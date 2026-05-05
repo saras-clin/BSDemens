@@ -134,9 +134,16 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   psyk_diag <- arrow::open_dataset(path_psyk_diag) %>% rename_with(tolower) %>%
     rename(recnum = v_recnum)
 
-  lpr2_psyk <- psyk_adm %>%
+  lpr2_psyk_adm_filtered <- psyk_adm %>%
     filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum, date_contact = d_inddto) %>%
+    select(pnr, recnum, date_contact = d_inddto, c_pattype)
+
+  if (inpatient_only) {
+    lpr2_psyk_adm_filtered <- lpr2_psyk_adm_filtered %>%
+      filter(c_pattype == "0")   # same c_pattype convention as somatic LPR2
+  }
+
+  lpr2_psyk <- lpr2_psyk_adm_filtered %>%
     inner_join(
       psyk_diag %>%
         filter(c_diagtype %in% diagtypes) %>%
@@ -345,25 +352,44 @@ extract_dementia_outcomes <- function(bs_cohort) {
 extract_weight_outcomes <- function(bs_cohort) {
   # DBSO is a SAS extract from SunDK, not a DST parquet registry.
   # Prepared by prepare_dbso.R and saved to the shared parquet-registries folder.
-  path_dbso <- file.path(path_parquet_registers, "dbso.parquet")
+  path_dbso <- file.path(path_parquet_registries, "dbso.parquet")
   if (!file.exists(path_dbso)) {
     stop("DBSO parquet file not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
   }
 
   dbso <- arrow::read_parquet(path_dbso)   # small file — read fully into memory
 
-  weight_raw <- dbso %>%
-    filter(pnr %in% bs_cohort$pnr) %>%    # filter to cohort members
-    select(pnr, exam_date, weight_kg, height_cm, bmi) %>%
+  # DBSO column names (from prepare_dbso.R):
+  #   pnr, surgery_date, surgery_type — person-level identifiers
+  #   udgangsvaegtpre_prim            — weight at last pre-op visit before surgery (kg)
+  #   hoejde                          — height (cm)
+  #   bmi_pre                         — BMI calculated from pre-op weight + height
+  #   datofol                         — date of this follow-up visit
+  #   vaegtfol                        — weight at this follow-up visit (kg)
+  # Data is LONG: one row per clinic visit per person.
+
+  dbso_cohort <- dbso %>% filter(pnr %in% bs_cohort$pnr)
+
+  # Pre-operative weight: udgangsvaegtpre_prim is the weight from the last pre-op
+  # form before surgery. It is stored in every row for a patient — take one per person.
+  weight_preop <- dbso_cohort %>%
+    filter(!is.na(udgangsvaegtpre_prim)) %>%
+    distinct(pnr, .keep_all = TRUE) %>%
+    select(
+      pnr,
+      weight_preop = udgangsvaegtpre_prim,
+      height_preop = hoejde,
+      bmi_preop    = bmi_pre
+    )
+
+  # Post-operative weights: rows with a measured follow-up weight.
+  # Compute days from surgery and assign to nearest target window.
+  weight_postop <- dbso_cohort %>%
+    filter(!is.na(datofol), !is.na(vaegtfol)) %>%
     inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%
-    filter(
-      exam_date >= surgery_date - 365,
-      exam_date <= surgery_date + 730
-    ) %>%
     mutate(
-      days_since_surgery = as.numeric(difftime(exam_date, surgery_date, units = "days")),
+      days_since_surgery = as.numeric(difftime(datofol, surgery_date, units = "days")),
       target_days = case_when(
-        days_since_surgery < 0                                ~ -1L,
         days_since_surgery >= 60  & days_since_surgery < 120 ~ 90L,
         days_since_surgery >= 150 & days_since_surgery < 210 ~ 180L,
         days_since_surgery >= 330 & days_since_surgery < 390 ~ 365L,
@@ -371,18 +397,7 @@ extract_weight_outcomes <- function(bs_cohort) {
         TRUE ~ NA_integer_
       )
     ) %>%
-    filter(!is.na(target_days))
-
-  weight_preop <- weight_raw %>%
-    filter(days_since_surgery < 0) %>%
-    group_by(pnr) %>%
-    arrange(desc(exam_date)) %>%
-    slice(1) %>%
-    ungroup() %>%
-    select(pnr, weight_preop = weight_kg, height_preop = height_cm, bmi_preop = bmi)
-
-  weight_postop <- weight_raw %>%
-    filter(target_days > 0) %>%
+    filter(!is.na(target_days)) %>%
     mutate(days_diff = abs(days_since_surgery - target_days)) %>%
     group_by(pnr, target_days) %>%
     arrange(days_diff) %>%
@@ -394,8 +409,8 @@ extract_weight_outcomes <- function(bs_cohort) {
       target_days == 365 ~ "12mo",
       target_days == 730 ~ "24mo"
     )) %>%
-    select(pnr, period, weight_kg, bmi) %>%
-    pivot_wider(names_from = period, values_from = c(weight_kg, bmi))
+    select(pnr, period, weight_kg = vaegtfol) %>%
+    pivot_wider(names_from = period, values_from = weight_kg, names_prefix = "weight_kg_")
 
   bs_cohort %>%
     select(pnr) %>%
@@ -451,9 +466,17 @@ extract_insulin_outcomes <- function(bs_cohort) {
 # ============================================================================
 
 extract_hospital_contacts <- function(bs_cohort) {
+  # Glycemic events need icd4 precision: E10-E14 at 3-char level covers all diabetes
+  # admissions (neuropathy, retinopathy, etc.) not just acute hyperglycemia/hypoglycemia.
+  # E10.0/E10.1 = T1D coma / ketoacidosis (DKA); E11.0/E11.1 = T2D equivalents.
+  # E16.0/E16.1 = drug-induced / other hypoglycemia (main codes for insulin-related hypo).
+  icd4_conditions <- list(
+    hyperglycemia = c("E100", "E101", "E110", "E111", "E130", "E131", "E140", "E141"),
+    hypoglycemia  = c("E100", "E110", "E160", "E161", "E162")
+  )
+
+  # Non-glycemic conditions are unambiguous at 3-char level.
   icd3_conditions <- list(
-    hyperglycemia         = c("E10", "E11", "E12", "E13", "E14"),
-    hypoglycemia          = c("E15", "E16"),
     self_harm             = paste0("X", 60:84),
     substance_abuse       = paste0("F1", 0:9),
     trauma                = c(paste0("S0", 0:9), paste0("S", 10:99),
@@ -471,10 +494,22 @@ extract_hospital_contacts <- function(bs_cohort) {
 
   result <- bs_cohort %>% select(pnr)
 
+  for (condition_name in names(icd4_conditions)) {
+    codes    <- icd4_conditions[[condition_name]]
+    col_name <- paste0("date_first_", condition_name)
+    first_contact <- all_dx %>%
+      filter(icd4 %in% codes) %>%
+      group_by(pnr) %>%
+      arrange(date_contact) %>%
+      slice(1) %>%
+      ungroup() %>%
+      select(pnr, !!col_name := date_contact)
+    result <- result %>% left_join(first_contact, by = "pnr")
+  }
+
   for (condition_name in names(icd3_conditions)) {
     codes    <- icd3_conditions[[condition_name]]
     col_name <- paste0("date_first_", condition_name)
-
     first_contact <- all_dx %>%
       filter(icd3 %in% codes) %>%
       group_by(pnr) %>%
@@ -482,7 +517,6 @@ extract_hospital_contacts <- function(bs_cohort) {
       slice(1) %>%
       ungroup() %>%
       select(pnr, !!col_name := date_contact)
-
     result <- result %>% left_join(first_contact, by = "pnr")
   }
 
@@ -776,7 +810,7 @@ extract_nmi <- function(bs_cohort) {
     sweep(as.matrix(result[, predictor_cols]), 2, all_weights[predictor_cols], "*")
   )
 
-  bs_cohort %>%
+  result %>%
     select(pnr) %>%
     mutate(nmi_score = nmi_scores)   # one row per person, one column: their NMI score
 }

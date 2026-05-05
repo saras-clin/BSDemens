@@ -187,7 +187,6 @@ prepare_dbso <- function() {
         TRUE                    ~ "Unknown"
       ),
       datopre = as.Date(datopre),
-      datoper = as.Date(datoper),
       datofol = as.Date(datofol),
       # BMI at pre-surgery (reference BMI for weight outcomes); no BMI column in DBSO
       bmi_pre = dplyr::if_else(

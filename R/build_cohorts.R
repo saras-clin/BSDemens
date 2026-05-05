@@ -397,6 +397,7 @@ build_obesity_comparator <- function(bs_cohort) {
     select(pnr, recnum, date_contact = d_inddto) %>%
     inner_join(
       lpr_diag %>%
+        filter(c_diagtype %in% c("A", "B")) %>%   # exclude auxiliary "G" diagnoses
         mutate(icd3 = substr(c_diag, 2, 4)) %>%
         filter(icd3 == "E66") %>%
         select(recnum),
@@ -413,6 +414,7 @@ build_obesity_comparator <- function(bs_cohort) {
     select(pnr, dw_ek_kontakt, dato_start) %>%
     inner_join(
       diagnoser %>%
+        filter(diagnosetype %in% c("A", "B")) %>%   # exclude auxiliary "G" diagnoses
         mutate(icd3 = substr(diagnosekode, 2, 4)) %>%
         filter(icd3 == "E66", is.na(senare_afkraeftet) | senare_afkraeftet != "Ja") %>%
         select(dw_ek_kontakt),

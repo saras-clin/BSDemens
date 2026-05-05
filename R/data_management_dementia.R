@@ -80,24 +80,18 @@ load_and_merge <- function() {
 # STEP 2: EXCLUSION — PRE-SURGERY DEMENTIA (safety check)
 # ============================================================================
 # The primary pre-surgery dementia exclusion runs in build_cohorts.R using
-# get_prior_dementia_pnrs(). However, that function currently covers only the
-# somatic LPR registers (lpr_adm/lpr_diag for LPR2, kontakter/diagnoser for
-# LPR3). The LPR2 PSYCHIATRIC register (psyk_adm / psyk_diag) is NOT yet
-# included (see CRITICAL-1 in TODO.txt).
+# get_prior_dementia_pnrs(). That function covers LPR2 somatic (lpr_adm/lpr_diag),
+# LPR2 psychiatric (psyk_adm/psyk_diag via arrow::open_dataset), and LPR3
+# (lpr_a_kontakt/lpr_a_diagnose). All three sources are now included.
 #
 # F-code dementia (F00 Alzheimer's, F01 vascular, F02 other, F03 unspecified)
 # is routinely diagnosed in geropsychiatric outpatient memory clinics. Before
-# March 2019, these contacts are in a separate psychiatric register on DST,
-# invisible to the somatic-only LPR2 queries.
+# March 2019 these contacts live in the separate psychiatric register on DST,
+# which get_prior_dementia_pnrs() now queries directly.
 #
-# Consequence: some patients with prevalent F-code dementia diagnosed in a
-# psychiatric setting before 2019 will have passed the cohort-level exclusion
-# but will have a date_dementia < surgery_date when extract_outcomes_covariates.R
-# runs against the combined LPR (which does include LPR3 psychiatric contacts).
-#
-# This function catches those slipped-through cases as a safety net.
-# Once the psychiatric LPR2 register is added to build_cohorts.R (CRITICAL-1),
-# the message below should print 0 exclusions — a useful sanity check.
+# This function is a safety net: it re-applies the same filter on the joined
+# analysis dataset. With all three LPR sources included upstream, it should
+# print 0 exclusions — treat any non-zero count as a signal to investigate.
 
 apply_exclusions <- function(df) {
   n_before <- nrow(df)
