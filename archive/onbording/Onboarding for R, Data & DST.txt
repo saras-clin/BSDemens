@@ -1,0 +1,2104 @@
+﻿Agenda/Forberedelse
+Agenda 19/3
+
+
+* Hvor skal den her guide bo og hvordan skal det formidles?
+   * projektdatabasen
+   * Steno common docs onboarding
+   * * Organisering/oprydning af materialet
+   * 0. Hvad vil jeg undersøge, udformning af analyseplan
+   * 1. Overblik over DST og data
+      * Interfaces
+      * Folderstruktur
+      * Registre
+         * Baggrundsinfo & dokumentation
+   * 2. R
+      * Links til generel introduktion
+         * Tips og faldgruber til hvordan man kan bruge AI
+   * 3. R & databehandling på DST
+      * Filformater
+      * Eksempler på databehandling med “usual suspects”-registre
+         * Fra Parquet
+         * Eksempler på data pipelines: hvordan laver man sit analyse-data
+         * Hvordan undersøger man sine data
+   * 4. Specifikke opgaver i R
+         * Hvordan laver man tabeller
+         * Hvordan laver man grafer
+         * Regression
+         * Time-to-event-analyser
+         * vægtning
+         * matching
+         * comorbiditet
+   * 5. Hjemsendelse af data fra DST
+      * Formater der kan eksporteres
+      * Hvordan håndterer man mikrodata, f.eks. missings
+* Guides
+   * Feedback som kommentarer her i google docs
+      * Onboarding for R, Data & DST
+      * Onboarding for R, Data & DST
+      * Onboarding for R, Data & DST
+
+
+
+
+Til d. 19/3 kl. 9-10:
+Alle har inden møde læst og kommenteret på (vejledning til register mm (Anders sender link inden mødet til vejledning 
+Anders/Zheer rydder op/læser korrektur på det nuværende (nåede ikke til sidste møde)
+Anders prepper en opgaveliste med “the usual suspects” og laver udkast til så meget han kan nå (som udgangspunkt ud fra darter kickstarter
+Til d. 5/2 kl. 13-14:
+Anders/Zheer rydder op/læser korrektur på det nuværende
+Anders prepper en opgaveliste med “the usual suspects” og laver udkast til så meget han kan nå (som udgangspunkt ud fra darter kickstarter
+Der kommer nok lidt ud undervejs for at få feedback.
+Til d. 28/11:
+1. Opret en bruger på GitHub og bed om at komme med i Steno Diabetes Center Aarhus organisationen
+2. Udfyld potentielle emner inde i fanen “Emner”: Onboarding for R, Data & DST og "Ressourcer": Onboarding for R, Data & DST
+
+
+
+
+
+
+
+
+ 
+
+
+Anders kigger på hvor vi skal lave/samle materialet
+* enten som en sektion under Documentation and Resources for Supporting Research Activities – SDCA Research
+Emner
+Emner
+
+
+Ting vi skal tage fat på og lave vejledning til.
+
+
+Jeg forestiller mig, at det typisk vil dreje sig om
+* Praktiske opgaver
+* Generel introduktion
+
+
+Relateret til
+* R
+* Data management/pipeline
+* Data på Danmarks Statistik, inkl. data- og database-formater som f.eks. Parquet og DuckDB (og måske en knivspids SQL hvis man får behov for det)
+* Git/GitHub
+
+
+Tilføj selv emner nedenfor - evt. bare med stikord - og jeres initialer/navne. Hvis I ser overlap med noget andre har skrevet, så tilføj jeres navn. Så kan vi prioritere det efter hvor mange der står med det (eller har stået med det og synes de manglede noget hjælp til det dengang)
+
+
+F.eks.
+1. Hvordan indlæser man data i Parquet-format? (Anders, Tinne)
+2. Hvordan laver man tabeller på en smart måde (Cecilie, Sidsel)
+3. Hvordan laver man plots så de bliver pæne på sin poster/artikel (Cecilie) 
+4. Hvad betyder fejl-meddelelsen “xxx”
+
+
+Sæt i gang!
+
+
+Liste over opgaver/udfordringer/problemer
+Almene:
+1. New file vs new project I R, evt også quarto vs alm (Lykke, Cecilie, Sidsel)
+2. Rundt om bordet med yndlingsgenvejstaster  (Lykke)
+3. De 3 mest anvendte datasæt i DST, fx "bef"  (Lykke, Sidsel)
+4. Hvad de forskellige registre indeholder af specifikke kolonner som kan være brugbare (sidsel)
+5. Duck DB/DARTER SQL funktion (Lykke)
+6. Udvælgelse af relevante pakker og konsistent programmeringsstil (Cecilie, Sidsel),
+   1. Herunder en god rækkefølge til datamanagement
+7. Opbygning i R - hvordan man samler og manager data, fx starter med datasæt, filtrerer med is.na, mutater, slicer, group by mfl.  (Lykke, Cecilie, Sidsel)
+8. Håndtering af store datasæt, fx reduktion af filstørrelse og opdeling i flere dokumenter for at forbedre hastighed og overblik (Cecilie, Sidsel)
+   1. herunder hvad man skal gemme, og hvilket system der kan være smart at gemme sine filer i  (sidsel)
+9. Hvordan man nemt danner sig et overblik ift. sorte huller eller faldgrupper i sit datasæt (fx manglende data, dobbelt data, ekstreme værdier mv) (Sidsel)
+10. Hvad er Github og hvordan skal det bruges (Sidsel)
+11. Hvornår i sin kode giver det mening at collecte sin duck-DB lazy fil? og håndterer man den inden collect (Sidsel)
+12. Hvordan laver man regressionsanalyser eller time-to-event analyser på en god og effektiv måde (Sidsel)
+13. Effektiv måde at holde orden i sin kode på, evt god måde at opdele projekter på (Sidsel)
+
+
+Specifikke:
+14. hvordan jeg finder at pt har 3 kontakter med diagnosen, ift LPR2 og skift til LPR3. (Lykke)
+15. Hvordan man ser sit nye byggede dataframe/sæt i environment i DARTER (Lykke)
+16. En let form for drop funktion, altså hvor jeg vil smide en bestemt type væk og beholde resten. (Lykke)
+17. Matching ift indexdato, som er varierende for hver pt der får ny T2D, de skal matches med en på den dato, på køn, alder, ses, kommune. (Lykke)
+18. Hvordan man henter comorbiditetsdata (fx Charlson comorbidity index) (Sidsel)
+
+
+Resourcer
+Ressourcer
+
+
+Tilføj ting I bruger, når I skal finde information eller løse et problem. Måske vi skal lave en liste til nye brugere evt. med vejledning til
+
+
+
+
+1. TIMES-variabel-beskrivelser på dst.dk
+   1. Finde ud af, hvad en variabel er/betyder: https://www.dst.dk/da/Statistik/dokumentation/Times (Anders)
+2. ChatGPT
+   1. kodeproblemer (Anders, Sidsel)
+3. Google
+   1. kodeproblemer (Anders)
+4. StackOverflow
+   1. kodeproblemer
+5. R-cubed-kursusmaterialet
+   1. Strukturering af data-arbejde: 5  Setting up an R project – Intro Reproducible Research in R  (Anders)
+   2. Hvordan man bruger Quarto og skriver markdown: https://r-cubed-intro.rostools.org/sessions/reproducible-documents  (Anders)
+6. R Coding Café - Noter
+   1. https://r-coding-cafe.zheer.dk/notes/lesson-notes/
+7. “Stjernen” på skrivebordet inde på DST
+   1. Hvilken tabel jeg skal bruge for at formatere en variabel.
+8. Den officielle tidyverse-dokumentation 
+   1. F.eks. for duckplyr, når jeg skal bruge dplyr til at arbejde med parquet-filer via DuckDB: A DuckDB-Backed Version of dplyr • duckplyr (Anders)
+
+
+
+
+Steno Aarhus GitHub start: Quick guide to using GitHub – SDCA Research
+
+
+Oleguer’s gruppes materialer:
+https://osf.io/zhfyp/files
+https://osf.io/zhfyp/files/dkfmu
+https://osf.io/zafhu/files/h6qzw
+
+
+Open Source Diabetes Classifier for Danish Registers • osdc
+Arbejdsemner
+
+
+First steps: taktik og planlægning
+Hvem: Sidsel
+
+
+
+
+1. Analyseplan
+* Meget vigtigt at lave en god analyseplan:
+   * Skaber overblik
+   * Kan forebygge metodiske fejl
+   * Der fastlægges eksponering, outcome og kovariate, som skal hentes fra registre
+   * Klarlægger hvordan data skal behandles/analyseres
+   * Kan tages frem, når man går i stå med sit arbejde
+* Benyt STROBE flowchart, for at sikre at du har tænkt over alle relevante ting inden du går i gang. 
+https://www.equator-network.org/wp-content/uploads/2015/10/STROBE_checklist_v4_combined.pdf
+* Analyseplanen publiceres på OSF (Open Science Framework). Link indeholder gode skabeloner:
+https://help.osf.io/article/330-welcome-to-registrations
+
+
+
+
+Sundhedsdatastyrelsen (SDS): 
+* Har de rå nationale sundhedsregistre (fx National Patientregister, Medicinregisteret, Vaccinationsregisteret, cancerregisteret, CPR-registeret mv).
+   * https://sundhedsdatastyrelsen.dk/data-og-registre/nationale-sundhedsregistre
+Danmarks statistik (DST): 
+* Tilbyder bearbejdede og anonymiserede data fra disse registre til statistikformål, som kan tilgås under sikre forhold.
+* https://www.dst.dk/extranet/forskningvariabellister/Oversigt%20over%20registre.html
+
+
+Som forskere kan vi få adgang via remote access og har mulighed for at kombinere forskellige registre fra SDS + DST.
+
+
+
+
+Dan et overblik
+* Start med blyant & papir: 
+   * Hvad er mit endemål (jf analyseplanen), og hvilke informationer skal jeg bruge for at nå dertil?
+      * Hvilke kolonner skal jeg bruge? (patient-information)
+      * Hvilke rækker skal jeg bruge? (patienttype)
+   * Hvilke data har jeg tilgængelig? 
+   * Hvilke data skal jeg bruge?
+   * I hvilke mapper er data placeret på DST?
+
+
+
+
+Dan et R project
+* Opret en mappe med dit eget navn i Workspaces
+* Åben RStudio og opret et nyt projekt: file → new project → new directory → navn og placering på computeren → create. 
+   * Et nyt R-projekt fungerer som en slags mappe på computeren, dvs et R-projekt er IKKE en fil i sig selv. Det er i denne mappe man kan gemme sine scripts, dokumenter til hjemsendelse, grafer, tabeller mv. 
+
+
+* Når der er oprettet et nyt projekt i RStudio: Create new file / quarto document → navngiv dokumentet
+   * vil blive automatisk placeret i projektmappen. 
+
+
+* Man kan finde sit R projekt i den mappe man har valgt at gemme den i på computeren.
+Herefter kan man lave nye mapper i Projekt-mappen, fx:
+* R_scripts: Til filer med script/kode (.R, .qmd mv.)
+* hjemsend / downloads:, Til at gemme filer, som skal hjemsendes. 
+* Graphs / Tables: Til grafer eller tabeller, som skal gemmes
+
+
+* Når du gemmer og lukker RStudio: der kommer pop-up vindue: Save workspace image? → gør til rutine IKKE at gemme. Dette sikrer, at der ikke findes objekter, som pludselig melder fejl, hvis man begynder at redigere i tidligere kode, da global environment fra tidligere bliver gemt. Alternativt: Ryd global environment hver gang RStudio åbnes. 
+
+
+
+
+Organisering af scripts
+Arbejde i R-fil eller Quarto/Qmd-fil?
+* R-filer:
+   * Standard kode-format med linjer og kode. Nemt og ligetil at håndtere 
+   * benyt dig altid af “#” og skriv løbende forklaringer på din kode 
+   * Benyt Ctrl/Cmd+Shift+R for at lave headers undervejs i koden. Dette kan give et større overbllik over de forskellige dele af koden. 
+
+
+* i Quarto/markdown filer: 
+* Qmd-filer opdeles i tekststykker med chunks af kode imellem. Disse kan oprettes med genvejen Ctrl + Alt + I. 
+* Qmd-filer kan nemt konverteres til forskellige slags letlæselige filer. 
+* I Qmd-filer kan man se flere visual outputs ad gangen, da den gemmer den kørte kode under hver kode-chunk.
+* Sørg for at lave løbende nye chunks, så hver chunk kan køres for sig selv og vise det tilhørende resultat. Dette danner et godt overblik i koden. 
+
+
+
+
+Brugbare kommandoer til eksplorering/visualisering af rådata[a]
+* dim(data)                        # antal rækker og kolonner
+* names(data)                        # kolonnenavne
+* colnames(data)                # kolonnenavne
+* length(data)                        # antal kolonner
+* class(data)                        # datatype af objektet
+* str(data)                        # struktur: kolonner, type og første observationer
+* glimpse(data)                        # strukturel oversigt med første observationer
+* head(data)                        # de første 6 rækker
+* tail(data)                        # de sidste 6 rækker
+* unique(data$køn)                # unikke værdier i en kolonne
+* table(data$køn)                # frekvensfordeling af kategorisk variabel
+* summary(data)                # min, max, median, mean, kvartiler mv.
+* data |> count(køn)                # antal observationer pr. kategori
+* data |> arrange(alder)                # sortering af rækker efter alder
+
+
+Hurtig overbliksbillede med grafer:
+* Kontinuerte variable: 
+   * hist(data$alder)
+   * boxplot(data$indkomst) / boxplot(indkomst ~ køn, data = data)
+   * scatterplot: plot(data$alder, data$indkomst)
+* Kategoriske variable
+   * barplot(table(data$køn))
+
+
+
+
+Brugbare kommandoer til kontinuert data: 
+* min(data$alder)
+* max(data$alder)
+* range(data$alder)
+* mean(data$alder)
+* median(data$alder)
+* var(data$alder)
+* sd(data$alder)
+* IQR(data$alder)  # interquartile range
+
+
+Classes: 
+* Vigtigt at kende forskel på de forskellige classes, da det kan give anledning til problemer, hvis dette ikke er lavet korrekt 
+  
+
+
+
+
+
+
+
+2. Getting started with R
+This page contains links to help you get started using R.
+DDEA Introductory Course:
+https://r-cubed-intro.rostools.org/
+This link contains the teaching material for a beginner course in R offered by DDEA (Danish Diabetes and Endocrine Academy). The course is typically offered once a year, but the teaching materials are publicly available to everyone.
+The material is structured in a very user-friendly way, making it easy to go through independently without attending the course in person.
+The Epidemiologist R Handbook:
+https://www.epirhandbook.com/en/
+This is an online book that can be used to get started with R. It includes guidance on how to use R, how to import and export data, how to use different R packages, as well as extensive material on data management, analysis, visualization, and much more.
+R for Data Science (E-book):
+https://r4ds.hadley.nz/
+This is a free and publicly available e-book that explains how to import, clean, manipulate, visualize, and model data in R.
+AU PhD Course: “Basic R”
+Basic course in R. Can be found on AU’s PhD course portal:
+https://au.phd-courses.dk/
+This course is a very good introduction to using RStudio.
+The course has the following purpose:
+The course introduces participants to R and RStudio as tools for data management, basic programming, and data visualization. It aims to provide the fundamental skills needed to write clear and reproducible R scripts, handle common data structures, and perform simple descriptive and graphical analyses. The course focuses on programming principles and reproducible workflows rather than statistical theory.
+
+
+
+
+
+
+
+
+
+
+3. Where to get help when stuck in R coding
+Denne side beskriver, hvor man med fordel kan søge hjælp, hvis man ikke kan komme videre i R pga. en kodefejl. Nedenstående er i prioriteret rækkefølge, og som man nok vil bemærke kommer AI nederst på listen, da der er en del faldgruber ved at bruge AI som det første, når man er ny R-bruger.
+
+
+1. Har du en kollega eller vejleder, som også bruger R, som kan hjælpe dig?
+2. Google
+3. Stack Overflow (https://stackoverflow.com/questions)
+4. Zheers R coding cafe (https://r-coding-cafe.zheer.dk/)
+5. Læs den officielle dokumentation for den pakke, du bruger og som problemet opstår i.
+   1. F.eks tidyverse: https://tidyverse.org/packages/
+6. AI:
+   1. Claude (https://claude.ai/new)
+      1. God til kodeproblemer. Kan anvendes in-browser.
+
+
+
+
+zheeri@gmail.comer det noget med, at man kan oprette sig her https://github.com/education og få gratis adgang til subscription-udgaverne af de forskellige AI modeller?
+Parquet & DuckDB
+Hvem
+Lykke, Elena
+
+
+Parquet
+ 
+Forestil dig, at Danmarks Statistik har meget store regneark med tal om fx befolkning, sundhed eller økonomi.
+I stedet for at gemme dem som CSV kan de gemmes som Parquet (et filformat).
+Data fylder mindre her, det går hurtigere, det bliver sorteret og gemt pænt (som i kasser, mens excel/CSV er hulter til bulter)
+Forestil dig et ark med:
+·           alder
+·           køn
+·           sygdom
+·           årstal
+I Parquet ligger:
+·           alle aldre samlet ét sted
+·           alle køn samlet ét sted
+·           alle årstal samlet ét sted
+Med CSV (ofte): Du ender tit med at læse alt ind i hukommelsen, også selv om du kun skal bruge 2 kolonner og 1 år.
+Med Parquet (ofte): Du kan tit nøjes med at hente kun de kolonner og rækker, du skal bruge — hvilket kan være meget hurtigere.
+Ift R:
+ Et billede, der indeholder tekst, Font/skrifttype, skærmbillede
+
+AI-genereret indhold kan være ukorrekt. Hvis du bruger open_dataset(), så husk at data først bliver “rigtigt” i R, når du kalder collect().
+Load dstdataprep for at gøre det klart. 
+
+
+DuckDB
+ 
+DuckDB er en database som kører i din R session. Den er optimal til hurtige analyser på store datasæt. Den er særlig egnet til filer som er i Parquet format, da DuckDB kun læser de ”nødvendige” kolonner for at kunne arbejde. Der ”arbejdes i baggrunden” og først når man ”ber” om det kommer der et data output.  Man tilgår DuckDB via en lokal r pakke som man skal installere/køre der hedder dstdataprep (tjek onboarding). Man arbejder med det via duckplyr (minder om dplyr)  syntakser hvor man ”nemt” kan arbejde med data.
+Du skifter fra at “hælde hele arkivet ud på bordet” til at “spørge arkivet om præcis det, du skal bruge
+Før (uden DuckDB / ikke-lazy)
+1. Læs alt ind
+2. Filtrér og beregn i R
+3. Vent og håb at computeren har nok hukommelse
+Nu (DuckDB + lazy)
+1. Fortæl hvad du vil have (plan)
+2. DuckDB henter kun det nødvendige fra Parquet
+3. Du får et færdigt resultat — ofte meget hurtigere og med mindre RAM
+Forestil dig Danmarks Statistik-data som et supermarked:
+·           Uden lazy: du køber hele butikken, kommer hjem, og sorterer hvad du skulle bruge.
+·           Med lazy/DuckDB: du sender en indkøbsliste: “2 mælk, 1 rugbrød” — og får kun det.
+ 
+
+
+
+
+Introduction to Parquet, Arrow and DuckDB in R
+Introduction to Parquet, Arrow and DuckDB in R
+Modern, efficient data processing tools can help you reduce the amount of memory you need to process your data. In addition, they can dramatically reduce the time it takes to run your processing. This document contains a short introductory description on what Parquet, Arrow and DuckDB are, and how/when to use them.
+Memory and data storage formats
+Register data is stored on disk, and from there it is read/loaded into the computer's memory (RAM) where it can be processed by the computer's "math brain" (CPU). Data that is saved/stored on disk persists through sessions, whereas memory is cleared at the end of each session (or, on your local computer, when you power it off). So, once any processing is done, the results are usually held in memory, but needs to be stored to disk before you can log off/crash the R session without losing them.
+Disk space is usually not a limiting factor, but memory capacity is a hard limit to the size of data that your computer can work with, making it a very important thing to consider in your analyses. On Statistics Denmark's servers, you are working on a virtual machine running on one of their servers, and you will be sharing the server's RAM with all other users running analyses on their virtual machines. When the server's total memory is getting close to full (you can gauge this by the color of the "memory report" icon in RStudio's Environment panel - red color is bad), your analyses will run much, much slower (and risk crashing/failing). So, while the server has a very large amount of total RAM (e.g 1,000 GigaBytes), you (and everyone else on the server) will probably experience problems if one or more users are occupying several hundreds of GBs of RAM at the same time.
+So, for everyone's sake, it's a good idea to be mindful of your memory footprint and only take up as little as needed - and, when you need to occupy very large amounts of RAM, only do so for as short a time as needed.[b]
+Processing engines
+When processing data in R scripts, you're using R's processing engine (sometimes referred to as the back-end) by default. This seems obvious, and chances are that you've never used - or needed - any other engine before. When processing very large amounts of data, e.g. nation-wide registers, there are some advantages to using other processing engines, and clever people have created R packages that translate R and dplyr commands to the language (SQL queries) of these engines, allowing you to use them from within your R session with standard dplyr syntax.
+In this guide, we'll use two of these engines - Arrow, accessible through the arrow package, and DuckDB, accessible through the duckplyr package - both of which are installed on the virtual machines of Statistics Denmark and can be used with standard dplyr syntax as if they were normal R objects.
+What are these new things?
+* Parquet
+   * Apache Parquet is an open-source project made by the Apache Foundation. It is a column-oriented data file format designed for efficient data storage and retrieval
+   * In plain language, this means that it's a way to store data in files on disk in a way that saves disk space and let's the computer read data from the disk as fast as possible.
+   * Parquet files can be created with several tools, but in R this is mainly done using functions from the arrow package (write_parquet() or write_dataset())
+   * Data stored in Parquet files can be read into other statistical packages, such as Python and Stata (upcoming version), so it supports a diverse group of users.
+* Arrow
+   * Apache Arrow is also an open-source project made by the Apache Foundation. It is a language-independent memory format organized for efficient analytic operations
+   * In plain language, this means that it's a way to structure data in a way that let's the computer process data as efficiently as possible. How this is done and what separates Arrow from other formats like R, SAS or DuckDB is beyond the scope of this guide. This is all done "under the hood" anyway, and as a user you don't need to know the inner workings to take advantage of it.
+   * The arrow R-package provides R users access to many of the features of Apache Arrow through base R and tidyverse functions.
+* DuckDB is an open-source project made by DuckDB Labs/the DuckDB Foundation. It is a fast, in-process, portable analytical database system
+   * In plain language, this means that it's a way to structure and/or store data in a way that facilitates efficient data processing and analysis. The in-process and portable part refers to DuckDB being interoperable with a lot of other data storage formats and programming language processing engines, including Arrow and R, which allows the user to efficiently read/convert most data types into a DuckDB database without the need to set up a dedicated SQL database server in a separate workflow.
+   * In a sense, DuckDB can do alone what Parquet and Arrow can do in combination, but it also plays well with them, as it can e.g. read Parquet files or Arrow Table data very fast.
+   * The duckplyr R-package runs all of your existing dplyr code, using DuckDB where possible to calculate results faster and allow processing of larger-than-memory datasets (by being very memory-efficient and by sometimes writing data to temporary .duckdb files on disk if needed).
+* As you can see, the aims of duckplyr and arrow are similar: to let R users use a more efficient storage and processing engine than native R, without having to learn the language of those engines. And from an R-user's perspective, they are similar to work with, as they rely mainly dplyr functions and use dplyr::compute() to move data into the right place for the engine to process and dplyr::collect() to force execution of commands and pull the results into R.[c]
+What are main pros and cons to using these external engines in R:
+* Pros:
+   * They're much more computationally efficient, so you'll get your processing done much faster
+   * They take up less memory resources on the server, so you're less likely to crash your session or experience instability or unresponsiveness (and so are everyone else using the server at the same time as you).
+* Cons:
+   * Objects created by commands interacting with these engines don't look and behave exactly as you're used to when working in R, so you will need to get to know them.
+   * They don't support all of R's functionality. Their main purpose is to facilitate data cleaning (e.g. row filtering, variable selection/creation, table joins) and relatively simple analytics (e.g. sorting, calculate means etc.). You will still be doing your regressions in R.[d]
+Getting started with Arrow/arrow and DuckDB/duckplyr
+Remember: The goal of using arrow or duckplyr is to use their engines to read and wrangle the massive raw datasets that make up most registers. At some point - after a lot of filtering, selection, joining etc. - this data will be cleaned to the variables you actually use in your analyses, which will fit in a size that R can handle without breaking a sweat, e.g. a handful of tables consisting of millions of rows. At this point, there is no longer much advantage to using either back-end over R's engine, and you can safely use R's engine to execute your custom functions or other operations not supported by the other back-ends. You may find yourself needing to use functions that aren't supported by arrow or duckplyr earlier in your pipeline, and that's fine as well - just try to think of ways to reduce the size of the data as much as possible before having to fall back to using R's engine. If need be, you can even export the data back onto the Arrow or DuckDB engine after it's been pulled into R, but that's beyond the scope of this guide.
+The main point of surprise, confusions, and frustration with these engines is usually their lazy evaluation vs. R's default eager evaluation, which leads to their objects and outputs by default being connections or pointers to a not-yet-needed-and-therefore-non-existing table of data, where R would have executed the computations and generated a table that you could see with your own eyes.
+A practical way to understand the lazy evaluation used by both arrow and duckplyr, is to think of it like grocery shopping. R's default eager evaluation goes shopping as soon as you think of some ingredient (execute a command in R) that you will need for cooking in the coming days, whereas lazy evaluation writes the thoughts down in a shopping list (a SQL query), but doesn't go shopping until you actually start cooking, and only buys the ingredients needed for the dish you've started to cook. This way, it only buys the ingredients (reads the data) you actually need, not what you thought or planned to use, so it doesn't have to carry as much, and nothing goes to waste. Furthermore, since the ingredients stay in the store as long as possible, it doesn't fill up your refrigerator (memory) with unnecessary items (data). This is why lazy evaluation is sometimes called just-in-time evaluation.
+Arrow/arrow and DuckDB/duckplyr in practice
+Both packages work by "hi-jacking" dplyr functions called on arrow or duckplyr table objects and translating them to their engines. So, once you've loaded your data as such an object, you simply write the same dplyr code you're used to writing (and if you use dplyr commands on a "normal" R object, e.g. a tibble, this is handled by dplyr as if arrow and duckplyr didn't exist).
+Both packages use dplyr::collect() to force execution of commands in their engines and pull the results into R, and dplyr::compute() to connect data from another source to their engine (e.g. move/convert a tibble in R to an Arrow or DuckDB table). arrow and duckplyr support each other very well, and you can efficiently convert an Arrow Table/dataset into a DuckDB database (and vice versa). The examples below will make use of this when loading in the data - which is stored in Parquet files as a dataset of Arrow Tables - and convert the Arrow connection to a DuckDB connection.
+A final note on joining tables before proceeding: To execute joins on their engines, both packages require both of the join's incoming tables to be formatted as either two Arrow or DuckDB tables. Furthermore, the tables must have the same connection source, but this should rarely be an issue and is beyond the scope of this guide (for now at least)
+arrow vs. duckplyr
+In both arrow and duckplyr, you can use dplyr::collect() to signal their engine to start executing the commands (you start cooking), but if any function needs the output of the queued commands to run, it can also force Arrow/DuckDB to execute any "shopping list" of commands previously queued on their objects in R.
+While arrow supports a lot of operations from R, it will sometimes throw an error when encountering a few operators. On the contrary,duckplyr supports nearly all dplyr commands, and when duckplyr encounters an R command it cannot translate to something the DuckDB engine can execute, it will - in most cases - automatically pull the data into R and "fall back" to executing them in R's engine.
+For this reason, it's usually worth using DuckDB through duckplyr rather than Arrow through arrow, but both are blazing fast and can get you through the most heavy parts of your data processing.
+One reason to use arrow instead of duckplyr is if your data is saved to disk as Arrow Tables in Parquet files, and you don't want to spend the first few minutes (and system resources) it takes dplyr::compute() to convert a whole register into a DuckDB format that duckplyr can work with. By default, the DuckDB database produced by dplyr::compute() is temporary and is deleted from memory (and disk, where it is temporarily saved if it exceeds the memory capacity of the system) when the session ends, but you can choose to save the DuckDB database on the disk as a .duckdb file that you can read directly from R with duckplyr later if you wish to. But for now, this is out of scope of this guide.
+Final note on working with these packages on Statistics Denmark
+On Statistics Denmark's servers, a snapshot of CRAN has been pre-installed, meaning that almost all packages on CRAN can be loaded with a simple call to library() , without requiring the user to download and install the packages with install.packages. The pre-installed packages are rather old, however, and the old version of duckplyr is missing a lot of functionality, and the guides in this package will not work. To install the most recent version from CRAN, simply use install.packages("duckplyr"), and remember to repeat the install after every log-out or server reset. If you're in doubt which package version is installed in your session, you can verify this with packageVersion("duckplyr"). If you're on version >=1.1, you should be fine.
+Further reading:
+The official documentation is a good place to get started using arrow and duckplyr:
+* arrow:
+   * data wrangling
+   * support & limitations
+* duckplyr:
+   * supported functions
+   * unsupported dplyr functions
+
+
+Parquet -> Arrow -> DuckDB pipeline
+Common data processing tasks: examples using Parquet, arrow and duckplyr
+Introduction
+This Quarto document uses synthetic register data to run a data processing pipeline and illustrate common tasks encountered when conducting register-based research. The aim is to align the workflow to reflect how one would work on Statistics Denmark’s servers with raw data in Parquet format.
+Setup chunks
+The beginning of most sections of this walkthrough contains a code chunk that sets up each register by generating the synthetic register data and storing it as Parquet files on disk in the data-parquet sub-folder of the current directory. The data is read in from there in subsequent code chunks.
+In some real-world scenarios, you may be on your own in a project with only the raw SAS data. In this situation, you would first need to convert your raw SAS files to a more practical format like Parquet (the fastreg package can help you) and store them in a similar structure as is done in this guide (data from each register is stored inside separate folders). Then you can load your data from those Parquet files in the same way as shown below.
+One final note: the variable names in the fake data used here are lower-cased, whereas the real data often has inconsistent casing, which you will need to process according. At the time of writing, the newest version of duckplyr (1.1.3) supports conveniently converting all column names e.g. to lower-case with dplyr::rename_with(), e.g. dplyr::rename_with(bef_ddb, tolower).
+Let’s go
+Let’s get to work with some actual fake data and real code!
+Through-out the examples, I use the package::function syntax to be explicit about which packages the functions are from. In a normal workflow, this isn’t necessary after loading the libraries - e.g. after running library(dplyr), you can use e.g. select() instead of dplyr::select() just fine.[e]
+We need to generate the synthetic data to mimic the DST environment and run the examples on. But first, make sure you have the necessary packages installed, if you’re running this as a script:
+# Check if necessary packages are installed:
+packages_to_check <- c("dplyr", "purrr", "tibble", "lubridate", "here", "arrow", "duckplyr", "fs")
+
+
+data.frame(
+  Package = packages_to_check,
+  IsInstalled = packages_to_check %in% row.names(installed.packages()),
+  Version = sapply(packages_to_check, function(x) {
+    tryCatch(as.character(packageVersion(x)), error = function(e) "Not installed")
+  })
+)
+           Package IsInstalled  Version
+dplyr         dplyr        TRUE    1.2.0
+purrr         purrr        TRUE    1.2.1
+tibble       tibble        TRUE    3.3.1
+lubridate lubridate        TRUE    1.9.5
+here           here        TRUE    1.0.2
+arrow         arrow        TRUE 23.0.0.1
+duckplyr   duckplyr        TRUE    1.1.3
+fs               fs        TRUE    1.6.6
+# Source (run) the script containing the functions to generate synthetic data to import them:
+source(here::here("R", "generate_data.R"))
+BEF[f]
+# Setup synthetic data: Create BEF directory/folder:
+fs::dir_create[g](here::here("data-parquet", "bef"))
+
+
+# Generate BEF and save to disk
+arrow::write_dataset(
+  generate_bef([h]
+    background_df = generate_background_pop()
+    ),
+  here::here("data-parquet", "bef"),
+  format = "parquet",
+  partitioning = "year")[i]
+Tasks:[j]
+1. Load in BEF
+   1. Normally, this will be from disk: either single-year files or a combined dataset containing data of all years.
+   2. Here, we mimic having the raw data converted to Parquet format with files llfrom each register stored in separate folders (similar to the output from the fastreg package.[k] So first, we generate the synthetic data, save it to disk as .parquet files by year, and then load it from disk.
+2. Filter the data to what is needed for your planned analyses.
+   1. This is a good way to reduce the size of the data you’re working with, which will speed processing times up and make your sessions more stable.
+   2. For example, you can filter your data to the range of years and/or ages used in your analyses.
+   3. The list of pnr-numbers that you identify in this step can be used to filter all the other data sources. If your analyses are restricted to a population of individuals with a certain disease, e.g. diabetes or cardiovascular disease, it may be useful to define these variables early in your workflow, and combine them with bef to allow you to filter the data to this study population from the start.
+3. Convert raw codes to usable values.
+1: Load data into DuckDB
+The key step here is to read the Arrow Tables from the Parquet files (bef_folder |> arrow::open_dataset(unify_schemas = TRUE)) into DuckDB (by piping it into arrow::to_duckdb() |> dplyr::compute()). You can add operations between the two parts to e.g. filter the data in Arrow before converting it to DuckDB. This way you will have less data to convert to DuckDB, and spend less time and system memory on the conversion.
+arrow and duckplyr will often help you out if you forget it, and you can sometimes get away with not calling dplyr::compute() to load the data into DuckDB or dplyr::collect() to load it from Arrow/DuckDB into R, but it’s a good habit to be explicit and conscious of when those commands are called.
+Let’s look at bef. In order to look at it in R, we have to collect it into R. Make sure to call head() or other filtering operations before dplyr::collect() to avoid loading the entire dataset into R, when you just want a short glance at its contents:
+# Load BEF data:
+
+
+bef_folder <- here::here("data-parquet", "bef")
+bef_ddb <- bef_folder |> arrow::open_dataset(unify_schemas = TRUE) |>
+  # You can add cleaning steps in Arrow here before converting to DuckDB
+  arrow::to_duckdb() |> dplyr::compute()
+
+
+bef_head <- bef_ddb |> head() |>  dplyr::collect()
+
+
+bef_head
+# A tibble: 6 × 8
+  pnr           koen foed_dag   alder   reg civst opr_land  year
+  <chr>        <dbl> <date>     <dbl> <dbl> <chr>    <dbl> <int>
+1 418524316931     1 2001-01-11    14    83 E         5293  2015
+2 423702115506     2 1987-08-09    28    83 D         5100  2015
+3 704948858170     2 1975-10-19    40    83 9         5100  2015
+4 307120402203     1 2000-06-25    15    82 9         5100  2015
+5 366797950745     2 1966-04-22    49    85 L         5100  2015
+6 440395402432     1 2009-03-04     6    85 E         5100  2015
+A quick way to tell if your object is an R data.frame or an Arrow or DuckDB connection, is to use class() (or look at the environment tab, where Arrow and DuckDB connections will appear funky):
+cat("R data.frame object:\n")
+R data.frame object:
+bef_head_df <- bef_ddb |> head() |>  dplyr::collect()
+class(bef_head_df)
+[1] "tbl_df"     "tbl"        "data.frame"
+cat("\n")
+cat("DuckDB connection object:\n")
+DuckDB connection object:
+bef_head_ddb <- bef_ddb |> head()
+class(bef_head_ddb)
+[1] "tbl_duckdb_connection" "tbl_dbi"               "tbl_sql"              
+[4] "tbl_lazy"              "tbl"                 
+cat("\n")
+cat("Arrow connection object:\n")
+Arrow connection object:
+bef_head_arrow <- bef_folder |> arrow::open_dataset(unify_schemas = TRUE) |> head()
+class(bef_head_arrow)
+[1] "Table"        "ArrowTabular" "ArrowObject"  "R6"         
+If you find yourself getting errors about your dplyr calls containing unsupported functions, you may be using an outdated version of arrow or duckplyr, or you may have forgotten to call dplyr::compute() when converting the data from Arrow to DuckDB and are still using the Arrow engine with its more limited dplyr support. To quickly see if the connection to the data is Arrow or DuckDB, we can use dbplyr::sql_render():
+cat("We remembered to use dplyr::compute(), so the DuckDB engine is used (contains 'dbplyr_'):\n")
+We remembered to use dplyr::compute(), so the DuckDB engine is used (contains 'dbplyr_'):
+bef_head_ddb |> dbplyr::sql_render()
+<SQL> SELECT dbplyr_Qh0yFYBLQ1.*
+FROM dbplyr_Qh0yFYBLQ1
+LIMIT 6
+cat("\nWe forgot to use dplyr::compute(), so we're still using the Arrow engine (contains 'arrow_'):\n")
+
+
+We forgot to use dplyr::compute(), so we're still using the Arrow engine (contains 'arrow_'):
+bef_head_arrow |> arrow::to_duckdb() |> dbplyr::sql_render()
+<SQL> SELECT *
+FROM arrow_002
+2: Filter
+In this example, we only need adults alive and residing in Denmark between 2020 and 2024 for our analyses.
+Note that we perform these filtering steps on the DuckDB connection object (not an R data.frame object) which allows duckplyr to inject it’s magic into dplyr
+bef_ddb_filtered <-
+  bef_ddb |> dplyr::filter(year %in% 2020:2024 & alder >= 18) |>
+  dplyr::select(pnr, year, foed_dag, koen, civst, reg, opr_land)
+3: Clean variables
+Next, we’ll define the variables we need from the raw data to get a “clean” dataset. Again, note that we do the data processing on the DuckDB connection object (but to inspect/illustrate the changes, we’ll load in some of the resulting dataset from DuckDB to R at the end of the chunk here):
+bef_ddb_clean <- bef_ddb_filtered |>
+  dplyr::mutate(
+    pnr = pnr,
+    year = year,
+    date_of_birth = as.Date(foed_dag),
+    
+    sex = dplyr::if_else(koen == '1', 'Male', 'Female'),
+    
+    marital_status = dplyr::case_when(
+      civst %in% c("G", "P") ~ "Married",
+      civst %in% c("F", "O", "E", "L") ~ "Divorced or widowed",
+      civst == "U" ~ "Unmarried",
+      TRUE ~ NA_character_
+    ),
+    
+    region = dplyr::case_when(
+      reg == 81 ~ "North Denmark Region",
+      reg == 82 ~ "Central Denmark Region",
+      reg == 83 ~ "South Denmark Region",
+      reg == 84 ~ "Capital Region",
+      reg == 85 ~ "Zealand Region",
+      TRUE ~ NA_character_
+    ),
+    
+    immigrant = opr_land != 5100
+  )
+
+
+bef_ddb_clean |>  head() |> dplyr::collect()
+# A tibble: 6 × 12
+  pnr           year foed_dag    koen civst   reg opr_land date_of_birth sex   
+  <chr>        <int> <date>     <dbl> <chr> <dbl>    <dbl> <date>        <chr> 
+1 284442219623  2020 1953-01-16     1 E        83     5480 1953-01-16    Male  
+2 235891699027  2020 1952-06-06     2 P        85     5260 1952-06-06    Female
+3 814538982681  2020 1968-05-27     1 U        84     5100 1968-05-27    Male  
+4 502055802069  2020 1994-10-31     1 F        82     5100 1994-10-31    Male  
+5 735052889633  2020 1991-07-04     2 F        84     5100 1991-07-04    Female
+6 681696900813  2020 1980-08-07     1 L        81     5305 1980-08-07    Male  
+# ℹ 3 more variables: marital_status <chr>, region <chr>, immigrant <lgl>
+LPR
+LPR2
+# Create lpr_adm directory/folder:
+fs::dir_create(here::here("data-parquet", "lpr_adm"))
+
+
+# Generate lpr_adm and save to disk
+arrow::write_dataset(
+  generate_lpr_adm(
+    background_df = generate_background_pop()
+    ),
+  here::here("data-parquet", "lpr_adm"),
+  format = "parquet",
+  partitioning = "year")
+
+
+# Create lpr_diag directory/folder:
+fs::dir_create(here::here("data-parquet", "lpr_diag"))
+
+
+# Generate lpr_adm and save to disk (year-partitioning the synthetic data is not feasible here)
+arrow::write_dataset(
+  generate_lpr_diag(generate_lpr_adm(
+    background_df = generate_background_pop()
+  )),
+  here::here("data-parquet", "lpr_diag"),
+  format = "parquet"
+)
+1: Load
+Let’s look at two LPR2 registers to assess diagnosis codes. LPR tables cover the calendars years before 2019 using ICD-10 codes (ICD-8 codes prior to 1994).
+lpr_adm
+lpr_adm is mainly used for its information on pnr and d_inddto time of a given record and used to join data from other LPR2 tables to your study population. Let’s take a look at it:
+# Load lpr_adm data:
+
+
+lpr_adm_folder <- here::here("data-parquet", "lpr_adm")
+lpr_adm_ddb <- lpr_adm_folder |> arrow::open_dataset(unify_schemas = TRUE) |>
+  # You can add cleaning steps in Arrow here before converting to DuckDB
+  arrow::to_duckdb() |> dplyr::compute()
+
+
+lpr_adm_head <- lpr_adm_ddb |>  head() |> dplyr::collect()
+
+
+lpr_adm_head
+# A tibble: 6 × 5
+  pnr          recnum           d_inddto   c_spec  year
+  <chr>        <chr>            <date>     <chr>  <int>
+1 418524316931 3843766594086211 2015-02-18 85      2015
+2 423702115506 0221666005420475 2015-03-27 82      2015
+3 704948858170 1533440440011640 2015-01-21 04      2015
+4 307120402203 4772092488614490 2015-10-16 43      2015
+5 366797950745 3359615834543410 2015-06-05 65      2015
+6 440395402432 4437673920385080 2015-11-30 45      2015
+lpr_diag
+lpr_diag contains information on diagnosis codes assigned to a contact and their type (primary, secondary, etc.).
+# Load lpr_diag data:
+lpr_diag_folder <- here::here("data-parquet", "lpr_diag")
+lpr_diag_ddb <- lpr_diag_folder |> arrow::open_dataset(unify_schemas = TRUE) |>
+  # You can add cleaning steps in Arrow here before converting to DuckDB
+  arrow::to_duckdb() |> dplyr::compute()
+
+
+lpr_diag_head <- lpr_diag_ddb |> head() |> dplyr::collect()
+
+
+lpr_diag_head
+# A tibble: 6 × 3
+  recnum           c_diagtype c_diag
+  <chr>            <chr>      <chr> 
+1 3843766594086211 A          DC73  
+2 0221666005420475 A          DX091 
+3 0221666005420475 B          DH17  
+4 0221666005420475 B          DM204 
+5 1533440440011640 A          DV081 
+6 1533440440011640 B          DE781
+2: Join lpr_adm and lpr_diag
+This information has to joined to lpr_adm via the recnum variable in order to be linked to individuals. Again, we don’t want to load the entire joined dataset into memory just to inspect it, so we only do so for the first few rows.
+lpr2_joined_ddb <- lpr_adm_ddb |> dplyr::left_join(lpr_diag_ddb)
+Joining with `by = join_by(recnum)`
+lpr2_joined_head <- lpr2_joined_ddb |> head() |> dplyr::collect()
+
+
+lpr2_joined_head
+# A tibble: 6 × 7
+  pnr          recnum           d_inddto   c_spec  year c_diagtype c_diag
+  <chr>        <chr>            <date>     <chr>  <int> <chr>      <chr> 
+1 418524316931 3843766594086211 2015-02-18 85      2015 A          DC73  
+2 423702115506 0221666005420475 2015-03-27 82      2015 A          DX091 
+3 423702115506 0221666005420475 2015-03-27 82      2015 B          DH17  
+4 423702115506 0221666005420475 2015-03-27 82      2015 B          DM204 
+5 704948858170 1533440440011640 2015-01-21 04      2015 A          DV081 
+6 704948858170 1533440440011640 2015-01-21 04      2015 B          DE781
+At this point, DuckDB has only executed the join for the small part of the dataset to produce lpr2_joined_head, and the lpr2_joined_ddb object is basically just a “shopping list” of instructions that will be executed when needed. This will come in handy later.
+LPR3
+lpr_a_kontakt & lpr_a_diagnose
+From 2019 onward, the LPR data is formatted slightly differently, as the National Patient Register was changed to the LPR3 format. The file names and variables names and types have changed, but the underlying contents are the same.
+(to add to the confusion, LPR3 data was initially shared for research as LPR_F formatted files - which used yet another set of different file names/variable names/types - but this format will not be covered in this guide, as it was recently retired in favor of the LPR_A format, which covers all years from 2019 onward).
+This data is loaded and joined in the same way as we did with LPR2, using lpr_a_kontakt instead of lpr_adm, and lpr_a_diagnose instead of lpr_diag:
+# Create lpr_a_kontakt directory/folder:
+fs::dir_create(here::here("data-parquet", "lpr_a_kontakt"))
+
+
+# Generate lpr_a_kontakt and save to disk
+arrow::write_dataset(
+  generate_lpr_a_kontakt(
+    background_df = generate_background_pop()
+    ),
+  here::here("data-parquet", "lpr_a_kontakt"),
+  format = "parquet")
+
+
+# Create lpr_a_diagnose directory/folder:
+fs::dir_create(here::here("data-parquet", "lpr_a_diagnose"))
+
+
+# Generate lpr_a_diagnose and save to disk
+arrow::write_dataset(
+  generate_lpr_a_diagnose(generate_lpr_a_kontakt(
+    background_df = generate_background_pop()
+    )),
+  here::here("data-parquet", "lpr_a_diagnose"),
+  format = "parquet"
+)
+1: Load
+# Load lpr_adm data:
+
+
+lpr_a_kontakt_folder <- here::here("data-parquet", "lpr_a_kontakt")
+lpr_a_kontakt_ddb <- lpr_a_kontakt_folder |> arrow::open_dataset(unify_schemas = TRUE) |>
+  # You can add cleaning steps in Arrow here before converting to DuckDB
+  arrow::to_duckdb() |> dplyr::compute()
+
+
+lpr_a_kontakt_head <- lpr_a_kontakt_ddb |>  head() |> dplyr::collect()
+
+
+lpr_a_kontakt_head
+# A tibble: 6 × 4
+  pnr          dw_ek_kontakt    kont_starttidspunkt kont_ans_hovedspec        
+  <chr>        <chr>            <dttm>              <chr>                     
+1 538221268998 8353814124589805 2019-01-01 00:16:46 Miljømedicin              
+2 913934301857 7724987237338717 2019-01-01 05:20:47 Sexologi                  
+3 087267805080 8191739523920645 2019-01-01 10:38:31 Klinisk farmakologi       
+4 695122971005 7036602558280569 2019-01-02 02:13:40 Dermato-venerologi        
+5 473684745888 5811534959935164 2019-01-02 05:17:59 Børne- og ungdomspsykiatri
+6 802598541298 6536181585671858 2019-01-02 15:32:39 Diagnostisk radiologi    
+# Load lpr_adm data:
+
+
+lpr_a_diagnose_folder <- here::here("data-parquet", "lpr_a_diagnose")
+lpr_a_diagnose_ddb <- lpr_a_diagnose_folder |> arrow::open_dataset(unify_schemas = TRUE) |>
+  # You can add cleaning steps in Arrow here before converting to DuckDB
+  arrow::to_duckdb() |> dplyr::compute()
+
+
+lpr_a_diagnose_head <- lpr_a_diagnose_ddb |>  head() |> dplyr::collect()
+
+
+lpr_a_diagnose_head
+# A tibble: 6 × 4
+  dw_ek_kontakt    diag_kode_type diag_kode senere_afkraeftet
+  <chr>            <chr>          <chr>     <chr>            
+1 8353814124589805 A              DK61      Nej              
+2 8353814124589805 B              DQ91      Nej              
+3 8353814124589805 B              DR968     Nej              
+4 7724987237338717 A              DC80      Nej              
+5 7724987237338717 B              DP05      Nej              
+6 8191739523920645 A              DR687     Nej             
+2: Join
+lpr3_a_joined_ddb <- lpr_a_kontakt_ddb |> dplyr::left_join(lpr_a_diagnose_ddb)
+Joining with `by = join_by(dw_ek_kontakt)`
+lpr3_a_joined_head <- lpr3_a_joined_ddb |> head() |> dplyr::collect()
+
+
+lpr3_a_joined_head
+# A tibble: 6 × 7
+  pnr        dw_ek_kontakt kont_starttidspunkt kont_ans_hovedspec diag_kode_type
+  <chr>      <chr>         <dttm>              <chr>              <chr>         
+1 538221268… 835381412458… 2019-01-01 00:16:46 Miljømedicin       A             
+2 538221268… 835381412458… 2019-01-01 00:16:46 Miljømedicin       B             
+3 538221268… 835381412458… 2019-01-01 00:16:46 Miljømedicin       B             
+4 913934301… 772498723733… 2019-01-01 05:20:47 Sexologi           A             
+5 913934301… 772498723733… 2019-01-01 05:20:47 Sexologi           B             
+6 087267805… 819173952392… 2019-01-01 10:38:31 Klinisk farmakolo… A             
+# ℹ 2 more variables: diag_kode <chr>, senere_afkraeftet <chr>
+Combine LPR2 and LPR3
+It is usually convenient to combine LPR2 and LPR3 into a single table for further processing. Binding two (or more) tables by rows is supported by duckplyr via dplyr::union_all(). But first, the variable names and their types have to be identical across the two tables. In this example, we’ll simply convert the LPR3 ones to match those in LPR2:
+lpr3_a_in_lpr2_format <- lpr3_a_joined_ddb |> dplyr::mutate(pnr, d_inddto = as.Date(kont_starttidspunkt), c_diag = diag_kode, c_diagtype = diag_kode_type, .keep = "none")
+
+
+lpr_combined <- lpr2_joined_ddb |>
+  dplyr::select(pnr, d_inddto, c_diag, c_diagtype) |>
+  dplyr::union_all(lpr3_a_in_lpr2_format)
+
+
+lpr_combined |> dplyr::collect()
+# A tibble: 20,199 × 4
+   pnr          d_inddto   c_diag c_diagtype
+   <chr>        <date>     <chr>  <chr>     
+ 1 418524316931 2015-02-18 DC73   A         
+ 2 423702115506 2015-03-27 DX091  A         
+ 3 423702115506 2015-03-27 DH17   B         
+ 4 423702115506 2015-03-27 DM204  B           
+ 5 704948858170 2015-01-21 DV081  A         
+ 6 704948858170 2015-01-21 DE781  B         
+ 7 307120402203 2015-10-16 DO58   A         
+ 8 307120402203 2015-10-16 DS899  B         
+ 9 366797950745 2015-06-05 DG09   A         
+10 366797950745 2015-06-05 DD124  B         
+# ℹ 20,189 more rows
+
+
+
+
+Data pipeline
+How to. Indhente variabler fra DS til R og dannelse af population 
+Cecilie 
+
+
+Først skal du gøre dig klart:
+
+1. Hvilke fil-typer er dine filer med variabler gemt som - se eksempler nedenfor? DA dette afgør, hvordan filerne skal håndteres i R og hvilke R-pakker, som du skal hente for at arbejde videre med fil-typerne 
+
+
+Filtype-navn
+	Filtype
+	R-pakke(r)
+	Centrale funktioner
+	Stata
+	.dta
+	haven
+	read_dta(), write_dta()
+	SAS
+	.sas7bdat / .xpt
+	haven
+	read_sas(), read_xpt()
+	SPSS
+	.sav / .por
+	haven
+	read_sav(), write_sav()
+	Parquet
+	.parquet
+	arrow
+	read_parquet(), write_parquet()
+	Feather
+	.feather
+	arrow
+	read_feather(), write_feather()
+	ORC
+	.orc
+	arrow
+	read_orc(), write_orc()
+	CSV
+	.csv
+	readr, data.table
+	read_csv(), fread()
+	TSV
+	.tsv
+	readr
+	read_tsv()
+	JSON
+	.json
+	jsonlite
+	fromJSON(), toJSON()
+	NDJSON
+	.ndjson
+	ndjson, jsonlite
+	stream_in() m.fl.
+	HDF5
+	.h5 / .hdf5
+	rhdf5
+	h5read(), h5write()
+	MATLAB
+	.mat
+	R.matlab
+	readMat()
+	RDS
+	.rds
+	base R
+	readRDS(), saveRDS()
+	RData
+	.rdata / .rda
+	base R
+	load(), save()
+	
+
+
+2. Hvilke variable du ønsker og fra hvilket årstal? 
+
+
+OBS god guideline til at udvælge socioøkonomiske variable: SEPLINE – en ny guideline, der bidrager til at styrke socioøkonomisk epidemiologisk forskning baseret på danske registerdata - Danmarks Statistik 
+
+
+Et dårligt, men dog et overblik over variable på Danmarks Statistik: Variable - Danmarks Statistik 
+
+
+Forstå navngivningen af filer og deres indhold:
+F.eks. “akm2023.sas7bdat” 
+        → akm står for arbejdsklassifikationsmodulet
+        → 2023 er det givne årstal, som data er fra - MÅSKE
+        → .sas7dbat angiver, at det er en sas-filtype, om man kan se ovenfor. 
+
+
+OBS tabel med variabelnavne efter punkt 3!
+
+3. Dannelse af population i R:
+1. lav pakkeliste og load pakker, hvis arbejder i DST
+2. hent data fra f.eks. survey og registerdata
+3. sammenkoble data med pnr (personidentifikationsnummer) - OBS sammenkoble med brug af PNR - obs for store og små bogstaver i R! evt. rename det ene til små bogstaver. Kan herefter sammenkoble data med left_join, right_join mm. afhængigt hvem du er interesseret i som population
+Et komplet eksempel
+Se et fuldt pipeline her:
+
+
+https://r-coding-cafe.zheer.dk/notes/extra/0-simulate-data.html
+https://r-coding-cafe.zheer.dk/notes/extra/1-example-pipeline.html
+
+
+1) Laver først mini-kopier af LMDB, LAB, LPR, bef
+
+
+2) Danner population ud fra det
+
+
+3) Viser eksempel på at indhente baselinekarakteristika + outcome:
+
+
+
+
+Gode pakker og funktioner
+Hjælp til standardfunktioner
+
+
+Hvem:
+Anders
+
+
+   * Cheatsheets:
+   *  Cheatsheets fra udviklerne bag Rstudio (”Posit”):
+   *  https://posit.co/resources/cheatsheets/#ide
+   * Mulighed for at subscribe på linket, så man får besked ved tilføjelse af nye cheatsheets
+   * Cheatsheets fra brugere af Rstudio:
+   * https://rstudio.github.io/cheatsheets/contributed-cheatsheets.html
+ 
+   * R-shortcuts:
+   * Help → Keyboard Shortcuts Help (opt/alt+shift+K)
+   * file:///Applications/RStudio.app/Contents/Resources/app/www/docs/keyboard.htm
+
+
+      * Ctrl-Shift-P: ”Pallette”. Oversigt over stort set alle features/options samt tilhørende shortcuts.
+ 
+
+
+
+
+
+
+
+
+Gode pakker og funktioner at kende:
+
+
+R-pakker er udvidelser af R-sproget. De indeholder funktioner.
+Pakker refereres tit til i curly brackets; eksempelvis {dplyr}.
+
+
+En funktion er noget, der tager et input og manipulerer det - typisk vil det sende et output tilbage, som man kan arbejde videre med. Andre gange giver en funktion blot et udprint / en besked.
+
+
+Funktionskald består af et funktionsnavn efterfulgt af en parentes, hvori funktionens argumenter (inputtet) indsættes; eksempelvis rnorm(n = 10, mean = 0, sd = 1).
+
+
+Formål
+	Pakke
+	Funktion
+	Beskrivelse
+	Eksempel
+	Generel datamanagement
+	{dplyr} og det bredere “tidyverse”
+	
+
+	En suite af forskellige funktioner til at lette data management.
+
+
+Fungrer med pipen (se nedenunder) fra base-R såvel som den fra {magrittr}-pakken.
+	df <- data.frame(x = 1:5, y = 6:10) |>
+mutate(z = x + y) |>
+left_join(df2, by = “x”)
+	“Pipes”
+	Base-R eller tidyverse/magrittr
+	|> 
+
+
+%>%
+	Piping er (blandt andet) en måde at forsimple kode og gøre den mere intuitiv og letlæselig.
+I bund og grund er det en omskrivning af et almindeligt funktionskald, som demonstreret her til højre
+	# I stedet for
+filter(df, x == 2)
+# får man med pipe
+df |> filter(x == 2)
+# pipen putter altså skjult “df” ind, hvor den skal være. Det kan også gøres eksplicit:
+df |> filter(_, x == 2)
+
+
+# pipe vil altid putte objektet ind det først mulige sted i funktionskaldet, med mindre man eksplicit beder om andet:
+x == 2 |> filter(df, _ )
+
+
+# Man kan betragte nested calls som det modsatte:
+print(mutate(filter(df, x == 2), y = x+1))
+# ===>
+df |≥ filter(x == 2) |> mutate(y = x+1) |> print()
+
+
+# Magrittr-pipen (%>%) har særlige evner; den kan bruges hvis noget skal pipes flere steder hen eller til specielle funktioner med unavngivne argumenter:
+df <- 5 %>% sum(., .) #dobbelt-piping
+	Kombinering af flere datasæt:
+
+
+Læs: Mutating joins
+	{dplyr}
+Tidyverse
+	left_join()
+	Sætte kolonner fra to datasæt sammen, som har fælles værdier (eks. PNR-numre)
+	x <- data.frame(PNR = 1:10, p = 101:110)
+y <- data.frame(PNR = 5:15, q = 205:215)
+
+
+x <- left_join(x, y, by = “PNR”)
+# beholder alle rækker i x og vedhæfter kolonner fra y til disse
+	right_join()
+	x <- right_join(x, y, by = “PNR”)
+# som ovenfor men med omvendt fortegn
+	full_join
+	x <- full_join(x, y, by = “PNR”)
+# beholder alle rækker fra både x og y
+	inner_join
+	x <- inner_join(x, y, by = “PNR”)
+# som left_join() men beholder kun de rækker fra x, som havde et match i y.
+	Filtrering:
+
+
+Læs: Filtering joins
+	{dplyr}
+Tidyverse
+	semi_join()
+	Filtrere rækker i x baseret på om der er matches i y.
+Der sker ingen merging, modsat 
+	x <- semi_join(x, y, by=”PNR”)
+#gemmer kun rækker i x MED matches i y
+	anti_join()
+	x <- anti_join(x, y, by=”PNR”)
+#gemmer kun rækker i x UDEN matches i y
+	“Pivots”
+	{tidyr}
+Tidyverse
+	pivot_wider()
+	Data i “langt” format (værdier fordelt ud over mange rækker) kan gøres bredere, så det fordeles over flere kolonner i stedet
+	df <- data.frame(
+PNR = c(1,1,1,2,2,2),
+group = c("short", "medium", "long", "short", "medium", "long"),
+val = c(3,4,7,1,6,3)
+) |> pivot_wider(names_from = group, values_from = val)
+	pivot_longer()
+	Modsatte af ovenfor
+	# omgørelse af eksemplet ovenfor
+df |> pivot_longer(
+cols = c(short, medium, long), 
+names_to = "group")
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+Eksportering & hjemsendelse
+Kristina + Chatten
+
+
+Eksportering og hjemsending af data fra Danmarks Statistik i RStudio
+Når du arbejder med data fra Danmarks Statistik via deres browserløsning og RStudio, er der nogle vigtige retningslinjer og tekniske trin, du skal følge for at sikre korrekt håndtering af data:
+1. Forstå rammerne
+      * Data fra Danmarks Statistik er underlagt GDPR og særlige regler for forskningsdata.
+      * Du må ikke eksportere personhenførbare data direkte til din lokale maskine uden godkendelse.
+      * Eksport og hjemsendelse skal ske i henhold til den aftale, du har med Danmarks Statistik (typisk via Forskningsservice).
+2. Eksportering fra browsermiljøet
+      * I Danmarks Statistiks forskermiljø arbejder du normalt i en sandbox, hvor data ikke må forlades uden kontrol.
+      * Eksport sker typisk via:
+      * Aggregerede resultater (tabeller, figurer) – ikke rådata.
+      * Brug af godkendte funktioner til at generere output (fx write.csv()), som derefter sendes til en outputmappe til kontrol.
+3. Hjemsendelse (outputkontrol)
+      * Når du har genereret dine resultater, skal de godkendes af Danmarks Statistik før hjemsendelse.
+      * Processen:
+      1. Gem dine filer i den godkendte outputfolder i RStudio-miljøet.
+      2. Angiv tydeligt, hvad filerne indeholder (fx dokumentation i README).
+      3. Danmarks Statistik foretager en outputkontrol for at sikre, at ingen persondata eller for detaljerede oplysninger forlader miljøet.
+      4. Efter godkendelse kan du hente filerne via den sikre downloadfunktion.
+4. Praktiske tips i R
+      * Brug write.csv() eller saveRDS() til at gemme dine resultater i outputmappen:
+R
+         1. # Eksempel: Gem en aggregeret tabel
+         2. write.csv(my_summary, "output/my_summary.csv", row.names = FALSE
+
+            * Vis flere linjer
+            * Undgå at gemme rå datasæt – kun aggregerede eller anonymiserede resultater.
+            * Dokumentér dine scripts, så kontrollen kan se, hvordan output er genereret.
+5. God praksis
+            * Tjek altid Danmarks Statistiks vejledninger for outputkontrol.
+            * Sørg for, at dine resultater er tilstrækkeligt aggregerede (ingen små celler, ingen identifikation).
+            * Brug versionsstyring (fx GitHub) til dine scripts – men ikke til data.
+
+
+
+
+7. Eksempel på deling af eksporteret kode (bruger dput()-funktionen til at eksportere R-objekterne uden at konvertere dem til f.eks. csv-format):
+hulmanlab/chatgpt_perception_ai: Scripts for the paper "Changes in public perception of artificial intelligence in healthcare after exposure to ChatGPT"
+Misc tips & tricks
+Handy shortcuts
+
+
+Global options -> code: vælg shortcut til native/magrittr pipe
+CTRL + SHIFT + M: |>
+
+
+OPTION/alt + “-”: <-
+
+
+ctrl-s: gem
+
+
+OPTIONS/CTRL+SHIFT+R: script header
+
+
+OPTIONS/CTRL+ENTER: run selected line/code and go to next
+
+
+COM/ALT+ENTER run selected line and stay on same line
+
+
+COM/CTRL+Z: redo
+
+
+COM/CTRL+SHIFT+Z: redo
+
+
+CTRL + A : marker alt
+
+
+CTRL + SHIFT + A: format/style code
+
+
+CTRL + “pile”:
+
+
+CTRL + SHIFT + “pile”
+Minimal reproducible example
+NB: Læs dette link for konkrete tips til at simulere et lille kopi-datasæt eller se ekemplerne i dette eksempel.
+
+
+
+
+
+
+_________________________________________________________________________________
+How to create a Minimal, Reproducible Example
+Referred to as
+- "minimal, reproducible example" (MRE)
+- "minimal, complete and verifiable example" (MCVE)
+- "minimal, workable example" (MWE), or 
+- a "reprex". 
+Your code examples should be…
+            * Minimal: Use as little code as possible that still produces the same problem
+            * Complete: Provide all parts someone else needs to reproduce your problem in the question itself
+            * Reproducible: Test the code you're about to provide to make sure it reproduces the problem
+For more information on how to debug your program so that you can create a minimal example, Eric Lippert has written a fantastic blog post on the subject: How to debug small programs.
+Minimal
+The more code there is to go through, the less likely people can find your problem. Streamline your example in one of two ways:
+            1. Restart from scratch. Create a new program, adding in only what is needed to see the problem. Use simple, descriptive names for functions and variables – don’t copy the names you’re using in your existing code.
+            2. Divide and conquer. If you’re not sure what the source of the problem is, start removing code a bit at a time until the problem disappears – then add the last part back.
+…but still readable
+Don't sacrifice clarity for brevity when creating a minimal example. Use consistent naming and indentation, and include code comments if needed. 
+Complete
+Make sure all information necessary to reproduce the problem is included as text in the question itself:
+            * DO NOT use images of code. Copy the actual text from your code editor
+            * Use individual code blocks for each file or snippet you include. Provide a description for the purpose of each block.
+Reproducible
+To help you solve your problem, others will need to verify that it exists:
+            * Describe the problem. "It doesn't work" isn't descriptive enough to help people understand your problem. Instead, tell other readers what the expected behavior should be. Tell other readers what the exact wording of the error message is, and which line of code is producing it. Use a brief but descriptive summary of your problem as the title of your question.
+            * Eliminate any issues that aren't relevant to the problem. 
+            * Double-check that your example reproduces the problem! If you inadvertently fixed the problem while composing the example but didn't test it again, you'd want to know that before asking someone else to help.
+It might help to shut the system down and restart it, or transport the example to a fresh environment to confirm it really does provide an example of the problem.
+"The usual suspects"-variabler
+Oversigt over ofte brugte variabler
+
+
+Demografi
+Sociodemografi
+Tabel -> variabel -> processering -> indhold
+Fra bef:
+            * foed_dato
+            * Alder/fødselsdato
+            * koen
+            * Køn
+            * opr_land
+            * Oprindelse
+            * Bopæl (region/kommune)
+            * Samlevende-status
+            * Civilstatus
+akm
+            * Beskæftigelsesstatus
+udda
+            * Uddannelsesniveau
+faik:
+            * Indkomst
+
+
+Død og ind/udvandring
+            * dødsdato
+            * dødsårsag
+            * vandringer
+
+
+Sundhedsdata
+
+
+Lægemidler
+            * lmdb
+            * ATC-kode
+
+
+Blodprøve/laboratoriesvar
+            * lab_forsker
+
+
+Sygehusdiagnoser
+            * LPR-sjov
+            * (ICD-8/ ICD-10)
+            * LPR2, LPR3, LPR_A
+
+
+Procedurekoder
+            * SKS koder
+
+
+Primærsektor/sygesikringsdata
+            * sssy
+            * sysi
+
+
+
+
+Hvilke typer variabler skaber vi typisk ud fra ovenstående rådata (og hvordan)
+
+
+Komorbiditet
+Kobling til index-dato
+
+
+
+
+Komplet variabelliste
+Datasæt og variabelnavne i DST
+
+
+
+
+Filnavn:
+	Link (DST / relevant register):
+	Variable:
+	akmårstal.dataformat
+	AKM (Arbejdsklassifikationsmodulet) — DST dokumentation. (Danmarks Statistik)
+	  
+
+	befårstal.dataformat
+	BEF – Befolkningen (DST variabelliste / Datasætoversigt). (Danmarks Statistik)
+	  
+
+	dodårstal.dataformat
+	DOD – Døde i Danmark (DST variabelliste: DODDATO mv.). (Danmarks Statistik)
+	  
+
+	dodsaarsårstal.dataformat
+	DODSAARS / Dødsårsagsregistret — DST variabelliste (DODSAARS). (Danmarks Statistik)
+
+
+	  
+
+	dodaasgårstal.dataformat
+	(formodet: DODSAASG / Dødsårsagsregister - varianter) — DST extranet variabellister. (Danmarks Statistik)
+	  
+
+	faikårstal.dataformat
+	FAIK - Familieindkomster 
+FAIK - Familieindkomster
+	  
+
+  
+
+  
+
+  
+
+	idapårstal.dataformat
+	IDAP – IDA persondata (DST extranet variabelliste). (Danmarks Statistik)
+	  
+
+  
+
+  
+
+	indårstal.dataformat
+	Indvandrere / Indvandring — DST tema + variabellister (Indvandrere og efterkommere). (Danmarks Statistik)
+	INDVANDRERSTATUS, OPRINDELSESLAND, ANKOMSTDATO, BOPKOM/KOMMUNE, ALDER, KOEN — (typiske; se IND variabelliste i Datasafari). (Danmarks Statistik)
+	lpr_admårstal.dataformat
+	LPR_ADM — Landspatientregisteret (DST ekstranet variabelliste). (Danmarks Statistik)
+	LPR_IDENT, ADM_STARTDATO, ADM_SLUTDATO, BEHANDLINGSDAGE (udgået for ældre år), AFDELING_KODE, REGION … (se LPR_ADM variabelliste). (Danmarks Statistik)
+	lpr_besårstal.dataformat
+	LPR — Landspatientregisteret variabellister (DST / Sundhedsdatastyrelsen). (Danmarks Statistik)
+	BESØGSTYPE, KONTAKTID, HOSPITALSKODE, BEHANDLINGSTYPE — (typiske LPR-besøg/forløbsfelter; verificer i LPR variabelliste). (Danmarks Statistik)
+	lpr_diagårstal.dataformat
+	LPR (diagnosefelter) — LPR variabellister (DST / Sundhedsdatastyrelsen). (Danmarks Statistik)
+	DIAG1, DIAG2, DIAG_KODE, DIAG_STARTDATO, DIAGSLUTDATO (ICD-felter). (Se LPR diag-variabelliste). (Danmarks Statistik)
+	lpr_f_diagnoserårstal.dataformat
+	LPR – (fagdiagnoser/forløbsdiagnoser) — LPR variabellister. (Danmarks Statistik)
+	F_DIAG1, F_DIAGKODE, F_DIAG_DATO — (typiske navne; se LPR dokumentation). (Danmarks Statistik)
+	lpr_f_forloebårstal.dataformat
+	LPR forløb/episoder — LPR variabellister. (Danmarks Statistik)
+	FORLOEB_ID, FORLOEB_START, FORLOEB_SLUT, BEHANDLINGSTYPE (typisk). (Danmarks Statistik)
+	lpr_f_kontakterårstal.dataformat
+	LPR kontakter — LPR variabellister. (Danmarks Statistik)
+	KONTAKT_ID, KONTAKT_DATO, KONTAKT_TYPE, KLINISK_ENHED (typisk). (Danmarks Statistik)
+	lpr_sksoprårstal.dataformat
+	LPR — SKS-operationer/Procedurer (Sundhedsdatastyrelsen / LPR). (Sundhedsstyrelsen)
+	OP_KODE, OP_DATO, OP_TYPE, OP_ENHED — (typiske SKS-feltnavne; se LPR/SDS dokumentation). (Sundhedsstyrelsen)
+	lpr_sksubeårstal.dataformat
+	LPR — SKS-subprocedure/underprocedure felter (LPR variabellister). (Danmarks Statistik)
+	SUBOP_KODE, SUBOP_BESKRIVELSE, SUBOP_DATO — (typisk; kræver variabelliste). (Danmarks Statistik)
+	priv_admårstal.dataformat
+	(Private sygehuse / privat sektoradministration) — dokumentation typisk hos Sundhedsdatastyrelsen / LPR-tilføjelser. (Sundhedsstyrelsen)
+	PRIV_IDENT, PRIV_ADM_START, PRIV_ADM_SLUT, PRIV_ENHED — (estimerede/forkortede navne; verificer i SDST). (Sundhedsstyrelsen)
+	priv_diagårstal.dataformat
+	Private klinikker – diagfelter (Sundhedsdatastyrelsen / LPR privat). (Sundhedsstyrelsen)
+	PRIV_DIAG1, PRIV_DIAGKODE, PRIV_DIAG_DATO — (typisk; se SDST variabellister). (Sundhedsstyrelsen)
+	priv_sksporårstal.dataformat
+	Private SKS-procedurer (SDST/LPR). (Sundhedsstyrelsen)
+	PRIV_OP_KODE, PRIV_OP_DATO, PRIV_OP_ENHED — (typisk; kræver SDST dokumentation). (Sundhedsstyrelsen)
+	priv_sksubeårstal.dataformat
+	Private sub-procedurer (SDST/LPR). (Sundhedsstyrelsen)
+	PRIV_SUBOP_KODE, PRIV_SUBOP_DATO — (typisk). (Sundhedsstyrelsen)
+	sssyårstal.dataformat
+	Social-/sygedagpenge/statistik (DST Sociale forhold-moduler). (Danmarks Statistik)
+	SSSY_VAR1, SSSY_VAR2 — (navne varierer; se relevant social statistik-variabelliste i Datasafari). (Danmarks Statistik)
+	sysiårstal.dataformat
+	System-indikatorer / administrative indikatorer (DST oversigt). (Danmarks Statistik)
+	SYSI_IND, SYSI_DATO, SYSI_ENHED — (typisk; kræver konkret variabelliste). (Danmarks Statistik)
+	uddaårstal.dataformat
+	Uddannelsesstatistik (UDDA / UDDINDSATS) — DST uddannelsesvariabellister. (Danmarks Statistik)
+	UDDNIVEAU, UDD_KODE, UDD_START, UDD_SLUT, ALDER, KOEN, KOMMUNE — (typiske uddannelsesfelter; verificer i UDD variabelliste). (Danmarks Statistik)
+	
+
+
+
+
+
+
+
+
+
+Documentation references for Danish registers
+Documentation references for Danish registers[l]
+
+
+This document contains short descriptions and links to relevant documentation for the registers and variables most commonly used in health research. This list is not exhaustive
+Overview of all registers/tables and their variables, with links to some documentation
+BEF
+Full variable list
+            * pnr: Personnummer
+            * koen: Køn
+            * foed_dag: Fødselsdato
+            * reg: Region
+            * civst: Civilstand
+            * opr_land: Oprindelsesland
+LPR
+LPR2 (from 1977 through 2018)
+Full documentation (scroll to bottom of page for variables, not possible to link directly)
+LPR_ADM
+            * pnr: ID: “Personnummer”
+            * recnum: Contact record number: “Recordnummer”
+            * d_inddto: Date of beginning of a contact (hospital admission or first outpatient consultation): “Kontaktens startdato”
+            * c_spec: Specialty of department: “Stamafdelingens hovedspeciale”
+LPR_DIAG
+Diagnoses prior to 1994 were coded in the ICD-8 schema. Diagnoses from 1994 onward were coded using the ICD-10 schema. The SKS Browser is a great tool to look up diseases and their codes, and especially the Danish variations over the standard ICD-10 codes, e.g. the DZ-subcodes relevant for some outcomes such as uncomplicated pregnancies, and the ZZ procedure codes for examinations and procedures performed (this data is in the sksube table/register, however, and is not currently in the scope of this guide).
+            * recnum: Contact record number: “Recordnummer”
+            * c_diagtype: Diagnosetype (main/hoved/A-diagnose, secondary/bi/B-diagnose, or referral/henvisnings/H-diagnose)
+            * c_diag: Diagnosekode
+LPR3: LPR A (2019 onward)
+Compared to LPR2, LPR3 contains finer-grained data across a patient’s care journey. For example, LPR3 should contain a primary diagnosis for each outpatient consultation, whereas all consultations in a care track (e.g. all recurrent visits as part of diabetes care in a hospital outpatient clinic) in LPR2 would result in only a single primary diagnosis (and secondary diagnoses, if any) mapped to the date of the first and last contact in that care track.
+At the time of writing, LPR A is practically a secret. There is no publicly available official documentation. It is planned to completely supersede the first version of LPR3 (LPR_F, which is no longer available) and will cover all the years of LPR3 data (2019 onward), and even a few years of LPR2 (2017 onward).
+Due to the lack of official documentation, the links provided below may point to documentation on the corresponding variable in LPR2.
+LPR_A_KONTAKT
+DST’s variable list
+            * pnr: ID: “Personnummer”
+            * dw_ek_kontakt : Contact record number
+            * kont_starttidspunkt : Date of contact: “Kontaktens startdato”
+            * kont_ans_hovedspec: Specialty of department: “Stamafdelingens hovedspeciale”
+LPR_A_DIAGNOSE
+DST’s variable list
+            * dw_ek_kontakt : Contact record number
+            * diag_kode_type: Diagnosis code type (main/hoved/A-diagnose vs secondary/bi/B-diagnose vs referral/henvisnings/H-diagnose)
+            * diag_kode: Diagnosekode
+            * senere_afkraeftet: Was the diagnosis later retracted (“Ja” vs. “Nej”)
+
+
+darter kickstarter
+---
+title: "DARTER Kickstarter"
+author: "Anders Aasted Isaksen"
+format: html
+editor: visual
+---
+
+
+## Introduction
+
+
+This Quarto document is intended as a guide to new users of the DARTER project. It contains short descriptions and coding examples of:
+
+
+-   The data structure on Statistics Denmark and why Parquet & DuckDB is a great combination to use in R compared to the SAS-format that stores the raw data by default.
+
+
+-   How to build the dstDataPrep package which allows the user to quickly get an overview of the available register data.
+
+
+-   How to load, filter and join the different register sources.
+
+
+-   How to combine this data with a diabetes cohort defined by the Open-Source Diabetes Classifier
+
+
+-   Examples of coding socio-demographic variables
+
+
+## The Data on Statistics Denmark
+
+
+Raw data for the DARTER project (project ID 708421) is stored in subfolders of E:/rawdata/708421/ in ".sas7bdat"-format. The data can seem a bit overwhelming and messy at first glance, since it is spread across different subfolders depending on the data source and when the data was obtained - and most registers are divided across multiple files (one for each year), which contributes to making it hard to get an overview. In addition, the SAS format is great if you use SAS, but for R it is VERY slow to convert or read.
+
+
+Fortunately, Luke Johnston made a great setup for getting an overview of this data and working with it in R. In this setup, the data is stored in a *DuckDB* database in a format called *Parquet* and accessed via a local R package called *dstDataPrep*. Don't worry, the names and the technical details aren't important! The important thing is that this setup allows you to easily read and work with the data, using standard *dplyr* syntax. And it is VERY fast.
+
+
+## Accessing registers: the dstDataPrep package
+
+
+Since DST resets the local drives regularly, you have to build the dstDataPrep package yourself. This is no problem!
+
+
+How to build the dstDataPrep package from RStudio:
+
+
+First, open the dstDataPrep project:
+
+
+File -\> "Open Project in New Session" -\> Navigate to and open E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj
+
+
+After loading the project, type CTRL-SHIFT-B (keyboard shortcut to build package)
+
+
+Once finished, close that R session.
+
+
+## Loading the data
+
+
+We need to load the dstDataPrep package that we've just built
+
+
+```{r setup}
+library(dstDataPrep)
+```
+
+
+Now, we can get an overview of the different databases currently available by using `list_databases().` A lot of these acronyms might not make a sense to you, but you can google/look up most of them on the documentation pages of dst.dk/times or esundhed.dk.
+
+
+```{r}
+list_databases()
+```
+
+
+Using these acronyms, we can load the data with another function from the dstDataPrep package: `load_database()`. Here we load LMDB, the prescription register (lÃ¦gemiddeldatabasen) and print the first rows and columns. Note that
+
+
+```{r}
+lmdb <- load_database("lmdb")
+
+
+print(lmdb)
+```
+
+
+## Working with the data
+
+
+Working with the data in a DuckDB database can be a bit unintuitive if you are used to working with regular R data files, since your commands aren't actually processed until necessary, e.g. an output is required or the user asks for the data to be loaded into memory using `combine()`.
+
+
+Let's show how to read another commonly-used data source and do some actual work: filtering, joining and combining, using diagnosis data as an example. This data is particularly annoying, since it is spread across two tables (administrative contact information & diagnosis information) and you almost always need to merge two tables. To add to the challenge, the data format was changed in 2019 from LPR2 to LPR3, which lead to the source names being changed (lpr_adm became "kontakter", and lpr_diag became "diagnoser") and most variables were renamed.
+
+
+Here we'll filter the data using standard dplyr syntax and R regular expressions. In the end we'll have a table of only A or B diagnoses of cardiovascular diseases defined by a specific regular expression (defining a range of ICD-10 diagnosis codes). The table contains the ID of the patient, the date of admission, the diagnosis and the type (A or b):
+
+
+```{r}
+# Load LPR2/ICD-10 codes for cardiovascular complication status through time:
+
+
+# Primary/Secondary diagnoses from lpr_diag:
+
+
+# Load LPR2: lpr_diag:
+
+
+lpr_2_diag <- load_database("lpr_diag")
+
+
+# Filter to ICD-10 codes only:
+lpr_2_diag_filtered <- lpr_2_diag %>%
+  filter(
+    C_DIAGTYPE %in% c('A', 'B') &
+      REGEXP_MATCHES(
+        C_DIAG,
+        '^DI2[0-5]|^DI6[0-4]|^DI74|^DI702|^DI739A|^DI50|^DI110|^DI13[02]'
+      )
+  ) %>% select(RECNUM,
+               C_DIAG,
+               C_DIAGTYPE)
+
+
+# Merge LPR2 diag to adm
+
+
+lpr_2_adm <- load_database("lpr_adm")
+lpr_2_adm_filtered <- lpr_2_adm %>% select(PNR,
+                                           D_INDDTO,
+                                           RECNUM)
+
+
+lpr2_icd10_filtered <-
+  lpr_2_diag_filtered |> left_join(lpr_2_adm_filtered) |> select(PNR, D_INDDTO, C_DIAG, C_DIAGTYPE)
+
+
+
+
+# Merge LPR3 diag (diagnoser) to adm (kontakter)
+
+
+# Load diag
+lpr_3_diag <- load_database("diagnoser")
+
+
+lpr_3_diag_filtered <- lpr_3_diag |>
+  mutate(RECNUM = DW_EK_KONTAKT,
+         C_DIAG = diagnosekode,
+         C_DIAGTYPE = diagnosetype) |>
+  filter(
+    REGEXP_MATCHES(
+      C_DIAG,
+      '^DI2[0-5]|^DI6[0-4]|^DI74|^DI702|^DI739A|^DI50|^DI110|^DI13[02]'
+    )
+  ) |>  select(RECNUM,
+               C_DIAG,
+               C_DIAGTYPE)
+
+
+# Load adm:
+lpr_3_adm <- load_database("kontakter")
+lpr_3_adm_filtered <- lpr_3_adm  %>% select(PNR = CPR,
+                                            D_INDDTO = dato_start,
+                                            RECNUM = DW_EK_KONTAKT)
+
+
+# Merge diag to adm:
+
+
+lpr3_icd10_filtered <-
+  lpr_3_diag_filtered |> left_join(lpr_3_adm_filtered) |> select(PNR, D_INDDTO, C_DIAG, C_DIAGTYPE)
+
+
+
+
+
+
+# Combine LPR2 and LPR3:
+
+
+icd10_cvd <-
+  rbind(collect(lpr3_icd10_filtered), collect(lpr2_icd10_filtered))
+
+
+
+
+print(icd10_cvd)
+```
+
+
+This only took about a minute!
+
+
+## Working with DST's formatting tables
+
+
+In the following example, we create a cross-sectional population of individuals living in the municipalities Horsens (KOM=615), Hedensted (KOM=766), Skanderborg (KOM=746) and Odder (KOM=727) with prevalent type 2 diabetes in each year from 2019-2022. First we load the population register *bef* and filter to the needed data. Note that the naming of most registers refers to the end of the year, e.g. the raw file bef202112 contains data on individuals residing in Denmark at the end of the year 2021 (and the data refers to the status of these individuals at that point in time). In the dstDataPrep-database this year-specific information in encoded in the variable "year".
+
+
+```{r}
+bef_db <- load_database("bef")
+
+
+bef_data <-
+  bef_db |> filter(year %in% 2018:2022 &
+                     KOM %in% c(615, 766, 746, 727))  |> select(PNR, FOED_DAG, KOEN, KOM, year)
+
+
+print(bef_data)
+
+
+```
+
+
+The values for sex and municipality don't make much sense, so let's clean up the data a bit before going any further. In the case of sex, it's quite simple to look up the meaning of the 1's and 2's on the documentation for the KOEN variable on dst.dk/times (1's are men and 2's are females). We can quickly encode that by hand:
+
+
+```{r}
+
+
+bef_sex <- bef_data |> mutate(date_of_birth = FOED_DAG, sex = ifelse(KOEN == 1, "M", "F")) 
+
+
+print(bef_sex)
+```
+
+
+Like most of the register variables, the KOM variable has hundreds of potential values, so manually encoding it is not going to work. Instead, we need to use the conversion/formatting tables provided by Statistics Denmark. These are stored in subfolders of `E:\Formater\SAS formater i Danmarks Statistik\SAS_datasaet`, but finding the right table can be tricky, as there are hundreds of different formatting tables, none of which are intuitively names.
+
+
+The "Star" shortcut on the desktop opens the DST formatting table guide (direct link: "file://srvfsenas1/data/Formater/SAS%20formater%20i%20Danmarks%20Statistik/SAS-FORMATER%20I%20DANMARKS%20STATISTIK.html"), which may help you in the right direction, but doesn't link to the sas7bdat-files that you need to read into R, unfortunately.
+
+
+In our case, the municality conversion table is found in the subfolder `E:\Formater\SAS formater i Danmarks Statistik\SAS_datasaet\Geokoder`. The DST formating guide suggests that V4 is the right table to use for the years after 2007 when municipalities were reformed. Depending on the output you want (just text code, just numbers, or both), there are different files with different suffixes ("\_T", "\_K" and "\_KT", respectively).
+
+
+Browsing through the folder, it seems that the `c_kom_v4_t.sas7bdat` file is our best bet here, so let's load it in with the `haven` package:
+
+
+```{r}
+kom_table <-
+  haven::read_sas(
+    "E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Geokoder/c_kom_v4_t.sas7bdat"
+  )
+
+
+print(kom_table)
+```
+
+
+This looks right!
+
+
+Finding the right formatting table file can be tricky, especially for data like education or employment status where there are several hundreds of different tables depending on which output you're looking for. To help you in the right direction, I'll provide the files I usually use below:
+
+
+-   If you want the length of highest attained education (in months), you can use the `E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Disced/n_audd_pria_l1lx_k.sas7bdat`-file.
+-   Likewise, the file to format employment status according the the DISCED classification is `E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Times_personstatistik/n_socio13_t.sas7bdat`
+
+
+Anyway, let's put the formatting tables to use and clean up the municipality variable. This is done by merging the formatting table to the dataset containing the original value/code.
+
+
+Notice that the values in kom_table that correspond to the raw values of the `KOM` variable in `bef` are stored in the `START` variable, so these two variables are what we will use to join the actual municipality names to our dataset:
+
+
+```{r}
+
+
+bef_municipalities <- bef_sex |> left_join(kom_table, by = c("KOM" = "START"))
+
+
+```
+
+
+Wait, why did we receive an error? It's because the formatting tables aren't stored in a database format, so `kom_table` is read into the computers memory. In order to combine the two data objects, we need to also read the `bef` data into the computer's memory, which is stored in the database until we use `collect()`:
+
+
+```{r}
+
+
+bef_municipalities <-
+  collect(bef_sex) |> left_join(kom_table, by = c("KOM" = "START"))
+
+
+print(bef_municipalities)
+```
+
+
+This works - and looks right!
+
+
+Now let's create a table for each year with individuals below age 40. First, we calculate the age of individuals at the end of each year:
+
+
+```{r}
+bef_age <-
+  bef_municipalities |> mutate(age_years = as.duration(interval(date_of_birth, paste0(year, "-12-31"))) / as.duration(years(1)))
+
+
+bef_u40 <- bef_age |> filter(age_years < 40)
+```
+
+
+## Using the OSDC cohort
+
+
+Now let's add diabetes variables from the OSDC (Open Source Diabetes Classifier) diabetes cohort:
+
+
+The OSDC cohort isn't yet available in an R package, but it is generated locally on the DARTER project and ready for use - just load it in:
+
+
+```{r}
+dm_population <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
+
+
+print(dm_population)
+
+
+```
+
+
+Now, we'll join this data to the data we just cleaned. We'll remove some variables in the process.
+
+
+```{r}
+
+
+t2d_population <-
+  dm_population |> filter(diabetes_type == 2) |> select(PNR, diabetes_type, do_dm, age_at_onset)
+
+
+u40_t2d <-
+  bef_u40 |> select(PNR, date_of_birth, sex, municipality = KOM_V4_T, age_years, year) |> left_join(t2d_population, by = "PNR")
+
+
+# Let's see how it worked for those with T2D (those without get NA values)
+print(u40_t2d |> filter(!is.na(diabetes_type)))
+```
+
+
+We're almost there. The diabetes data contains data on diabetes onset at any point in time, and since this is a cross-sectional analysis at a specific point in time, we need to check if an individual's diabetes is prevalent at this specific point in time (was it diagnosed before December 31 of the corresponding year). We will also reformat the sex and municipality variables to factors to ease further analyses.
+
+
+```{r}
+
+
+u40_t2d <-
+  u40_t2d |> mutate(
+    prevalent_diabetes = !is.na(do_dm) & do_dm <= paste0(year, "-12-31"),
+    sex = as.factor(sex),
+    municipality = as.factor(municipality)
+  )
+
+
+print(u40_t2d)
+```
+
+
+Now we're ready to do whatever analyses we want.
+
+
+```{r}
+
+
+u40_t2d <- u40_t2d |> mutate(age_strata = cut(
+  age_years,
+  breaks = c(18, 25, 30, 35, 40),
+  right = FALSE,
+  include.lowest = TRUE
+))
+
+
+table_list <- as.list(2018:2022)
+
+
+
+
+for (year_index in 2018:2022) {
+  table_list[[year_index - 2017]] <-
+    u40_t2d |>  filter(year == year_index) |> finalfit::summary_factorlist(
+      dependent = "prevalent_diabetes",
+      explanatory = c("year", "age_strata", "sex", "municipality"),
+      column = FALSE,
+      digits = c(1, 1, 3, 2, 0)
+    )
+  names(table_list[[year_index - 2017]]) <-
+    c("variable", "levels", "without_T2D", "with_T2D")
+  table_list[[year_index - 2017]] <-
+    table_list[[year_index - 2017]] |> mutate(
+      without_T2D_nopct = as.integer(stringr::word(without_T2D, 1)),
+      with_T2D_nopct = as.integer(stringr::word(with_T2D, 1)),
+      with_T2D_pct = finalfit::round_tidy((with_T2D_nopct + without_T2D_nopct) /
+                                            without_T2D_nopct * 100,
+                                          2
+      )
+    )
+}
+
+
+
+
+# And if we want to export the list of tables to an excel format:
+# openxlsx2::write_xlsx(table_list,
+#                       "E:/workdata/708421/workspaces/aai/horsens_klynge.xlsx")
+
+
+
+
+```
+
+
+## Adding socio-demographic variables
+
+
+This section is under development.
+
+
+```{r}
+# akm table (employment status):
+
+
+# note: akm data is joined to index date by year-1 since akm data for each year corresponds to summary for that whole year (is partly retrospective)
+
+
+akm_db <- load_database("akm")
+
+
+akm_filtered <-
+  akm_db |> filter(year %in% 2011:2021) |> select(PNR, year, SOCIO13)
+
+
+akm_years <- collect(akm_filtered)
+
+
+
+
+
+
+# faik table (family income):
+
+
+# note: faik data is joined to index date by year-1 since faik data for each year corresponds to summary for that whole year (is partly retrospective)
+
+
+# Because family income is tied to the FAMILIE_ID variable, we have to join the PNR numbers within each family in order to get the invididual values.
+
+
+faik_db <- load_database("faik")
+
+
+faik_filtered <-
+  faik_db |> filter(year %in% 2011:2021) |> select(FAMILIE_ID, year, FAMAEKVIVADISP_13)
+
+
+
+
+# here we join the family income to the PNR numbers from the bef data:
+faik_years_pnr <-
+  bef_db |> select(PNR, FAMILIE_ID, year) |> left_join(faik_filtered, by = join_by(FAMILIE_ID, year)) |> filter(PNR, year, FAMAEKVIVADISP_13)
+
+
+faik_years <- collect(faik_years_pnr)
+
+
+setDT(faik_years)
+setkey(faik_years, PNR, year)
+faik_years <- faik_years[, .(PNR, YEAR = year,  FAMAEKVIVADISP_13)]
+
+
+# Recode 3 year mean family income to quintiles for each year:
+
+
+faik_years[, mean_3_years :=
+             zoo::rollapplyr(FAMAEKVIVADISP_13, width = 3, mean, fill = NA, partial = TRUE, na.rm = TRUE), by = PNR]
+
+
+# Recode as factor with proper labels:
+faik_years[!is.na(FAMAEKVIVADISP_13), adj_family_income_quintile := as.numeric(Hmisc::cut2(mean_3_years, g = 5)),
+           by = .(YEAR)]
+#faik_years[, adj_family_income_percentile := as.numeric(Hmisc::cut2(mean_3_years, g = 100)),
+#           by = .(YEAR)]
+faik_years[, adj_family_income_quintile :=
+             factor(adj_family_income_quintile)]
+
+
+
+
+
+
+
+
+# udda table (highest attained educational status):
+
+
+# note: udda data is joined to index date by year-1 since udda data for each year corresponds to education status at end-of-year
+
+
+
+
+udda_db <- load_database("udda")
+
+
+udda_filtered <-
+  udda_db |> filter(year %in% 2011:2021) |> select(PNR, YEAR = year, HFAUDD)
+
+
+udda_years <- collect(udda_filtered)
+setDT(udda_years)
+setkey(udda_years, PNR, YEAR = year)
+
+
+# Join socio-demographic covariates to population dataset ------------------------------------------
+
+
+# Time-varying covariates:
+
+
+# Note YEAR is the year prior to index date:
+
+
+pop_covars_all <-
+  Reduce(
+    function(x, y)
+      merge(x, y, by = c("PNR", "YEAR"), all.x = TRUE),
+    list(study_pop_outcomes[, YEAR := year(do_dual_diagnosis) - 1],
+         bef_years_clean,
+         faik_years[, .(PNR, YEAR, adj_family_income_quintile)],
+         akm_years,
+         udda_years)
+  )
+```
+
+
+### Recoding the values
+
+
+This section is under development (currently in data.table format)
+
+
+```{r}
+# Employment status:
+
+
+# Load formatting table:
+socio13 <- as.data.table(read_sas("E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Times_personstatistik/n_socio13_kt.sas7bdat"))
+
+
+# Andre inkl. B&U og uregistrerede.
+socio13[, employment_status := as.factor(ifelse(
+  grepl("210|220|321|330", START),
+  "Unemployed",
+  ifelse(grepl("322|323", START), "Retired",
+         "Employed, student or other")
+  # includes ~250.000 code 410 "Other" nationwide.
+))]
+
+
+
+
+# Merge to
+pop_covars_empl <- merge(pop_covars_all,
+                        socio13[,.(START, employment_status)],
+                        by.x = "SOCIO13",
+                        by.y = "START",
+                        all.x = T)
+
+
+# Education level (years)
+# Defined as the sum of:
+# The norm duration of the highest attained education
+# plus the duration of education required for admission to the highest attained education
+
+
+# Load duration table:
+pria <- as.data.table(read_sas("E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Disced/n_audd_pria_l1lx_k.sas7bdat"))
+
+
+# Merge formatting to data:
+pop_covars_educ <- merge(pop_covars_empl,
+                        pria[,.(START, education_months = AUDD_PRIA_L1LX_K)],
+                        by.x = "HFAUDD",
+                        by.y = "START",
+                        all.x = T)
+
+
+# Classify as categorical
+# (since education time is "blocks" of time from each level of the education system, rather than linear):
+pop_covars_educ[, education_years := cut(
+  as.numeric(education_months) / 12,
+  breaks = c(0, 10, 15, Inf),
+  include.lowest = T,
+  right = TRUE
+)]
+```
+
+
+Fane 21
+
+
+Fane 22
+
+
+[a]pakke::funktion()
+[b]Rigtig god intro. let at forstå
+[c]Lidt svært at forstå. måske lidt kortere og simplere?
+[d]Godt og let at forstå
+[e]det er den her del jeg bliver forvirret over, se næste kommentar
+[f]Jeg mangler lidt forståelse for hvad der sker i dette afsnit. Der er flere ting jeg har svært ved at læse: 
+
+
+1. Hvor skriver du hvor data hentes fra i denne kode? Kunne man lave koden så det ligner en rigtig sti på DST? Jeg synes denne kode er svær at omsætte til mit eget projekt, da jeg ikke ved hvad mange af funktionerne gør, og om det er almengyldige koder, eller om det er et "eksempel", f.eks. den første linje, er det så et dataset der hedder "data-parquet"?
+
+
+2. Loader du data ind her? Det ligner at du først loader data ind i koden på næste side, men hvad er det så der sker her?
+
+
+3. Er denne kode den man skal bruge hvis man skal omdanne de ca. 30 BEF tabeller til en samlet tabel? Og hvor i DST gemmer man denne fil - er det i sin egen mappe?
+
+
+4. Et bedre overblik over hvad der sker i hver kode-del. Der står godt nok "Setup synthetic data", men hvad betyder det? 
+
+
+5. Det store problem for mig er, at dataset ligger i årstal, så der er 30 forskellige BEF-dataset som man skal samle til 1. Kunne man kort beskrive hvordan man koder det sammen til 1 dataset (medmindre det er det du gør her?)
+
+
+Beklager den meget lange kommentar, men nu fik du lige alle mine umiddelbare tanker som en low-level koder:)
+[g]er det her så package::function ?
+[h]er det her så package::function ?
+[i]Er year en kolonne i dette syntetiske datasæt? Hvad gør man i virkeligheden, hvor man har en mappe med bef og årstal ligger i filnavnet f.eks. bef201512.parquet? Kan man betinge på en del af filnavnet som år, altså skrive at den skal bruge 2015 som year?
+[j]Er disse tasks det som du gennemgår i koden nedenfor? For så ville det give mening at skrive at eksempel vises nedenfor, og så strømline tal og overskrifter i tasks her, og koden nedenfor. F.eks. 1. i tasks hedder Load in BEF og i koden nedenfor hedder 1. Load data into DuckDB.
+[k]Der mangler slutparentes. Og jeg forstår ikke hvad fastreg er? Det ligner ikke en pakke der skal downloades? Ved ikke om det forvirrer mere end det gavner?
+[l]Virkelig godt afsnit og let at forstå. måske parentes med engelsk oversættelse, hvis udenlandske forskere skal benytte det?

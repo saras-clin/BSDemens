@@ -1,0 +1,574 @@
+================================================================================
+FUNCTIONS GUIDE — BS & DEMENTIA PROJECT
+================================================================================
+Explains every R function used across the pipeline files.
+Organised by category. For each function: what it does, why it is used here,
+and a plain-language example where helpful.
+================================================================================
+
+
+================================================================================
+THE PIPE — %>%
+================================================================================
+
+  x %>% f(y)   is the same as   f(x, y)
+
+  The pipe passes the result on the left as the FIRST argument to the function
+  on the right. It lets you read code top-to-bottom as a sequence of steps
+  instead of nesting functions inside each other.
+
+  Example — without pipe:
+    collect(filter(select(lpr_adm, pnr, recnum), pnr %in% my_pnrs))
+
+  Example — with pipe (much easier to read):
+    lpr_adm %>%
+      select(pnr, recnum) %>%
+      filter(pnr %in% my_pnrs) %>%
+      collect()
+
+  The pipe comes from the magrittr package, re-exported by dplyr.
+  All files have library(dplyr) so %>% is always available.
+
+
+================================================================================
+DATA LOADING
+================================================================================
+
+  load_database("name")
+    From the dstDataPrep package (DST-specific).
+    Opens a connection to a parquet folder on the DST server.
+    The result is a LAZY reference — data is NOT read into R memory yet.
+    You add filter/select steps, then call collect() at the end to pull data in.
+    Used for: bef, dod, lpr_adm, lpr_diag, kontakter, diagnoser, lmdb,
+              t_psyk_adm, t_psyk_diag, udda, faik, akm, t_sksopr.
+
+  readRDS("path/file.rds")
+    Reads a saved R object from disk into memory.
+    Used for: full_cohort.rds, bs_cohort.rds, extract_*.rds, ses_data.rds.
+
+  arrow::read_parquet("path/file.parquet")
+    Reads a single parquet file directly into memory as a data frame.
+    Used for: dbso.parquet (the DBSO weight registry).
+    Different from load_database() which works with partitioned parquet folders.
+
+  haven::read_sas("path/file.sas7bdat")
+    Reads a SAS data file into R. Used only in prepare_dbso.R to load
+    the raw DBSO file from SunDK before converting it to parquet.
+
+  saveRDS(object, "path/file.rds")
+    Saves any R object to disk in R's native format. Used to save all
+    intermediate extract_*.rds files and the final study1_clean.rds.
+
+  arrow::write_parquet(df, "path/file.parquet")
+    Saves a data frame as a parquet file. Used in prepare_dbso.R
+    to convert DBSO from SAS to parquet.
+
+  file.path(dir, "filename.rds")
+    Builds a file path by pasting folder + filename correctly for the OS.
+    Safer than paste0() because it handles slashes automatically.
+
+  file.exists("path")
+    Returns TRUE/FALSE — used to check whether a required file is present
+    before trying to read it, so errors are informative rather than cryptic.
+
+  dir.create(path, showWarnings = FALSE, recursive = TRUE)
+    Creates a folder if it does not already exist.
+    recursive = TRUE creates any missing parent folders too.
+
+
+================================================================================
+COLUMN NAME STANDARDISATION
+================================================================================
+
+  rename_with(tolower)
+    Lowercases ALL column names in one step.
+    DST registers use uppercase or mixed-case names (e.g. PNR, KOEN, D_INDDTO).
+    After rename_with(tolower) everything is lowercase and consistent.
+    Used immediately after every load_database() call.
+
+  rename(new_name = old_name)
+    Renames one or more specific columns.
+    Used e.g. rename(surgery_date = index_date) to harmonise naming across files.
+
+  names(df)
+    Returns the column names of a data frame as a character vector.
+
+
+================================================================================
+dplyr — COLUMN SELECTION AND CREATION
+================================================================================
+
+  select(col1, col2, new_name = old_name, -drop_col)
+    Keeps only the listed columns. Can rename at the same time.
+    -col_name drops a column. Used constantly to keep only what is needed
+    before collect() so less data crosses the parquet-to-R boundary.
+
+  mutate(new_col = expression)
+    Adds a new column or modifies an existing one. Does not change the number
+    of rows. Used for: date arithmetic, creating icd3/icd4 substrings, making
+    factor variables, computing age, flagging conditions (1L/0L), etc.
+
+  transmute(...)
+    Like mutate() but drops ALL columns that are not explicitly listed.
+    Used in build_bs_cohort() to output only the five needed columns.
+
+  rename_with(fn, cols)
+    Applies a function to column names. rename_with(tolower) applies tolower()
+    to all column names at once.
+
+  case_when(cond1 ~ val1, cond2 ~ val2, TRUE ~ default)
+    Vectorised if-else with multiple conditions. Evaluates conditions in order
+    and returns the value for the FIRST condition that is TRUE.
+    TRUE ~ default acts as the "else" at the end.
+    Used for: education categories, income categories, occupation categories,
+              sep_category, surgery_period, age_cat, diabetes labels.
+
+  if_else(condition, true_value, false_value)
+    Simple two-way conditional. Stricter than base ifelse() — requires both
+    true_value and false_value to be the same type. Used for single conditions.
+
+  coalesce(x, replacement)
+    Replaces NA values with the replacement value.
+    coalesce(flag_col, 0L) turns NA (= not found in join) into 0 (= absent).
+    Used after every left_join() that produces flag columns.
+
+  across(cols, fn)
+    Applies a function to multiple columns at once inside mutate() or summarise().
+    across(all_of(nmi_vars)) selects columns by a character vector of names.
+    Used in compute_multimorbidity_count() to sum across all condition flags.
+
+  all_of(character_vector)
+    Helper for across() and select() — selects columns whose names are in
+    the supplied character vector. Errors if any name is missing (safe).
+
+  rowSums(matrix, na.rm = TRUE)
+    Adds up values across columns for each row. Used in extract_nmi() to compute
+    the weighted NMI score and in compute_multimorbidity_count() to count
+    how many conditions each person has.
+
+
+================================================================================
+dplyr — ROW FILTERING AND DEDUPLICATION
+================================================================================
+
+  filter(condition1, condition2, ...)
+    Keeps only rows where ALL conditions are TRUE.
+    Multiple conditions are combined with AND (use | inside filter for OR).
+    Used for: date windows, ICD code matching, cohort inclusion/exclusion.
+
+  distinct(col1, col2)
+    Removes duplicate rows. distinct(pnr) keeps the first occurrence of each
+    unique pnr — used to collapse multiple contacts per person into one row
+    (we only need to know whether a person ever had a condition, not how many
+    times they were diagnosed).
+
+  slice(n)
+    Keeps only the nth row within each group (when used after group_by).
+    slice(1) after arrange(desc(aar)) keeps the most recent record per person.
+
+  slice_min() / slice_max()
+    Like slice() but selects the row with the minimum/maximum value of a column.
+    Alternative to arrange() + slice(1) for a single column.
+
+
+================================================================================
+dplyr — GROUPING AND AGGREGATION
+================================================================================
+
+  group_by(col1, col2)
+    Splits the data into groups. All subsequent operations (arrange, slice,
+    summarise, mutate) happen separately within each group.
+    Always ungroup() afterwards to avoid unexpected grouped behaviour later.
+
+  ungroup()
+    Removes grouping. Best practice to call this after any group_by() + slice()
+    sequence, otherwise the data frame stays grouped and later operations
+    can behave unexpectedly.
+
+  arrange(col)  /  arrange(desc(col))
+    Sorts rows by a column, ascending by default. desc() reverses to descending.
+    Used with group_by() + slice(1) to get the most recent record per person:
+      group_by(pnr) %>% arrange(desc(aar)) %>% slice(1)
+
+  summarise(new_col = fn(col), .groups = "drop")
+    Collapses each group to one summary row.
+    .groups = "drop" removes grouping automatically after summarising.
+    Used in build_obesity_comparator() to compute earliest_e66 per person:
+      group_by(pnr) %>% summarise(earliest_e66 = min(date_contact, na.rm = TRUE))
+
+  ntile(x, n)
+    Assigns each row to one of n equal-sized groups (quintile buckets).
+    ntile(income, 5) creates quintiles 1-5. Used in extract_ses.R for income.
+
+  n()
+    Counts rows within a group. Used inside summarise() or mutate().
+    e.g. summarise(n_rx = n()) counts prescriptions per person per period.
+
+
+================================================================================
+dplyr — JOINING TABLES
+================================================================================
+
+  inner_join(y, by = "key")
+    Keeps ONLY rows that exist in BOTH tables.
+    Used when you need a match to be meaningful — e.g. inner_join(bs_cohort)
+    keeps only contacts that belong to someone in the study cohort.
+
+  left_join(y, by = "key")
+    Keeps ALL rows from the LEFT table. Rows in the left table with no match
+    in y get NA for the columns coming from y.
+    Used when adding flags: everyone stays in the result, flagged or not.
+
+  bind_rows(df1, df2, ...)
+    Stacks data frames vertically (same as rbind but more flexible).
+    Used to combine LPR2 + LPR2-psychiatric + LPR3 diagnoses into one table,
+    and to combine the three cohorts (BS + GP + Obesity) into full_cohort.
+
+
+================================================================================
+dplyr — RESHAPING
+================================================================================
+
+  pivot_wider(names_from = col, values_from = col, names_prefix = "prefix")
+    Turns a long table (one row per person per time period) into a wide table
+    (one row per person, one column per time period).
+    Used in extract_weight_outcomes() and extract_insulin_outcomes() to go from
+    one row per exam visit to one row per person with columns like weight_kg_12mo.
+
+
+================================================================================
+dplyr — DATABASE EXECUTION
+================================================================================
+
+  collect()
+    Executes the lazy query and pulls data from the parquet files into R memory.
+    Everything before collect() runs as a DuckDB query on disk (fast, no memory use).
+    collect() is the moment data actually crosses into R. Call it LATE — after all
+    filter() and select() steps — so only the needed subset is loaded.
+
+  !! (bang-bang operator, used inside dplyr verbs)
+    Injects a local R variable into a dplyr/DuckDB query.
+    filter(pnr %in% !!pnr_vector) passes the R vector pnr_vector into the query.
+    Without !!, dplyr would look for a column called "pnr_vector" instead.
+
+  !!col_name := value  (inside mutate)
+    Creates a column whose NAME comes from a variable.
+    mutate(!!condition_name := 1L) creates a column named whatever string is
+    stored in condition_name (e.g. "mi", "stroke_tia"). := is required when
+    the left side of an assignment is dynamic (not a fixed name).
+
+
+================================================================================
+BASE R — STRING OPERATIONS
+================================================================================
+
+  substr(string, start, stop)
+    Extracts a portion of a string by character position.
+    substr(c_diag, 2, 4)  strips the DST "D" prefix and returns 3 characters
+                           (e.g. "DG30" -> "G30").
+    substr(c_diag, 2, 5)  returns 4 characters (e.g. "DI110" -> "I110").
+
+  paste0(x, y)
+    Concatenates strings with no separator. paste0("C", 10:43) produces
+    "C10", "C11", ..., "C43" — used to build ICD code lists compactly.
+
+  paste(x, y, sep = "_")
+    Concatenates strings with a separator. paste(sex, birth_year, sep="_")
+    creates a key like "1_1975" for the pool split.
+
+  toupper(x) / tolower(x)
+    Converts strings to upper/lower case.
+    toupper(c_opr) ensures procedure codes match regardless of case in the register.
+
+  grepl(pattern, x)
+    Returns TRUE/FALSE for each element of x that matches the regex pattern.
+    grepl("^C34", icd4) matches any 4-char ICD starting with C34.
+    Used in extract_nmi() to test each ICD code against the 29 NMI patterns.
+
+  substr(as.character(hfaudd), 1, 2)
+    Converts HFAUDD to string first (in case it was read as numeric),
+    then takes the first 2 characters to get the education level group.
+
+
+================================================================================
+BASE R — VECTOR OPERATIONS
+================================================================================
+
+  unique(x)
+    Removes duplicate values. unique(bs_cohort$pnr) gives each person ID once,
+    so we do not query the same person multiple times.
+
+  c(val1, val2, ...)
+    Creates a vector. c("F00","F01","F02") creates a character vector of ICD codes.
+    c(dx_B18=10, dx_C34=19) creates a named numeric vector of NMI weights.
+
+  %in%
+    Tests whether each element of the left vector is in the right vector.
+    filter(icd3 %in% dementia_codes) keeps rows where icd3 matches any of the codes.
+
+  is.na(x)
+    Returns TRUE where x is missing (NA). Used in filter(!is.na(pnr)) to drop
+    rows with missing person IDs, and in coalesce() conditions.
+
+  !  (NOT)
+    Logical negation. filter(!pnr %in% bs_pnrs) keeps rows NOT in the BS list.
+    filter(!is.na(date_dementia)) keeps rows where date_dementia is not missing.
+
+  as.integer(x) / 1L
+    Converts to integer type. The L suffix (1L, 0L) creates integer literals.
+    Flags are stored as integer (1L/0L) not double (1/0) to save memory.
+
+  as.numeric(x)
+    Converts to numeric (double). Used for date differences:
+    as.numeric(difftime(date1, date2, units = "days")) gives a plain number.
+
+  as.Date(x)
+    Converts character or numeric to a Date object.
+    DST registers sometimes store dates as POSIXct (datetime with time zone) —
+    as.Date() strips the time part and gives a plain calendar date.
+
+  as.character(x)
+    Converts to character string. Used for pnr (CPR numbers must always be
+    character, never numeric — leading zeros would be lost as numeric).
+
+
+================================================================================
+BASE R — MATHEMATICAL AND STATISTICAL
+================================================================================
+
+  min(x, na.rm = TRUE) / max(x, na.rm = TRUE)
+    Minimum/maximum of a vector, ignoring NA values.
+    Used in summarise() to find earliest E66 date per person.
+
+  pmin(x, y, na.rm = TRUE) / pmax(x, y, na.rm = TRUE)
+    Element-wise (parallel) min/max: compares two vectors position by position.
+    pmin(death_date, "2025-12-31") returns whichever is earlier for each person.
+    pmax(flag1, flag2) returns 1 if either flag is 1 (used for icd3+icd4 merging).
+
+  rowSums(matrix, na.rm = TRUE)
+    Sums each row of a matrix. Used in two places:
+    1. NMI score: rowSums(flag_matrix * weight_vector) = weighted score per person.
+    2. Multimorbidity count: rowSums(condition_flags) = how many conditions present.
+
+  sweep(matrix, margin, values, FUN)
+    Applies a vector of values to each row (margin=1) or column (margin=2) of a matrix.
+    sweep(flag_matrix, 2, weights, "*") multiplies each column by its NMI weight.
+    The result is then passed to rowSums() to get the weighted sum per person.
+
+  as.matrix(df[, cols])
+    Converts selected columns of a data frame to a numeric matrix.
+    Needed before sweep() and rowSums() which expect a matrix, not a data frame.
+
+  difftime(date1, date2, units = "days")
+    Computes the difference between two dates.
+    as.numeric(difftime(surgery_date, birth_date, units="days")) / 365.25
+    gives age at surgery in years.
+
+  year(date)  [from lubridate]
+    Extracts the year from a Date. year(surgery_date) gives e.g. 2015.
+
+  sample(x, size)
+    Draws size elements at random from vector x, without replacement by default.
+    Used in the comparator matching loops to randomly select matched controls.
+
+  set.seed(n)
+    Sets the random number generator seed so results are reproducible.
+    set.seed(42) before sample() means the same controls are selected every run.
+
+
+================================================================================
+BASE R — LIST AND LOOP OPERATIONS
+================================================================================
+
+  split(df, group_vector)
+    Splits a data frame into a list of sub-data-frames, one per unique value
+    of group_vector. Returns a named list — the name is the group value.
+    split(pool[, c("pnr","death_date")], paste(koen, birth_year, sep="_"))
+    creates one data frame per sex+birth_year combination for fast lookup.
+
+  names(list)  /  names(list)[[k]]
+    Names of the list elements. Used to iterate: for(name in names(dx_patterns))
+
+  vector("list", n)
+    Creates an empty list of length n. Pre-allocated before a loop so R does
+    not need to grow the list on each iteration (faster for large n).
+
+  seq_len(n)
+    Creates the integer sequence 1, 2, ..., n. Safer than 1:n when n might be 0.
+    Used as the loop index: for(i in seq_len(nrow(bs_key)))
+
+  unlist(list, use.names = FALSE)
+    Flattens a list of vectors into one long vector. No longer used in the pool
+    loops (replaced by bind_rows), but still used elsewhere for combining results.
+
+
+================================================================================
+BASE R — PRINTING AND DIAGNOSTICS
+================================================================================
+
+  cat("text\n")
+    Prints text to the console without quotes. \n creates a newline.
+    Used in main functions to show progress: cat("Extracting NMI score...\n")
+
+  print(x)
+    Prints an R object to the console with formatting.
+
+  message("text")
+    Like cat() but prints to stderr, useful for warnings that should stand out.
+
+  nrow(df)
+    Number of rows in a data frame. Used to print cohort sizes and check counts.
+
+  stop("message")
+    Throws an error and halts execution. Used to give informative errors when
+    required files are missing (e.g. if DBSO parquet file not found).
+
+
+================================================================================
+CUSTOM PROJECT FUNCTIONS
+================================================================================
+
+  -- build_cohorts.R --
+
+  get_prior_dementia_pnrs(pnr_vector, before_dates)
+    Queries LPR2 somatic + LPR2 psychiatric + LPR3 for dementia codes (F00-F03,
+    G30-G31) and returns the subset of pnrs that had a diagnosis before their
+    cutoff date. Used to exclude prevalent dementia from all cohorts.
+
+  get_prior_bs_pnrs(pnr_vector)
+    Returns pnrs with any bariatric surgery procedure code (KJDF10/11/40/41/96/97)
+    in LPR2 (via t_sksopr). Used to exclude prior BS from comparator pools.
+
+  get_bef_demographics(pnr_vector)
+    Returns one row per person with koen, foed_dag, birth_year from BEF
+    (most recent record). Used for matching key and age calculations.
+
+  build_bs_cohort()
+    Loads bs_cohort.rds, applies exclusions (death before surgery, age < 18,
+    < 5 year history, pre-surgery dementia), formats output.
+
+  build_gp_comparator(bs_cohort)
+    Builds the 1:25 matched general population cohort. Pre-splits BEF pool by
+    sex + birth_year, then loops over BS patients sampling matched controls.
+    Filters to candidates alive at each specific index date.
+
+  build_obesity_comparator(bs_cohort)
+    Builds the 1:5 matched obesity cohort. Same as GP but restricted to persons
+    with E66 diagnosis before their matched BS patient's index date.
+
+  main_build_cohorts()
+    Orchestrates steps 1-3, combines all three cohorts, flags crossover BS
+    surgery in comparators, saves full_cohort.rds.
+
+
+  -- extract_outcomes_covariates.R --
+
+  get_lpr_diagnoses(pnr_vector, diagtypes, inpatient_only)
+    Core helper: queries LPR2 somatic + LPR2 psychiatric + LPR3 and returns
+    one row per diagnosis contact with: pnr, date_contact, icd3, icd4.
+    diagtypes: which diagnosis types to include (A=primary, B=secondary, G=other).
+    inpatient_only: if TRUE, filters to inpatient contacts only (Study 2 outcomes).
+
+  load_full_cohort()
+    Reads full_cohort.rds and renames index_date -> surgery_date so extraction
+    functions work identically for BS patients and comparators.
+
+  extract_demographics(bs_cohort)
+    Pulls sex, birth date from BEF; death date from DOD; computes age and
+    follow_up_end. Output: extract_demographics.rds.
+
+  extract_dementia_outcomes(bs_cohort)
+    Finds first post-surgery contact with any dementia code. Separately identifies
+    first Alzheimer's date and first vascular dementia date. Output: extract_dementia.rds.
+
+  extract_weight_outcomes(bs_cohort)
+    Reads DBSO parquet, matches exam dates to pre-defined windows (pre-op, 3/6/12/24mo),
+    computes TWL, %TWL, %EWL. BS patients only. Output: extract_weights.rds.
+
+  extract_insulin_outcomes(bs_cohort)
+    Counts insulin prescriptions (ATC A10A) from lmdb per time period (baseline,
+    3mo, 6mo, 12mo). BS patients only. Output: extract_insulin.rds.
+
+  extract_hospital_contacts(bs_cohort)
+    Finds first ACUTE INPATIENT admission for each of six conditions post-surgery
+    (hyperglycemia, hypoglycemia, self-harm, substance abuse, trauma, complications).
+    Calls get_lpr_diagnoses with inpatient_only=TRUE. Output: extract_hospitals.rds.
+
+  extract_baseline_comorbidities(bs_cohort)
+    Flags 33 GMC conditions from LPR (5-year lookback, all contact types, A+B+G
+    diagnosis types). Includes icd4-level refinements for peptic ulcer and liver.
+    Output: extract_comorbidities.rds.
+
+  extract_nmi(bs_cohort)
+    Computes the Kristensen 2022 Nordic Multimorbidity Index: 29 ICD groups
+    (5-year lookback) + 21 ATC groups (6-month lookback). Returns a single nmi_score
+    per person (weighted sum, two negative weights for ARBs and statins).
+    Output: extract_nmi.rds.
+
+  extract_baseline_medications(bs_cohort)
+    Flags antihypertensive, lipid-lowering, insulin, antidepressant, antidementia
+    prescriptions from lmdb (5-year lookback). Output: extract_medications.rds.
+
+  extract_diabetes_classification(bs_cohort)
+    Reads the OSDC pre-computed cohort file and classifies each person as
+    T1D / T2D / No_diabetes. Output: extract_diabetes.rds.
+
+  main_extraction()
+    Runs all extract_*() functions in sequence, saves each to disk.
+
+
+  -- extract_ses.R --
+
+  extract_ses(bs_cohort)
+    Extracts education (UDDA), income (FAIK via BEF), occupation (AKM) at the
+    year before surgery. Computes sep_category composite. Output: ses_data.rds.
+
+  main_ses_extraction()
+    Wrapper that loads full_cohort and runs extract_ses().
+
+
+  -- data_management_dementia.R --
+
+  load_rds(name)
+    Helper that reads a .rds file from path_output by filename.
+
+  load_and_merge()
+    Reads all extract_*.rds and ses_data.rds, joins them into one data frame
+    on pnr. The nmi_score (weighted) column comes from extract_nmi.rds.
+
+  apply_exclusions(df)
+    Safety check: removes anyone whose date_dementia <= surgery_date (prevalent
+    dementia that slipped through the cohort-level exclusion, e.g. F-code cases
+    from LPR2 psychiatric). Prints a count so you know if it fires.
+
+  combine_icd_rx_flags(df)
+    Creates hypertension_combined and dyslipidemia_combined by combining
+    ICD diagnosis flags with prescription flags (ICD alone under-counts both
+    conditions because they are often managed only in primary care).
+
+  compute_multimorbidity_count(df)
+    Counts how many of the 33 GMC conditions each person has. Produces nmi_count
+    (integer) and nmi_cat ("0"/"1"/"2"/"3+"). This is NOT the same as nmi_score.
+
+  format_variables(df)
+    Converts raw columns to factors with explicit reference levels, computes
+    censor_date, event indicators (dementia_event etc.), follow_up_days,
+    age_cat, surgery_period. Makes the data frame ready for Cox regression.
+
+  main_data_management()
+    Orchestrates all steps, prints cohort sizes and event counts,
+    saves study1_clean.rds.
+
+
+================================================================================
+PACKAGE SUMMARY — WHAT EACH LIBRARY PROVIDES
+================================================================================
+
+  library(dstDataPrep)   load_database() — DST-specific parquet connector
+  library(dplyr)         %>%, filter, select, mutate, join, group_by, arrange, etc.
+  library(tidyr)         pivot_wider() — reshaping long to wide
+  library(lubridate)     year(), as.Date(), difftime() with nice date handling
+  library(arrow)         read_parquet(), write_parquet() — parquet file I/O
+  library(haven)         read_sas() — reading SAS data files (00b only)
+
+================================================================================

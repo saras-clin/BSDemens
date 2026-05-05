@@ -1,0 +1,260 @@
+# ============================================================================
+# VARIABLE DICTIONARY
+# ============================================================================
+# This file documents all variables needed for both studies
+# ONLY outcomes and covariates - exposure (bariatric surgery cohort) already exists
+# ============================================================================
+
+# ============================================================================
+# STUDY 1: BARIATRIC SURGERY & DEMENTIA
+# ============================================================================
+
+## PRIMARY OUTCOMES ----
+# Outcomes: All-cause dementia, Alzheimer's disease, Vascular dementia
+# Source: LPR (somatic + psychiatric) - ICD-10 codes have "D" prefix in registers (e.g. "DG30")
+# ICD-10 codes (use substr(diag, 2, 4) to strip the D prefix when matching):
+#   All-cause dementia: F00, F01, F02, F03, G30, G31
+#   Alzheimer's disease: G30, F00
+#   Vascular dementia: F01
+#   Other specified dementia: F02 (in other diseases classified elsewhere)
+#   Unspecified dementia: F03
+# Variables needed:
+#   pnr: personal identification number
+#   date_dementia: date of first diagnosis (post-surgery)
+#   dementia_type: "Alzheimers", "Vascular", "All_cause"
+
+## COVARIATES - BASELINE (5 years before surgery) ----
+
+### Demographics
+#   pnr: from BEF
+#   age: calculated from birth_date at surgery
+#   sex: koen in BEF (1=Male, 2=Female)
+#   birth_date: foed_dag in BEF
+
+### Nordic Multimorbidity Index (NMI) - Full condition list (GMC algorithm)
+# Source: LPR (lpr_adm + lpr_diag for LPR2; kontakter + diagnoser for LPR3)
+# Note: some conditions require BOTH a diagnosis AND prescription to be confirmed
+#   (see GMC algorithm in firstapperancediag2021.R). For baseline covariates we use
+#   diagnosis OR prescription (whichever appears first in lookback window).
+#
+#   Hypertension:         I10-I15 OR antihypertensives (C02, C03, C07-C09) in LMDB
+#   Dyslipidemia:         E78 OR lipid-lowering (C10) in LMDB
+#   IHD/Angina:           I20, I24, I25
+#   Atrial fibrillation:  I48
+#   Heart failure:        I50
+#   PAD:                  I70-I74
+#   Stroke/TIA:           I60-I64, I69, G45
+#   MI:                   I21-I23
+#   Diabetes (any):       E10-E14 (type classified via OSDC - see extract_diabetes_classification)
+#   Thyroid disorders:    E00-E07
+#   Gout:                 E79, M10
+#   COPD:                 J40-J44, J47
+#   Asthma:               J45-J46
+#   Allergy:              J301-J304, L23, L500, T780, T782, T784
+#   Peptic ulcer:         K221, K25-K28, K293-K295
+#   Liver disease:        B16-B19, K70-K75, K766, I85
+#   IBD:                  K50-K51
+#   Diverticular disease: K57
+#   Kidney disease:       N03, N11, N17-N19
+#   Prostate disorders:   N40 (men only)
+#   Connective tissue:    M05-M06, M08-M09, M30-M36, D86
+#   Osteoporosis:         M80-M82
+#   Depression:           F32-F33
+#   Bipolar disorder:     F30-F31
+#   Anemia:               D50-D53, D55-D59, D60-D61, D63-D64
+#   Cancer:               C00-C97
+#   HIV/AIDS:             B20-B24
+#   Vision disorders:     H25, H40, H54
+#   Hearing disorders:    H90-H91, H931
+#   Migraine:             G43
+#   Epilepsy:             G40-G41
+#   Parkinson's disease:  G20-G22
+#   Multiple sclerosis:   G35
+#   Peripheral neuropathies: G50-G64
+
+### Socioeconomic Status (SES)
+# Extracted separately in: extract_ses.R
+# Per SEPLINE guidelines (Hjorth et al. 2025, doi:10.2147/CLEP.S520772)
+#
+#   education_cat: HFAUDD from UDDA (highest completed education by year before surgery)
+#     - "Short":   HFAUDD starts with "10" (primary) or "15" (preparatory)
+#     - "Medium":  HFAUDD starts with "20" (general upper secondary), "30" (vocational), "35" (qualifying)
+#     - "Long":    HFAUDD starts with "40"-"80" (tertiary and above)
+#     - "Unknown": HFAUDD starts with "90" or missing
+#
+#   income_cat: FAMAEKVIVADISP_13 from FAIK (equivalized disposable household income)
+#     - Quintile-based, age/sex standardized: "Low" (Q1), "Medium" (Q2-Q4), "High" (Q5)
+#     - Linked via FAMILIE_ID in BEF to get household income per person
+#
+#   occupation_cat: SOCIO13 from AKM (employment classification, year before surgery)
+#     - "Working":           codes 110-114, 120, 131-135, 139 (self-employed, managers, employees)
+#     - "Student":           310
+#     - "Unemployed":        210, 410
+#     - "Outside_workforce": 220, 321, 330 (sick leave, disability, social security/flex job)
+#     - "Retired":           322, 323
+#     - "Unknown":           0, 420 (children), or missing
+
+### Baseline Medications (ATC codes from LMDB, 5 years before surgery)
+# Purpose:
+#   (1) Required component of NMI/GMC conditions that need BOTH diagnosis AND medication
+#       (e.g. treated hypertension = I10-I15 OR >=2 antihypertensive prescriptions/year)
+#   (2) Independent covariates reflecting metabolic/psychiatric status at baseline
+#
+#   antihypertensive: C02, C03, C07, C08, C09
+#   lipid_lowering:   C10
+#   antidiabetic:     A10 (all); A10A = insulin only
+#   antidepressant:   N06A
+#   antidementia:     N06D (sensitivity check - flag persons already treated for dementia)
+
+### Obesity-related comorbidities (from LPR diagnoses + LMDB, 5 years before surgery)
+# Purpose: These are the primary BS eligibility criteria (BMI >=40, or >=35 + comorbidity)
+#   and are key confounders in the BS-dementia association. They overlap with NMI conditions
+#   intentionally - flagged separately because they directly determine BS eligibility.
+#
+#   hypertension:  I10-I15 OR antihypertensives (C02, C03, C07-C09)
+#   diabetes_t2:   E11 OR non-insulin antidiabetics (A10B, A10X)
+#   dyslipidemia:  E78 OR lipid-lowering (C10)
+
+
+# ============================================================================
+# STUDY 2: TYPE 1 DIABETES & BARIATRIC SURGERY
+# ============================================================================
+
+## PRIMARY OUTCOMES - WEIGHT ----
+# Source: DBSO (confirm exact DST folder name with data manager)
+# Variables:
+#   weight_preop:      weight (kg) at last preoperative exam
+#   height_preop:      height (cm) at preoperative exam
+#   bmi_preop:         BMI at preoperative exam
+#   weight_3mo/6mo/12mo/24mo: weight at follow-up visits
+#   bmi_3mo/6mo/12mo/24mo:    BMI at follow-up visits
+# Calculated:
+#   twl:      total weight loss = weight_preop - weight_postop
+#   pct_twl:  (twl / weight_preop) * 100
+#   excess_weight: weight_preop - (25 * height_m^2)   [target BMI = 25]
+#   pct_ewl:  (weight_loss / excess_weight) * 100
+
+## PRIMARY OUTCOMES - METABOLIC ----
+# Source: LMDB (prescriptions, DST folder: lmdb)
+# Insulin ATC code: A10A (all insulin types)
+# Variables:
+#   insulin_n_rx_baseline: number of insulin prescriptions in 6-1 months before surgery
+#   insulin_n_rx_3mo:      3 months post-surgery (days 60-120)
+#   insulin_n_rx_6mo:      6 months post-surgery (days 150-210)
+#   insulin_n_rx_12mo:     12 months post-surgery (days 330-390)
+# Note: Actual daily dose in units requires DOSIS variable - confirm availability with data manager
+
+## PRIMARY OUTCOMES - HOSPITAL CONTACTS ----
+# Source: LPR (lpr_adm + lpr_diag + kontakter + diagnoser)
+# First-time post-surgery admissions per 100 person-years:
+#   hyperglycemia:         E10-E14 (acute diabetic complications - consider 4th char subtype)
+#   hypoglycemia:          E15, E16
+#   self_harm:             X60-X84
+#   substance_abuse:       F10-F19
+#   trauma:                S00-S99, T00-T98
+#   surgical_complication: T80-T88
+# Variables: date_first_{condition} for each above
+
+## SECONDARY OUTCOMES - MORTALITY ----
+# Source: DOD register (DST folder: dod)
+#   death_date: doddato in DOD
+#   mortality_90day:  death within 90 days of surgery (binary)
+#   mortality_5year:  death within 5 years of surgery (binary)
+
+## SECONDARY OUTCOMES - REOPERATION ----
+# Source: LPR
+#   Any surgery for surgical complications (exclude gastroscopy/endoscopy)
+#   Relevant procedure codes (NOMESCO/SKS): confirm with data manager
+
+## COVARIATES - BASELINE ----
+
+### Demographics
+#   Same as Study 1 (from BEF + DOD)
+
+### Diabetes Classification
+# Source: OSDC (Open Source Diabetes Classifier, pre-computed cohort)
+#   File: dm_population_1977_2022.rds (confirm path with data manager)
+#   diabetes_type: "T1D", "T2D", "No_diabetes"
+#   date_diabetes: date of diabetes classification
+
+### Baseline Comorbidities
+#   Same NMI conditions as Study 1
+
+### Baseline Medications
+#   Same as Study 1
+
+### Baseline Anthropometry
+# Source: DBSO (confirm folder name with data manager)
+#   weight_preop, height_preop, bmi_preop
+
+
+# ============================================================================
+# DATA SOURCES MAPPING - DST parquet folder names
+# ============================================================================
+# Base path: E:/workdata/708421/cleaned-data/parquet-registries/
+#
+# BEF - Befolkningsregisteret (Population register)
+#   DST folder: bef
+#   Key vars (lowercase after rename_with(tolower)):
+#     pnr, koen (sex: 1=M, 2=F), foed_dag (birth date), aar (year),
+#     familie_id (for income linkage), reg (region), civst (marital status)
+#   Note: does NOT contain death date - use DOD for that
+#
+# DOD - Doedsregisteret (Death register)
+#   DST folder: dod
+#   Key vars: pnr, doddato (date of death)
+#
+# LPR2 - Landspatientregisteret (National Patient Registry, 1977 to March 2019)
+#   DST folders: lpr_adm (contacts) + lpr_diag (diagnoses)
+#   lpr_adm:  pnr, recnum, d_inddto (contact date), c_spec (specialty), aar
+#   lpr_diag: recnum, c_diagtype (A=primary, B=secondary, G=other), c_diag (ICD with D-prefix)
+#   Join: lpr_adm LEFT JOIN lpr_diag ON recnum
+#   ICD note: codes have "D" prefix (e.g. "DG30") -> use substr(c_diag, 2, 4) to get "G30"
+#   Keep diagtypes: c("A", "B") -- exclude H (referral) and M (complications)
+#
+# LPR3 - Landspatientregisteret v3 (from March 2019 onwards, unified somatic + psychiatric)
+#   DST folders: kontakter (contacts) + diagnoser (diagnoses)
+#   (confirmed from hospital2021.R reference; "lpr3f_kontakter"/"lpr3f_diagnoser" returned 404)
+#   kontakter:  pnr (raw SAS: cpr - dstDataPrep renames to pnr),
+#               dw_ek_kontakt, dato_start (contact datetime), dato_slut,
+#               hoofdspeciale_ans (specialty), kontakttype
+#   diagnoser:  dw_ek_kontakt, diagnosekode (ICD with D-prefix), diagnosetype (A/B),
+#               senare_afkraeftet ("Ja"/"Nej" - exclude "Ja" = later retracted),
+#               diagnosekode_parent
+#   Join: kontakter LEFT JOIN diagnoser ON dw_ek_kontakt
+#
+# Psychiatric LPR contacts
+#   For LPR3: fully unified - psychiatric contacts included in kontakter;
+#             all A/B diagnoses searchable without specialty filter.
+#   For LPR2: t_psyk_adm + t_psyk_diag (pnr, recnum, d_inddto / recnum, c_diag, c_diagtype)
+#             ** CONFIRM-6: ask data manager if load_database() or SAS file on project 708421 **
+#
+# LMDB - Lagemiddeldatabasen (National Prescription Database)
+#   DST folder: lmdb
+#   Key vars: pnr, atc (ATC code), eksd (dispensing date), indo (indication code)
+#   Covers: 1994 onwards, annual files combined in parquet
+#
+# UDDA - Uddannelsesregisteret (Education register)
+#   DST folder: udda
+#   Key vars: pnr, hfaudd (highest completed education code), aar
+#   Use: filter aar == year(surgery_date) - 1 to get education at baseline
+#
+# FAIK - Familieindkomst (Family income register)
+#   DST folder: faik
+#   Key vars: familie_id, famaekvivadisp_13 (equivalized disposable household income), aar
+#   Link: join bef (pnr, familie_id, aar) with faik (familie_id, aar) to get income per person
+#
+# AKM - Arbejdsklassifikationsmodulet (Employment classification)
+#   DST folder: akm
+#   Key vars: pnr, socio13 (socioeconomic group code), aar
+#   Use: filter aar == year(surgery_date) - 1
+#
+# DBSO - Danish Obesity Surgery Registry (Fedmekirurgiregisteret)
+#   DST folder: ** ASK DATA MANAGER FOR EXACT FOLDER NAME **
+#   Expected key vars: pnr, surgery_date, surgery_type, exam_date, weight_kg, height_cm, bmi
+#   Note: mandatory reporting since 2010, covers both public and private hospitals
+#
+# OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
+#   File path: confirm with data manager (likely dm_population_YYYY_YYYY.rds)
+#   Key vars: pnr (or PNR), diabetes_type (1=T1D, 2=T2D), do_dm (classification date)
+#   Package: https://steno-aarhus.github.io/osdc/index.html
