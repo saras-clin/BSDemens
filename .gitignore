@@ -1,9 +1,0 @@
-.DS_Store
-.claude/
-*.rds
-*.RData
-*.parquet
-*.sas7bdat
-*.csv
-data/
-datasets/
