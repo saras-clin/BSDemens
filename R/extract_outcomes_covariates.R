@@ -57,6 +57,7 @@ library(arrow)         # for Parquet support used by dstDataPrep under the hood
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(heaven)        # exposureMatch(), findCondition(), edu_code, etc.
 # On DST: update duckplyr if needed - old pre-installed version has limited functionality
 # install.packages("duckplyr")
 
@@ -593,6 +594,16 @@ extract_baseline_comorbidities <- function(bs_cohort) {
       date_contact >= surgery_date - 365 * 5,  # only contacts within 5 years before surgery (baseline lookback window)
       date_contact <  surgery_date              # strictly before surgery — no post-surgery diagnoses counted as baseline
     )
+
+  # NOTE on heaven::findCondition() — evaluated and not adopted here.
+  # findCondition() searches raw diagnosis columns (full ICD with D-prefix) using a named
+  # list of prefix strings, returning a long data.table one row per match. It is fast
+  # (C++ core) and handles multi-column search and exclusion lists cleanly.
+  # We don't switch because: (1) all_dx is already collected and stripped of the D-prefix,
+  # so findCondition() would require restructuring to work on the raw (pre-collect) data;
+  # (2) our icd3 %in% codes loop is equivalent in speed on collected data;
+  # (3) findCondition() returns long format requiring dcast to get the 0/1 flags we need.
+  # Re-evaluate if we ever extend to multi-column diagnosis search (e.g., c_diag + c_tildiag).
 
   result <- bs_cohort %>% select(pnr)  # start with one row per person; condition flags will be added column by column
 

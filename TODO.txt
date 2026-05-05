@@ -229,6 +229,20 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
             If only DFR_MWL_population variables are present, a different SAS file is needed
             for the bariatric clinical data.
 
+[MINOR-14] LEARN: targets pipeline package
+  What:     The {targets} package manages multi-step R pipelines by tracking
+            dependencies and only re-running outdated steps when upstream
+            code or data changes. Strongly recommended for DST projects by
+            the CTP group (tagteam/RDST guide, R_on_DST.Rmd).
+  Why:      Our pipeline has 5+ sequential scripts. Changing one function
+            currently requires manually tracking what needs to be rerun.
+            targets would handle this automatically.
+  Resources:
+    - User manual: https://books.ropensci.org/targets/
+    - DST-specific exercises: https://github.com/tagteam/registerTargets/tree/main
+    - Intro in R_on_DST.Rmd (tagteam/RDST on GitHub)
+  Priority: Learn before starting the analysis phase (after pipeline is stable).
+
 [MINOR-11] OSDC insight — senare_afkraeftet filter alignment
   Current:  Our code filters is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
             (keep if NA or not retracted — defensive against NAs in real data).

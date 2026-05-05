@@ -267,7 +267,16 @@ Each individual followed from index date until the first of:
        surveillance bias. If HR ≈ 1.0 for negative control, this supports
        internal validity of the main analysis.
 
-Software: R (≥ 4.3). Key packages: survival, cmprsk, ggplot2, tableone.
+Implementation note for sensitivity analyses and subgroup analyses:
+    Use lapply() + data.table::rbindlist() to loop across outcomes/models rather
+    than copy-pasting analysis blocks. Pattern (recommended by tagteam/RDST guide):
+      results <- rbindlist(lapply(outcomes, function(outcome) {
+        fit <- coxph(Surv(time, event) ~ exposure + covariates, data = df)
+        tidy_result(fit, outcome_label = outcome)
+      }))
+    Apply to: all 8 sensitivity analyses, all 3 comparison pairs, secondary outcomes.
+
+Software: R (≥ 4.3). Key packages: survival, cmprsk, ggplot2, tableone, Publish.
 Significance: α = 0.05 two-sided. No correction for multiple comparisons across
 pre-specified secondary outcomes.
 

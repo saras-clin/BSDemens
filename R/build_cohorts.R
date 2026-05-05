@@ -52,6 +52,7 @@ library(dstDataPrep)
 library(arrow)
 library(dplyr)
 library(lubridate)
+library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_code, etc.
 
 # Paths ----
 path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
@@ -355,6 +356,78 @@ build_gp_comparator <- function(bs_cohort) {
   gp_cohort %>% filter(!pnr %in% dementia_pnrs)
 }
 
+## ---------------------------------------------------------------------------
+## ALTERNATIVE GP MATCHING: heaven::exposureMatch()
+## Commented out — the manual loop above is the default.
+##
+## heaven::exposureMatch() (= riskSetMatch) does validated risk-set matching
+## and is the standard tool used by the CTP group on DST. It handles alive/
+## event-free eligibility via the end.followup parameter.
+##
+## KEY LIMITATION vs current approach: terms= does EXACT matching only.
+## Our protocol specifies birth year ±1. Options:
+##   (a) Exact birth year — simpler; very minor reduction in match rate for
+##       rare birth years at the edges of the study period.
+##   (b) Collapse to 2-year birth groups before calling exposureMatch.
+##
+## To activate: replace the body of build_gp_comparator() with this block.
+## ---------------------------------------------------------------------------
+## build_gp_comparator_exposureMatch <- function(bs_cohort) {
+##   bef_pool <- ...   # same pool preparation as above (lines 260-295)
+##
+##   bs_key <- bs_cohort %>%
+##     left_join(get_bef_demographics(bs_cohort$pnr) %>%
+##                 select(pnr, koen, birth_year), by = "pnr") %>%
+##     left_join(pool_deaths %>% select(pnr, death_date), by = "pnr") %>%
+##     mutate(
+##       is_case      = 1L,
+##       case_index   = index_date,
+##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
+##                           as.Date("2025-12-31"), na.rm = TRUE),
+##       koen         = as.character(koen),          # terms must be character
+##       birth_year   = as.character(birth_year)
+##     )
+##
+##   ctrl_dt <- bef_pool %>%
+##     mutate(
+##       is_case      = 0L,
+##       case_index   = as.Date(NA),                 # NA = never exposed
+##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
+##                           as.Date("2025-12-31"), na.rm = TRUE),
+##       koen         = as.character(koen),
+##       birth_year   = as.character(birth_year)
+##     )
+##
+##   combined <- data.table::rbindlist(
+##     list(data.table::as.data.table(bs_key),
+##          data.table::as.data.table(ctrl_dt)), fill = TRUE
+##   )
+##
+##   matched <- heaven::exposureMatch(
+##     ptid         = "pnr",
+##     event        = "is_case",       # 1 = BS patient, 0 = GP control
+##     terms        = c("koen", "birth_year"),
+##     data         = combined,
+##     n.controls   = N_GP_PER_BS,
+##     case.index   = "case_index",
+##     end.followup = "end_followup",
+##     seed         = 42
+##   )
+##
+##   # Format to match current output structure
+##   case_ids <- matched[matched$is_case == 1, c("pnr", "case.id")]
+##   names(case_ids)[1] <- "matched_pnr"
+##
+##   gp_cohort <- matched[matched$is_case == 0, ] %>%
+##     dplyr::left_join(case_ids, by = "case.id") %>%
+##     dplyr::mutate(cohort = "GP", surgery_type = NA_character_) %>%
+##     dplyr::select(pnr, index_date = case_index, cohort, surgery_type, matched_pnr)
+##
+##   cutoffs <- gp_cohort %>% select(pnr, index_date)
+##   dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)
+##   gp_cohort %>% filter(!pnr %in% dementia_pnrs)
+## }
+
 
 # ============================================================================
 # STEP 3: BUILD OBESITY COMPARATOR POOL
@@ -483,6 +556,76 @@ build_obesity_comparator <- function(bs_cohort) {
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
   ob_cohort %>% filter(!pnr %in% dementia_pnrs)
 }
+
+## ---------------------------------------------------------------------------
+## ALTERNATIVE OBESITY MATCHING: heaven::exposureMatch()
+## Commented out — the manual loop above is the default.
+##
+## The E66 pre-index requirement (control must have E66 before case's index
+## date) maps to date.terms = "earliest_e66". exposureMatch interprets this
+## as: if the case has not yet reached the date at case.index (NA for BS
+## patients), the control must also not have reached it — which is the
+## opposite of what we need. Pre-filtering the pool to earliest_e66 < ANY
+## index date, then letting exposureMatch handle per-patient eligibility via
+## end.followup, is the practical workaround.
+##
+## To activate: replace the body of build_obesity_comparator() with this block.
+## ---------------------------------------------------------------------------
+## build_obesity_comparator_exposureMatch <- function(bs_cohort) {
+##   # Build obesity_pool with earliest_e66 and death_date as above (lines 387-437)
+##   # obesity_pool already filtered to: !pnr %in% bs_cohort, E66 confirmed
+##
+##   bs_key <- bs_cohort %>%
+##     left_join(get_bef_demographics(bs_cohort$pnr) %>%
+##                 select(pnr, koen, birth_year), by = "pnr") %>%
+##     mutate(
+##       is_case      = 1L,
+##       case_index   = index_date,
+##       end_followup = as.Date("2025-12-31"),
+##       koen         = as.character(koen),
+##       birth_year   = as.character(birth_year)
+##     )
+##
+##   # For obesity controls, end.followup = earliest_e66 ensures a control is
+##   # only eligible at index dates AFTER their E66 diagnosis.
+##   ctrl_dt <- obesity_pool %>%
+##     mutate(
+##       is_case      = 0L,
+##       case_index   = as.Date(NA),
+##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
+##                           as.Date("2025-12-31"), na.rm = TRUE),
+##       koen         = as.character(koen),
+##       birth_year   = as.character(birth_year)
+##     )
+##
+##   combined <- data.table::rbindlist(
+##     list(data.table::as.data.table(bs_key),
+##          data.table::as.data.table(ctrl_dt)), fill = TRUE
+##   )
+##
+##   matched <- heaven::exposureMatch(
+##     ptid         = "pnr",
+##     event        = "is_case",
+##     terms        = c("koen", "birth_year"),
+##     data         = combined,
+##     n.controls   = N_OBESITY_PER_BS,
+##     case.index   = "case_index",
+##     end.followup = "end_followup",
+##     seed         = 42
+##   )
+##
+##   case_ids <- matched[matched$is_case == 1, c("pnr", "case.id")]
+##   names(case_ids)[1] <- "matched_pnr"
+##
+##   ob_cohort <- matched[matched$is_case == 0, ] %>%
+##     dplyr::left_join(case_ids, by = "case.id") %>%
+##     dplyr::mutate(cohort = "Obesity", surgery_type = NA_character_) %>%
+##     dplyr::select(pnr, index_date = case_index, cohort, surgery_type, matched_pnr)
+##
+##   cutoffs <- ob_cohort %>% select(pnr, index_date)
+##   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
+##   ob_cohort %>% filter(!pnr %in% dementia_pnrs)
+## }
 
 
 # ============================================================================
