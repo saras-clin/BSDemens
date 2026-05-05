@@ -59,6 +59,7 @@ path_bs_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
 path_psyk_adm  <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
+path_dbso      <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
 
 # GP match ratio and obesity match ratio
 N_GP_PER_BS      <- 25L
@@ -176,35 +177,13 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
 
 
 get_prior_bs_pnrs <- function(pnr_vector) {
-  # Returns pnrs with any bariatric surgery procedure code (KJDF10/11/40/41/96/97) in LPR2.
-  #
-  # LPR2 structure confirmed from Dokumentation-af-LPR2.pdf (archive):
-  #   t_adm    = main contact table (dstDataPrep: "lpr_adm")   — has v_cpr (patient) + k_recnum (key)
-  #   t_sksopr = operations 1996+  (dstDataPrep: name unknown) — has c_opr (code) + v_recnum (key)
-  #   The record linkage: t_sksopr.v_recnum == t_adm.k_recnum
-  #   After rename_with(tolower): v_cpr->pnr, k_recnum->recnum, v_recnum->recnum (dstDataPrep renames)
-  #
-  # Procedure codes are in t_sksopr, NOT in t_adm. The previous code searching c_opr in lpr_adm
-  # was wrong — that column does not exist in t_adm.
-  #
-  # ** CONFIRM: ask data manager what load_database() name maps to t_sksopr on project 708421.
-  #    Likely candidates: "lpr_opr", "t_sksopr", "sksopr". Try each if needed. **
-
-  lpr_adm    <- load_database("lpr_adm")   %>% rename_with(tolower)  # t_adm: pnr (=v_cpr), recnum (=k_recnum)
-  lpr_sksopr <- load_database("t_sksopr")  %>% rename_with(tolower)  # t_sksopr: c_opr, recnum (=v_recnum)
-  # ** CONFIRM "t_sksopr" above — this is the official DST table name but dstDataPrep may use a different alias **
-
-  # Join: patient table -> operations table via shared recnum key
-  lpr_adm %>%
+  # Returns pnrs from pnr_vector who appear in DBSO — i.e., have had bariatric surgery.
+  # DBSO (Danish Quality Registry for Treatment of Severe Obesity) is the authoritative
+  # source: all public and private BS procedures are mandatorily reported since 2010.
+  # Minor limitation: procedures before DBSO's 2010 start are not captured, but these
+  # are very rare (BS was uncommon in Denmark pre-2010).
+  arrow::open_dataset(path_dbso) %>%
     filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum) %>%
-    inner_join(
-      lpr_sksopr %>%
-        # c_opr contains SKS procedure codes; KJDF codes start with the 4-char prefix
-        filter(substr(toupper(c_opr), 1, 6) %in% !!BS_PROC_CODES) %>%
-        select(recnum),  # recnum here = v_recnum in t_sksopr, linking to k_recnum in t_adm
-      by = "recnum"
-    ) %>%
     distinct(pnr) %>%
     collect() %>%
     pull(pnr)

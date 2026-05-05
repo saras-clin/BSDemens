@@ -19,7 +19,8 @@
 #                        not relevant for Study 1 or Study 2 primary outcomes
 #
 #   Input:   E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
-#   Output:  datasets/dbso.parquet  (read by extract_weight_outcomes() in 01_extract_*.R)
+#   Output:  parquet-external/databasesvaerovervaegt/part-0.parquet
+#            (read via arrow::open_dataset() in extract_outcomes_covariates.R)
 # ============================================================================
 
 library(haven)      # read_sas()
@@ -28,8 +29,8 @@ library(dplyr)
 library(lubridate)
 
 path_sas              <- "E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat"
-path_parquet_registries <- "E:/workdata/708421/cleaned-data/parquet-registries"   # shared with colleagues
-path_output            <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"  # own processed datasets
+path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
+path_output      <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"  # own processed datasets
 
 # ============================================================================
 # PHASE 1: INSPECT — run this first to confirm which table is in the SAS file
@@ -203,7 +204,9 @@ prepare_dbso <- function() {
   cat("Surgery type distribution:\n"); print(table(dbso_clean$surgery_type, useNA = "always"))
   cat("Pre-surgery BMI range:", range(dbso_clean$bmi_pre, na.rm = TRUE), "\n")
 
-  out_path <- file.path(path_parquet_registries, "dbso.parquet")
+  # Save as part-0.parquet inside the folder — Arrow open_dataset() convention.
+  dir.create(path_dbso_folder, recursive = TRUE, showWarnings = FALSE)
+  out_path <- file.path(path_dbso_folder, "part-0.parquet")
   write_parquet(dbso_clean, out_path)
   cat("\nSaved:", out_path, "\n")
 

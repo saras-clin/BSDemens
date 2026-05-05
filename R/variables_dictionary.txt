@@ -191,7 +191,7 @@
 # ============================================================================
 # DATA SOURCES MAPPING - DST parquet folder names
 # ============================================================================
-# Base path: E:/workdata/708421/cleaned-data/parquet-registries/
+# Base path: E:/workdata/708421/cleaned-data/parquet-registers/
 #
 # BEF - Befolkningsregisteret (Population register)
 #   DST folder: bef

@@ -56,7 +56,7 @@ BS_demens/
 **Basic workflow:**
 ```r
 # Open dataset
-data <- arrow::open_dataset("E:/workdata/708421/cleaned-data/parquet-registries/<registry-name>") |>
+data <- arrow::open_dataset("E:/workdata/708421/cleaned-data/parquet-registers/<registry-name>") |>
   duckplyr::as_duckplyr_table()
 
 # Use familiar dplyr verbs (lazy evaluation)

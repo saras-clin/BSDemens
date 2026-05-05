@@ -1,7 +1,7 @@
 ================================================================================
 STUDY 1: BARIATRIC SURGERY AND DEMENTIA — METHODS PLAN
 ================================================================================
-Last updated: 2026-05-03
+Last updated: 2026-05-05
 Based on: protocol draft "BS and dementia_SS.txt" (doc/) — reviewed and reconciled
 Journal target: to be decided
 
@@ -25,6 +25,13 @@ Minimum lookback required before index: 5 years
 2. DATA SOURCES
 --------------------------------------------------------------------------------
 - DBSO: surgery dates, procedure type, anthropometric data (operated by SunDK)
+    Index date source: DatoPER_prim (DBSO's own clinical record of surgery date).
+    DBSO also contains OpDateLPR (the surgery date as recorded in LPR / D_ODTO).
+    These two dates should agree closely; discrepancies reflect administrative lag
+    or coding differences between the clinical database and the national register.
+    Planned data quality check: distribution of (DatoPER_prim − OpDateLPR) in days.
+    If ≥95% of patients agree within 7 days → use DatoPER_prim, no sensitivity analysis.
+    If systematic discrepancy observed → add sensitivity analysis 7g.8 (see below).
 - CRS / BEF + DOD: age, sex, birth date, migration, vital status (since 1968)
 - DNPR / LPR2 + LPR3: somatic hospital diagnoses and procedures (since 1995)
 - DCPRR: all psychiatric hospital/clinic contacts (since 1970)
@@ -247,6 +254,13 @@ Each individual followed from index date until the first of:
        within-cohort quintiles, per SEPLINE recommendation)
     6. Censor comparators at time of bariatric surgery (already in main analysis;
        report results without this censoring as sensitivity check)
+    8. Index date source: repeat main analysis using OpDateLPR (LPR-recorded surgery
+       date) instead of DatoPER_prim (DBSO clinical record) as index date.
+       Triggered only if the data quality check (section 2) shows systematic
+       discrepancy between the two dates (≥5% of patients differing by >7 days).
+       Expected result: near-identical estimates. Large differences would indicate
+       that date source affects follow-up classification and warrants reporting.
+
     7. Negative control outcome [Protocol reviewer comment v]:
        Include an outcome unlikely to be causally related to bariatric surgery
        (e.g. bone fracture, cataract) to detect residual confounding or
@@ -360,6 +374,12 @@ DATA MANAGEMENT:
   - Confirm LPR2 psychiatric register folder name (CRITICAL — see TODO.txt)
   - Confirm revision surgery exclusion: what procedure code identifies a
     revision/re-operation vs primary bariatric surgery?
+  - Run date quality check: tabulate distribution of (DatoPER_prim − OpDateLPR)
+    in days across all DBSO patients. Check: % exact match, % within 1 day,
+    % within 7 days, % discrepant >7 days. Decision rule:
+      ≥95% within 7 days → DatoPER_prim is fine, sensitivity analysis 7g.8 skipped.
+      <95% within 7 days → add sensitivity analysis 7g.8 and report in methods.
+    Code: add to explore_dbso() in R/prepare_dbso.R.
 
 LIMITATIONS TO DISCUSS IN PAPER:
   - Surveillance bias / healthy user effect: patients with incipient dementia

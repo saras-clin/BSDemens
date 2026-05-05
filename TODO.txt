@@ -27,21 +27,6 @@ CRITICAL — MISSING DATA / WRONG RESULTS IF NOT FIXED
   Code:     Update extract_weight_outcomes() in extract_outcomes_covariates.R
             Replace load_database("dbso") with the appropriate read function
 
-[CONFIRM-7] LPR2 OPERATIONS TABLE — confirm load_database() name for t_sksopr
-  Status:   PARTIALLY RESOLVED. Code updated to join lpr_adm + t_sksopr correctly.
-            Official DST table name confirmed from Dokumentation-af-LPR2.pdf (archive):
-              t_sksopr (operations 1996+): c_opr (procedure code), v_recnum (record key)
-            Code now calls load_database("t_sksopr") — but the dstDataPrep alias is unknown.
-  Official DST structure confirmed from Dokumentation-af-LPR2.pdf:
-    t_adm    (dstDataPrep: "lpr_adm"):  v_cpr=patient, k_recnum=record key, d_inddto=date
-    t_diag   (dstDataPrep: "lpr_diag"): v_recnum=record key, c_diag=code, c_diagtype=type
-    t_sksopr (dstDataPrep: UNKNOWN):    v_recnum=record key, c_opr=SKS operation code
-    Note: dstDataPrep renames v_cpr->pnr, k_recnum->recnum, v_recnum->recnum automatically
-  Action:   Ask data manager: what is the load_database() name for t_sksopr on project 708421?
-            Candidates: "lpr_opr", "t_sksopr", "sksopr", "lpr_sksopr"
-            Update load_database("t_sksopr") in get_prior_bs_pnrs() accordingly.
-  Code:     build_cohorts.R — get_prior_bs_pnrs() (the load_database("t_sksopr") line)
-
 
 ================================================================================
 CONFIRM — CODE WILL NOT RUN WITHOUT THESE
@@ -60,7 +45,7 @@ CONFIRM — CODE WILL NOT RUN WITHOUT THESE
   (underlying DST raw names are v_cpr and k_recnum/v_recnum — irrelevant once loaded).
 
   Confirmed register names (load_database() alias = parquet folder name in
-  E:/workdata/708421/cleaned-data/parquet-registries/):
+  E:/workdata/708421/cleaned-data/parquet-registers/):
     akm, bef, dodsaasg, dodsaars, faik, lmdb, lpr_bes,
     lpr_a_diagnose, lpr_a_kontakt, lpr_adm, shss, ssnv, sssy, udda
 
@@ -74,7 +59,6 @@ CONFIRM — CODE WILL NOT RUN WITHOUT THESE
     lpr_a_kontakt:  pnr, dw_ek_kontakt, dato_start                      (LPR3, March 2019+)
     lpr_a_diagnose: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet  (LPR3 diagnoses)
     lpr_a_kontakt:  pnr, dw_ek_kontakt, dato_start, hoofdspeciale_ans  (replaces "kontakter")
-    t_sksopr:       recnum, c_opr (SKS operation code), d_odto — folder name UNCONFIRMED (CONFIRM-7)
     lmdb:           pnr, atc, eksd, volume, apk, indo
     udda:           pnr, hfaudd, aar
     faik:           familie_id, famaekvivadisp_13, aar
@@ -90,10 +74,12 @@ CONFIRM — CODE WILL NOT RUN WITHOUT THESE
   Action:   Run load_database("dodsaars") %>% rename_with(tolower) %>% glimpse() to
             confirm death date column name.
 
-[CONFIRM-3] OSDC file path and column names
-  Current path: E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds
-  Expected columns (after rename_with(tolower)): pnr, diabetes_type (1/2), do_dm
-  Action:   Confirm file exists. Check if an updated file (to 2024) is available.
+[CONFIRM-3] OSDC file — column names confirmed, diabetes_type values to verify
+  Path: E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds
+  Confirmed columns: PNR, diabetes_type, do_dm, sex, date_of_birth, age_at_onset
+  Code uses (after rename_with(tolower)): pnr, diabetes_type → "T1D"/"T2D", do_dm → date_diabetes
+  Action:   Verify diabetes_type values: code assumes 1=T1D, 2=T2D — run table(dm$diabetes_type)
+            to confirm. Check if an updated file (covering 2023–2024) is available.
 
 [CONFIRM-4] dstDataPrep package must be built before each session
   Action:   Build from E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj

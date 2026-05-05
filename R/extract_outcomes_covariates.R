@@ -61,10 +61,10 @@ library(lubridate)
 # install.packages("duckplyr")
 
 # Paths ----
-path_output             <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
-path_parquet_registries <- "E:/workdata/708421/cleaned-data/parquet-registries"
-path_psyk_adm           <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
-path_psyk_diag          <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
+path_output        <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
+path_psyk_adm      <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
+path_psyk_diag     <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
+path_dbso          <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
 # full_cohort.rds is produced by build_cohorts.R (BS + GP + obesity, with index_date)
 path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/full_cohort.rds"
 # OSDC path confirmed in DARTER kickstarter. Covers to 2022; sufficient for baseline
@@ -350,14 +350,13 @@ extract_dementia_outcomes <- function(bs_cohort) {
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 extract_weight_outcomes <- function(bs_cohort) {
-  # DBSO is a SAS extract from SunDK, not a DST parquet registry.
-  # Prepared by prepare_dbso.R and saved to the shared parquet-registries folder.
-  path_dbso <- file.path(path_parquet_registries, "dbso.parquet")
-  if (!file.exists(path_dbso)) {
-    stop("DBSO parquet file not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
+  # DBSO is a SAS extract from SunDK, saved as part-0.parquet in parquet-external.
+  # Prepared by prepare_dbso.R. Read with open_dataset() (Arrow folder convention).
+  if (!dir.exists(path_dbso)) {
+    stop("DBSO parquet folder not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
   }
 
-  dbso <- arrow::read_parquet(path_dbso)   # small file — read fully into memory
+  dbso <- arrow::open_dataset(path_dbso) %>% collect()
 
   # DBSO column names (from prepare_dbso.R):
   #   pnr, surgery_date, surgery_type — person-level identifiers
