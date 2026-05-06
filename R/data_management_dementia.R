@@ -3,40 +3,27 @@
 # ============================================================================
 # MAKE THE DATA ANALYSIS-READY (STUDY 1 ONLY)
 #   Merges all extracted pieces into one clean dataset for the dementia study.
-#   Run AFTER steps 1–3. Study 2 (T1D) will have its own 04_data_management_t1d.R.
+#   Run AFTER Steps 1–3 have completed:
+#     build_cohorts.R               → full_cohort.rds
+#     extract_outcomes_covariates.R → extract_*.rds files
+#     extract_ses.R                 → ses_data.rds
+#   Study 2 (T1D) will have its own script: 05_data_management_t1d.R
 #
 #   What this script does, in order:
-#     1. Load & merge  — joins full_cohort + all extract_*.rds + ses_data.rds
-#     2. Safety check  — removes anyone with pre-surgery dementia that slipped through
-#                        (safety net for F-code dementia from LPR2 psychiatric register)
-#     3. ICD + Rx      — supplements hypertension and dyslipidemia flags with prescriptions
-#                        (these conditions are under-captured in hospital ICD codes alone)
-#     4. NMI count     — counts how many GMC conditions the person has (for Table 1)
-#                        NOTE: nmi_score (weighted Kristensen 2022) is separate — from extract_nmi.rds
-#     5. Format vars   — factors, date differences, age categories, calendar period
+#     4.1 Load & merge  — joins full_cohort + all extract_*.rds + ses_data.rds
+#     4.2 Safety check  — removes anyone with pre-surgery dementia that slipped
+#                         through (safety net for F-code from LPR2 psychiatric)
+#     4.3 ICD + Rx      — supplements hypertension and dyslipidemia flags with
+#                         prescriptions (under-captured by hospital ICD codes alone)
+#     4.4 NMI count     — counts how many GMC conditions the person has (Table 1)
+#                         NOTE: nmi_score (Kristensen 2022 weighted index) is
+#                         separate — already in the merged data from extract_nmi.rds
+#                         nmi_count = simple count (for Table 1 descriptives)
+#                         nmi_score = weighted sum of 50 predictors (for Cox models)
+#     4.5 Format vars   — factors, date differences, age categories, calendar period
 #
-#   Output: datasets/study1_clean.rds  (one row per person, ready for Cox models and Table 1)
-# ============================================================================
-# DATA MANAGEMENT — STUDY 1: BARIATRIC SURGERY AND DEMENTIA
-# Study 2 (T1D outcomes) has its own script: 04_data_management_t1d.R
-# ============================================================================
-# Run AFTER:
-#   build_cohorts.R                → full_cohort.rds
-#   extract_outcomes_covariates.R  → extract_*.rds files
-#   extract_ses.R                  → ses_data.rds
-#
-# This script:
-#   1. Loads and merges all extracted components (including NMI weighted score)
-#   2. Verifies no pre-surgery dementia slipped through (safety check)
-#   3. Combines ICD and prescription flags for conditions needing both sources
-#      (hypertension, dyslipidemia — ICD alone under-captures primary-care diagnoses)
-#   4. Computes multimorbidity condition COUNT and category (for Table 1 descriptives)
-#      Note: the weighted NMI SCORE (Kristensen et al. 2022) comes from extract_nmi.rds
-#            and is already in the merged data as nmi_score. They are two separate things:
-#            nmi_count = simple count of conditions present (for descriptives)
-#            nmi_score = weighted sum of 50 predictors (for Cox model adjustment)
-#   5. Formats variables (factors, dates, age categories, calendar period)
-#   6. Saves analysis-ready dataset: study1_clean.rds
+#   Inputs:  datasets/full_cohort.rds, datasets/extract_*.rds, datasets/ses_data.rds
+#   Output:  datasets/study1_clean.rds  (one row per person; ready for Cox models)
 # ============================================================================
 
 library(dplyr)
@@ -51,7 +38,7 @@ load_rds <- function(name) {
 }
 
 # ============================================================================
-# STEP 1: LOAD AND MERGE
+# 4.1 LOAD AND MERGE ALL EXTRACTED DATASETS
 # ============================================================================
 
 load_and_merge <- function() {
@@ -78,7 +65,7 @@ load_and_merge <- function() {
 }
 
 # ============================================================================
-# STEP 2: EXCLUSION — PRE-SURGERY DEMENTIA (safety check)
+# 4.2 EXCLUSIONS: PRE-SURGERY DEMENTIA (SAFETY CHECK)
 # ============================================================================
 # The primary pre-surgery dementia exclusion runs in build_cohorts.R using
 # get_prior_dementia_pnrs(). That function covers LPR2 somatic (lpr_adm/lpr_diag),
@@ -114,7 +101,7 @@ apply_exclusions <- function(df) {
 }
 
 # ============================================================================
-# STEP 3: SUPPLEMENT NMI FLAGS WITH PRESCRIPTION DATA
+# 4.3 SUPPLEMENT: HYPERTENSION AND DYSLIPIDEMIA WITH PRESCRIPTION DATA
 # ============================================================================
 # The NMI (Kristensen et al., Clin Epidemiol 2022) is defined using ICD-10 codes
 # from hospital registers. However, hypertension and dyslipidemia are primarily
@@ -148,7 +135,7 @@ combine_icd_rx_flags <- function(df) {
 }
 
 # ============================================================================
-# STEP 4: MULTIMORBIDITY CONDITION COUNT AND CATEGORY (for Table 1)
+# 4.4 MULTIMORBIDITY COUNT AND CATEGORY (FOR TABLE 1)
 # ============================================================================
 # Counts how many of the 33 GMC baseline conditions the person has at surgery.
 # Produces nmi_count (integer) and nmi_cat (factor 0/1/2/3+) for Table 1 descriptives.
@@ -204,7 +191,7 @@ compute_multimorbidity_count <- function(df) {
 }
 
 # ============================================================================
-# STEP 5: FORMAT VARIABLES
+# 4.5 FORMAT VARIABLES FOR ANALYSIS
 # ============================================================================
 
 format_variables <- function(df) {
@@ -212,7 +199,7 @@ format_variables <- function(df) {
     mutate(
 
       # -----------------------------------------------------------------------
-      # COHORT AND SURGERY TYPE
+      # 4.5a COHORT AND SURGERY TYPE
       # Convert to factors with explicit reference levels for Cox regression.
       # -----------------------------------------------------------------------
 
@@ -228,7 +215,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # CENSORING DATE (censor_date)
+      # 4.5b CENSORING DATE (censor_date)
       # -----------------------------------------------------------------------
       # In survival analysis every person's observable follow-up ends at the
       # EARLIEST of several competing events. We call this the censor_date.
@@ -264,7 +251,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # ALL-CAUSE DEMENTIA OUTCOME (primary)
+      # 4.5c ALL-CAUSE DEMENTIA OUTCOME (primary)
       # -----------------------------------------------------------------------
       # date_dementia: first contact with ANY dementia ICD code (F00-F03, G30-G31)
       # AFTER the index date. Extracted from LPR2 + LPR3 in
@@ -289,7 +276,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # ALZHEIMER'S DISEASE OUTCOME (secondary)
+      # 4.5d ALZHEIMER'S DISEASE OUTCOME (secondary)
       # -----------------------------------------------------------------------
       # date_alzheimers: first G30 (Alzheimer's disease, neurological) or F00
       # (Alzheimer's, psychiatric coding) contact after the index date.
@@ -304,7 +291,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # VASCULAR DEMENTIA OUTCOME (secondary)
+      # 4.5e VASCULAR DEMENTIA OUTCOME (secondary)
       # -----------------------------------------------------------------------
       # date_vascular: first F01 (vascular dementia) contact after the index date.
       # Same independent extraction logic as Alzheimer's.
@@ -316,7 +303,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # SEX
+      # 4.5f SEX
       # -----------------------------------------------------------------------
       # In DST registers, sex is stored as KOEN (Danish: "køn" = gender/sex).
       # KOEN = 1 → Male, KOEN = 2 → Female (DST coding convention for BEF register).
@@ -327,7 +314,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # AGE AT INDEX DATE
+      # 4.5g AGE AT INDEX DATE
       # -----------------------------------------------------------------------
       # age_at_surgery: continuous age in years, computed from FOED_DAG (birth date
       # in BEF) and surgery_date in extract_demographics(). Here we create clinical
@@ -342,7 +329,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # CALENDAR PERIOD
+      # 4.5h CALENDAR PERIOD
       # -----------------------------------------------------------------------
       # Captures secular trends in BS technique (RYGB vs SG mix changed over time)
       # and in dementia diagnostic practice (increased awareness, new criteria).
@@ -356,7 +343,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # DIABETES TYPE
+      # 4.5i DIABETES TYPE
       # -----------------------------------------------------------------------
       # Classified from the Open Source Diabetes Classifier (OSDC), a pre-computed
       # cohort file at E:/workdata/708421/cleaned-data/.../dm_population_1977_2022.rds.
@@ -367,7 +354,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # SOCIOECONOMIC POSITION (SEP)
+      # 4.5j SOCIOECONOMIC POSITION (SEP)
       # -----------------------------------------------------------------------
       # All SEP variables derived in extract_ses.R following the SEPLINE
       # algorithm (Hjorth et al., Clin Epidemiol 2025;17:593–624).
@@ -398,7 +385,7 @@ format_variables <- function(df) {
 }
 
 # ============================================================================
-# MAIN
+# 4.6 MAIN: ASSEMBLE AND SAVE STUDY1_CLEAN.RDS
 # ============================================================================
 
 main_data_management <- function() {

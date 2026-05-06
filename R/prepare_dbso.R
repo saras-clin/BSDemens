@@ -33,7 +33,7 @@ path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/databasesv
 path_output      <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"  # own processed datasets
 
 # ============================================================================
-# PHASE 1: INSPECT — run this first to confirm which table is in the SAS file
+# 0.1 INSPECT — run this first to confirm which table is in the SAS file
 # ============================================================================
 
 inspect_dbso <- function() {
@@ -59,7 +59,7 @@ inspect_dbso <- function() {
 
 
 # ============================================================================
-# PHASE 1b: EXPLORE — answer structural questions about the data
+# 0.2 EXPLORE — answer structural questions about the raw data
 # ============================================================================
 # Call with the raw object from inspect_dbso(), or load fresh:
 #   raw <- read_sas(path_sas) %>% rename_with(tolower)
@@ -198,9 +198,9 @@ explore_dbso <- function(raw) {
 
 
 # ============================================================================
-# PHASE 2: CLEAN AND SAVE AS PARQUET
+# 0.3 CLEAN AND SAVE AS PARQUET
 # ============================================================================
-# Run AFTER Phase 1 confirms these column names are correct.
+# Run AFTER Phase 0.1 / 0.2 confirm column names are correct.
 #
 # Column mapping (after rename_with(tolower)):
 #   Patient ID:    cpr            (CPR)

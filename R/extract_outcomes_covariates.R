@@ -2,55 +2,42 @@
 # PIPELINE STEP 2 of 5 — extract_outcomes_covariates.R
 # ============================================================================
 # WHAT DO WE MEASURE?
-#   Pulls all outcomes and covariates from DST registers for every person in full_cohort.rds.
-#   Run AFTER build_cohorts.R and prepare_dbso.R.
+#   Pulls all outcomes and covariates from DST registers for every person in
+#   full_cohort.rds. Run AFTER build_cohorts.R (Step 1) and prepare_dbso.R (Step 0).
 #
 #   Study 1 (Dementia):
-#     Outcomes:     dementia date (all-cause / Alzheimer's / vascular) from LPR + LPR-psyk
-#     Covariates:   demographics, baseline comorbidities (GMC conditions), NMI score,
-#                   baseline medications, diabetes type (OSDC)
+#     Outcomes:   dementia date — all-cause (F00–F03, G30–G31), Alzheimer's
+#                 (G30, F00), and vascular (F01) — from LPR + LPR-psychiatric
+#     Covariates: demographics, baseline comorbidities (GMC conditions), NMI score,
+#                 baseline medications, diabetes type (OSDC)
 #
-#   Study 2 (T1D):
-#     Outcomes:     weight/BMI at pre-op + 3/6/12/24 months (DBSO parquet)
-#                   insulin prescription counts by period (lmdb)
-#                   first-time ACUTE INPATIENT admissions for: hyperglycemia, hypoglycemia,
-#                   self-harm, substance abuse, trauma, surgical complications (LPR inpatient)
-#     Note: extract_hospital_contacts() is Study 2 only. It calls get_lpr_diagnoses()
-#           with inpatient_only=TRUE — filtering to c_pattype=="0" (LPR2) and
-#           kontakttype=="ALCA00" (LPR3, the LPR3 code for acute inpatient admission).
+#   Study 2 (T1D — BS patients only):
+#     Outcomes:   weight/BMI at pre-op + 3/6/12/24 months (DBSO)
+#                 insulin prescription counts by period (LMDB)
+#                 first-time ACUTE INPATIENT admissions: hyperglycemia, hypoglycemia,
+#                 self-harm, substance abuse, trauma, surgical complications (LPR)
+#     Note: extract_hospital_contacts() uses inpatient_only=TRUE — c_pattype=="0"
+#           in LPR2 and kontakttype=="ALCA00" in LPR3.
+#
+#   Registers used (all column names lowercased with rename_with(tolower)):
+#     load_database("bef")                      — BEF population register
+#     load_database("dodsaars")                 — death register (doddato)
+#     load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
+#     arrow::open_dataset(path_psyk_adm/diag)   — LPR2 psychiatric diagnoses
+#     load_database("lpr_a_kontakt") + "diagnose"— LPR3 unified diagnoses (2019+)
+#     load_database("lmdb")                     — prescription register
+#     arrow::open_dataset(path_dbso)            — DBSO weight/surgery data
+#     readRDS(path_dm_pop)                      — OSDC diabetes classification
+#
+#   ICD-10 note: DST codes have a leading "D" (e.g. "DG30", "DF00").
+#   All code extractions strip this prefix: substr(c_diag, 2, 4) for 3-char,
+#   substr(c_diag, 2, 5) for 4-char comparisons.
 #
 #   Output files saved to datasets/:
 #     extract_demographics.rds, extract_dementia.rds, extract_weights.rds,
-#     extract_insulin.rds, extract_hospitals.rds, extract_comorbidities.rds,
-#     extract_nmi.rds, extract_medications.rds, extract_diabetes.rds
-# ============================================================================
-# BARIATRIC SURGERY & DEMENTIA / T1D STUDIES - OUTCOME & COVARIATE EXTRACTION
-# ============================================================================
-# Purpose: Extract outcomes and covariates from DST parquet registries
-# Exposure: Using existing bariatric surgery cohort (PNRs already defined)
-#
-# DST register names (via load_database() from dstDataPrep):
-#   "bef"            - population register       vars: pnr, foed_dag, koen, aar
-#   "dodsaars"       - individual death register  vars: pnr, doddato
-#   "lpr_adm"        - LPR2 admissions           vars: pnr, recnum, d_inddto, c_pattype
-#   "lpr_diag"       - LPR2 diagnoses            vars: recnum, c_diag, c_diagtype
-#   "lpr_a_kontakt"  - LPR3 contacts (2019+)     vars: pnr, dw_ek_kontakt, dato_start, kontakttype
-#   "lpr_a_diagnose" - LPR3 diagnoses (2019+)    vars: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet
-#   "lmdb"           - prescriptions             vars: pnr, atc, eksd
-#
-# Psychiatric LPR2 (via arrow::open_dataset, NOT load_database — confirmed CONFIRM-6):
-#   t_psyk_adm  — parquet-external; raw names v_cpr, k_recnum -> renamed pnr, recnum
-#   t_psyk_diag — parquet-external; raw names v_recnum, c_diag, c_diagtype -> renamed recnum
-#
-# DBSO (via arrow::open_dataset — converted from SAS by prepare_dbso.R):
-#   Path: parquet-external/databasesvaerovervaegt/ (path_dbso defined above)
-#   Key columns: pnr, surgery_date, surgery_type, datoper_prim, datofol, bmi_pre, etc.
-#
-# ICD-10 note: All diagnosis codes have a leading "D" (e.g. "DG30").
-#   Use substr(c_diag, 2, 4) to strip the prefix when matching.
-#
-# All column names are lowercased via rename_with(tolower) after loading.
-# DST registers use Danish variable names (aar, foed_dag, koen, eksd, d_inddto, etc.).
+#     extract_dbso_clinical.rds, extract_insulin.rds, extract_hospitals.rds,
+#     extract_comorbidities.rds, extract_nmi.rds, extract_medications.rds,
+#     extract_diabetes.rds
 # ============================================================================
 
 # Packages ----
@@ -76,7 +63,7 @@ path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datase
 path_dm_pop      <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
 
 # ============================================================================
-# Helper: combine LPR2, LPR2-psychiatric, and LPR3 diagnoses for a set of pnrs
+# 2.0 SHARED HELPER: PULL DIAGNOSES FROM ALL LPR SOURCES
 # ============================================================================
 # Returns a collected data frame: pnr, date_contact (Date), icd3 (3-char ICD), icd4 (4-char ICD)
 # No D-prefix — stripped via substr(code, 2, 4/5).
@@ -198,7 +185,7 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
 }
 
 # ============================================================================
-# PART 0: LOAD FULL COHORT (BS + GP + OBESITY)
+# 2.1 LOAD FULL COHORT (BS + GP + OBESITY)
 # ============================================================================
 # Produced by build_cohorts.R.
 # Columns: pnr, index_date, cohort ("BS"/"GP"/"Obesity"), surgery_type, matched_pnr
@@ -214,7 +201,7 @@ load_full_cohort <- function() {
 }
 
 # ============================================================================
-# PART 1: DEMOGRAPHICS (bef + dod)
+# 2.2 DEMOGRAPHICS (BEF + DODSAARS)
 # ============================================================================
 # bef: pnr, foed_dag, koen, aar
 # dod: pnr, doddato
@@ -273,7 +260,7 @@ extract_demographics <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 2: DEMENTIA OUTCOMES (LPR2 + LPR2-psychiatric + LPR3)
+# 2.3 DEMENTIA OUTCOMES — STUDY 1 (LPR2 + LPR2-PSYCHIATRIC + LPR3)
 # ============================================================================
 # All-cause dementia: F00, F01, F02, F03, G30, G31
 # Alzheimer's:        G30, F00
@@ -329,7 +316,7 @@ extract_dementia_outcomes <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 3: WEIGHT OUTCOMES (DBSO)
+# 2.4 WEIGHT OUTCOMES — STUDY 2 (DBSO)
 # ============================================================================
 # DBSO = Databasen for Behandling af Svaer Overvaegt, operated by SunDK (formerly RKKP).
 # Mandatory reporting for all public and private hospitals since 2010.
@@ -431,7 +418,7 @@ extract_weight_outcomes <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 3.5: DBSO CLINICAL OUTCOMES (Study 2 only — BS patients)
+# 2.5 DBSO CLINICAL OUTCOMES — STUDY 2 (READMISSION, REOPERATION, EOSS, SUPPLEMENTS)
 # ============================================================================
 # Extracts DBSO-computed clinical outcome flags not covered by extract_weight_outcomes().
 # All columns here are patient-level constants (same value across all visit rows per patient).
@@ -484,7 +471,7 @@ extract_dbso_clinical <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 4: INSULIN OUTCOMES (lmdb)
+# 2.6 INSULIN OUTCOMES — STUDY 2 (LMDB, ATC A10A)
 # ============================================================================
 # ATC A10A = insulin. Count of prescriptions per period as proxy for insulin use.
 # Actual dose in units requires DOSIS variable - confirm availability with data manager.
@@ -517,7 +504,7 @@ extract_insulin_outcomes <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 5: HOSPITAL CONTACTS (LPR2 + LPR2-psychiatric + LPR3) (For study 2 only)
+# 2.7 HOSPITAL CONTACTS — STUDY 2 (LPR ACUTE INPATIENT ONLY)
 # ============================================================================
 
 extract_hospital_contacts <- function(bs_cohort) {
@@ -579,7 +566,7 @@ extract_hospital_contacts <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 6: BASELINE COMORBIDITIES (LPR2 + LPR2-psychiatric + LPR3, 5-year lookback)
+# 2.8 BASELINE COMORBIDITIES — BOTH STUDIES (LPR, 5-YEAR LOOKBACK)
 # ============================================================================
 
 extract_baseline_comorbidities <- function(bs_cohort) {
@@ -705,7 +692,7 @@ extract_baseline_comorbidities <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 6.5: NORDIC MULTIMORBIDITY INDEX (LPR + lmdb)
+# 2.9 NORDIC MULTIMORBIDITY INDEX (NMI) — BOTH STUDIES (LPR + LMDB)
 # ============================================================================
 # NMI: continuous severity score with 50 weighted predictors (29 ICD groups +
 # 21 ATC groups). Designed to predict 1-year all-cause mortality in primary care.
@@ -881,7 +868,7 @@ extract_nmi <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 7: BASELINE MEDICATIONS (lmdb, 5-year lookback)
+# 2.10 BASELINE MEDICATIONS — BOTH STUDIES (LMDB, 5-YEAR LOOKBACK)
 # ============================================================================
 
 extract_baseline_medications <- function(bs_cohort) {
@@ -927,7 +914,7 @@ extract_baseline_medications <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 7.5: DIABETES CLASSIFICATION (OSDC pre-computed cohort)
+# 2.11 DIABETES CLASSIFICATION — BOTH STUDIES (OSDC PRE-COMPUTED FILE)
 # ============================================================================
 # Path confirmed in DARTER kickstarter.
 # OSDC columns: PNR (uppercase -> pnr after tolower), diabetes_type (1=T1D, 2=T2D),
@@ -956,9 +943,9 @@ extract_diabetes_classification <- function(bs_cohort) {
 }
 
 # ============================================================================
-# PART 8: SOCIOECONOMIC STATUS (extract_ses.R)
+# 2.12 SOCIOECONOMIC STATUS (SEE extract_ses.R — STEP 3 of 5)
 # ============================================================================
-# SES is extracted in extract_ses.R - run that script first.
+# SES is extracted in extract_ses.R — run that script separately.
 # Produces: path_output/ses_data.rds
 # Variables: pnr, education_cat, income_cat, occupation_cat, sep_category
 
@@ -972,7 +959,7 @@ load_ses <- function() {
 }
 
 # ============================================================================
-# MAIN WORKFLOW
+# 2.13 MAIN WORKFLOW
 # ============================================================================
 
 main_extraction <- function() {

@@ -3,48 +3,41 @@
 # ============================================================================
 # WHO ARE WE STUDYING?
 #   Defines the three study groups and applies all inclusion/exclusion criteria.
-#   Run this FIRST, before any extraction or analysis.
+#   Run FIRST, before any outcome extraction or analysis.
 #
-#   BS cohort     — all bariatric surgery patients 2010–2024 (from bs_cohort.rds)
-#   GP comparator — matched 1:25 from general population (BEF), same sex + birth year ±1
-#   Obesity comp. — matched 1:5 from persons with E66 diagnosis BEFORE their index date
+#   Study groups:
+#     BS cohort     — bariatric surgery patients 2010–2024 (source: DBSO)
+#     GP comparator — 1:25 matched from the general population (BEF)
+#                     Matching: same sex + birth year (±1 year)
+#     Obesity comp. — 1:5 matched from persons with ICD-10 E66 (obesity) in LPR
+#                     before their matched BS patient's surgery date
 #
-#   Exclusions for all groups: pre-surgery dementia, prior bariatric surgery, death before index
-#   Produces: datasets/full_cohort.rds  (one row per person, all three cohorts combined)
-# ============================================================================
-# COHORT BUILDING
-# ============================================================================
-# Purpose: Combines the existing BS cohort with matched comparison cohorts
-#          and applies inclusion/exclusion criteria to all groups.
+#   Inputs:  parquet-external/databasesvaerovervaegt/ (DBSO, from prepare_dbso.R)
+#            load_database("bef")                     — population register
+#            load_database("lpr_adm") + "lpr_diag"   — LPR2 somatic diagnoses
+#            arrow::open_dataset(path_psyk_adm/diag)  — LPR2 psychiatric diagnoses
+#            load_database("lpr_a_kontakt/diagnose")  — LPR3 unified diagnoses
+#            load_database("dodsaars")                — death register
 #
-# Run BEFORE extract_outcomes_covariates.R and extract_ses.R.
+#   Output:  datasets/full_cohort.rds
+#            One row per person. Columns: pnr, index_date, cohort
+#            ("BS"/"GP"/"Obesity"), surgery_type ("RYGB"/"SG"/NA),
+#            matched_pnr, bs_crossover_date
 #
-# Input:  bs_cohort.rds  (existing file with BS patients)
-# Output: full_cohort.rds
-#           pnr, index_date, cohort ("BS"/"GP"/"Obesity"),
-#           surgery_type ("RYGB"/"SG"/NA), matched_pnr (pnr of the matched BS patient)
+#   Exclusion criteria applied to ALL groups:
+#     1. Dementia (F00–F03, G30–G31) any time before index date
+#     2. Prior bariatric surgery (KJDF10/11, KJDF40/41/96/97) [for pool members]
+#     3. Emigration before index date
+#     4. Death before index date
+#     5. Age < 18 at surgery / < 5 years of registry history before index date
 #
-# Comparison cohorts:
-#   GP comparator   – matched 1:25 on sex + birth year (±1) from BEF
-#   Obesity cohort  – matched 1:5  on sex + birth year (±1) from BEF,
-#                     restricted to persons with ICD-10 E66 in LPR before index
-#   Note: there is no population-level BMI register in Denmark. The obesity
-#   comparator is defined by E66 diagnosis code (standard approach in Danish
-#   register epidemiology).
+#   NOTE: there is no population-level BMI register in Denmark. The obesity
+#   comparator is defined by E66 diagnosis code — standard approach in Danish
+#   register epidemiology.
 #
-# Exclusion criteria applied to ALL groups:
-#   1. Dementia diagnosis (F00–F03, G30–G31) any time before index date
-#   2. Prior bariatric surgery (KJDF10, KJDF11, KJDF40, KJDF41, KJDF96, KJDF97)
-#      [only relevant for GP and obesity pools]
-#   3. Emigration before index date
-#   4. Death before index date
-#   5. < 5 years of registry history before index date
-#
-# ============================================================================
-# PSYCHIATRIC LPR2 REGISTER — CONFIRMED ACCESS METHOD
-#   t_psyk_adm and t_psyk_diag are parquet folders in parquet-external.
-#   Accessed via arrow::open_dataset(path_psyk_adm / path_psyk_diag).
-#   Raw DST column names (v_cpr, k_recnum, v_recnum) — renamed in code.
+#   Psychiatric LPR2: t_psyk_adm and t_psyk_diag are parquet folders in
+#   parquet-external, accessed via arrow::open_dataset(). Raw DST column names
+#   (v_cpr, k_recnum, v_recnum) are renamed in code after loading.
 # ============================================================================
 
 # Packages ----
@@ -74,7 +67,7 @@ DEMENTIA_ICD3 <- c("F00", "F01", "F02", "F03", "G30", "G31")
 BS_PROC_CODES <- c("KJDF10", "KJDF11", "KJDF40", "KJDF41", "KJDF96", "KJDF97")
 
 # ============================================================================
-# HELPERS
+# 1.0 HELPER FUNCTIONS
 # ============================================================================
 
 get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
@@ -209,7 +202,7 @@ get_bef_demographics <- function(pnr_vector) {
 
 
 # ============================================================================
-# STEP 1: BUILD BS COHORT FROM DBSO
+# 1.1 BUILD BS COHORT FROM DBSO
 # ============================================================================
 # Source: DBSO (Databasen for Behandling af Svær Overvægt) — the national mandatory
 # bariatric surgery registry. Covers all public and private procedures since 2010.
@@ -270,7 +263,7 @@ build_bs_cohort <- function() {
 
 
 # ============================================================================
-# STEP 2: BUILD GP COMPARATOR POOL
+# 1.2 BUILD GP COMPARATOR POOL (1:25 MATCHED, GENERAL POPULATION)
 # ============================================================================
 # Strategy: group BEF by sex + birth_year, for each BS patient sample N_GP_PER_BS
 # people from the matching group who are alive at the index date and dementia-free.
@@ -375,7 +368,7 @@ build_gp_comparator <- function(bs_cohort) {
 }
 
 ## ---------------------------------------------------------------------------
-## ALTERNATIVE GP MATCHING: heaven::exposureMatch()
+## ALTERNATIVE FOR 1.2: heaven::exposureMatch()
 ## Commented out — the manual loop above is the default.
 ##
 ## heaven::exposureMatch() (= riskSetMatch) does validated risk-set matching
@@ -448,7 +441,7 @@ build_gp_comparator <- function(bs_cohort) {
 
 
 # ============================================================================
-# STEP 3: BUILD OBESITY COMPARATOR POOL
+# 1.3 BUILD OBESITY COMPARATOR POOL (1:5 MATCHED, E66 DIAGNOSIS)
 # ============================================================================
 # Pool: persons with E66 (obesity) diagnosis in LPR BEFORE their matched BS
 # patient's index date, never having had bariatric surgery.
@@ -576,7 +569,7 @@ build_obesity_comparator <- function(bs_cohort) {
 }
 
 ## ---------------------------------------------------------------------------
-## ALTERNATIVE OBESITY MATCHING: heaven::exposureMatch()
+## ALTERNATIVE FOR 1.3: heaven::exposureMatch()
 ## Commented out — the manual loop above is the default.
 ##
 ## The E66 pre-index requirement (control must have E66 before case's index
@@ -647,7 +640,7 @@ build_obesity_comparator <- function(bs_cohort) {
 
 
 # ============================================================================
-# MAIN
+# 1.4 MAIN: ASSEMBLE AND SAVE FULL COHORT
 # ============================================================================
 
 main_build_cohorts <- function() {

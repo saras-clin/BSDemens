@@ -2,32 +2,30 @@
 # PIPELINE STEP 3 of 5 — extract_ses.R
 # ============================================================================
 # WHAT IS EACH PERSON'S SOCIAL POSITION?
-#   Extracts socioeconomic variables for all cohort members. Run in parallel with
-#   extract_outcomes_covariates.R (both read full_cohort.rds, both write independently).
-#   Following SEPLINE guidelines (Hjorth et al., Clin Epidemiol 2025).
+#   Extracts socioeconomic variables for all cohort members following SEPLINE
+#   guidelines (Hjorth et al., Clin Epidemiol 2025;17:593-624).
+#   Can run in parallel with extract_outcomes_covariates.R — both read
+#   full_cohort.rds independently and write their own output files.
 #
-#   Education    — highest education (UDDA/hfaudd), most recent record up to index year
-#   Income       — equivalised household disposable income (FAIK via BEF family link)
-#   Occupation   — labour market status (AKM/socio13) at index year
-#   SEP category — composite: High / Medium / Low / Unknown
+#   Variables extracted:
+#     Education    — highest attained (UDDA/hfaudd), most recent record
+#                    up to the year before surgery
+#     Income       — equivalised household disposable income (FAIK via
+#                    BEF family link), year before surgery
+#     Occupation   — labour market status (AKM/socio13), year before surgery
+#     SEP category — composite (High / Medium / Low / Unknown)
 #
 #   Reference year: year(surgery_date) - 1  (year before surgery/index date)
-#   Output: datasets/ses_data.rds
-# ============================================================================
-# SOCIOECONOMIC STATUS (SES) EXTRACTION
-# ============================================================================
-# Based on SEPLINE guidelines:
-# Hjorth CF et al. "SEPLINE: Socioeconomic Position in Epidemiological Research —
-# A National Guideline on Danish Registry Data." Clin Epidemiol. 2025;17:593-624.
-# https://www.dovepress.com/sepline-socioeconomic-position-in-epidemiological-researcha-national-g-peer-reviewed-fulltext-article-CLEP
 #
-# DST parquet folders used:
-#   udda  - education register (pnr, hfaudd, aar)
-#   faik  - family income register (familie_id, famaekvivadisp_13, aar)
-#   bef   - population register for familie_id linkage (pnr, familie_id, aar)
-#   akm   - employment classification (pnr, socio13, aar)
+#   Inputs:  datasets/full_cohort.rds (from build_cohorts.R)
+#            load_database("udda")  — education register (pnr, hfaudd, aar)
+#            load_database("faik")  — household income register (familie_id,
+#                                     famaekvivadisp_13, aar)
+#            load_database("bef")   — population register for familie_id link
+#            load_database("akm")   — employment/labour market register
+#                                     (pnr, socio13, aar)
 #
-# All variables use year = year(surgery_date) - 1 as the baseline reference year.
+#   Output:  datasets/ses_data.rds
 # ============================================================================
 
 # Packages ----
@@ -49,8 +47,17 @@ load_full_cohort <- function() {
 }
 
 # ============================================================================
-# MAIN SES EXTRACTION
+# 3.0 MAIN SES EXTRACTION FUNCTION
 # ============================================================================
+# Input:  full_cohort (pnr + surgery_date for all cohort members)
+# Output: one row per person with education_cat, income_cat, occupation_cat,
+#         sep_category, plus raw register codes (hfaudd, famaekvivadisp_13, socio13)
+#
+# Internal sections:
+#   3.1 Education (UDDA / HFAUDD)
+#   3.2 Household income (FAIK / FAMAEKVIVADISP_13)
+#   3.3 Occupation (AKM / SOCIO13)
+#   3.4 Composite SEP category
 
 extract_ses <- function(bs_cohort) {
   # Add baseline year (year before surgery)
@@ -62,7 +69,7 @@ extract_ses <- function(bs_cohort) {
   pnrs         <- unique(cohort_years$pnr)
 
   # --------------------------------------------------------------------------
-  # Education: HFAUDD from UDDA
+  # 3.1 Education: HFAUDD from UDDA
   # HFAUDD codes (first 2 characters determine education level per SEPLINE Table 3):
   #   "10" = Primary/lower secondary (ISCED 1-2)     -> Short
   #   "15" = Preparatory basic education             -> Short
@@ -110,7 +117,7 @@ extract_ses <- function(bs_cohort) {
     dplyr::select(pnr, hfaudd, education_cat)   # keep pnr, raw HFAUDD code for reference, and derived category
 
   # --------------------------------------------------------------------------
-  # Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF
+  # 3.2 Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF
   # Income quintile per SEPLINE Table 9:
   #   Q1          -> Low
   #   Q2, Q3, Q4  -> Medium
@@ -149,7 +156,7 @@ extract_ses <- function(bs_cohort) {
     dplyr::select(pnr, famaekvivadisp_13, income_quintile, income_cat)   # keep raw income and quintile alongside category
 
   # --------------------------------------------------------------------------
-  # Occupation: SOCIO13 from AKM
+  # 3.3 Occupation: SOCIO13 from AKM
   # SOCIO13 numeric codes per SEPLINE Table 6:
   #   110-114, 120          = Self-employed             -> Working
   #   131, 132              = Manager/high-level        -> Working
@@ -187,7 +194,7 @@ extract_ses <- function(bs_cohort) {
     dplyr::select(pnr, socio13, occupation_cat)   # keep raw code alongside category
 
   # --------------------------------------------------------------------------
-  # Combine and compute composite SEP score
+  # 3.4 Combine and compute composite SEP category
   # Simple composite: Low if any dimension Low, High if all dimensions High
   # --------------------------------------------------------------------------
   cohort_years %>%                                           # start from all cohort members (pnr + index_year)
@@ -222,7 +229,7 @@ extract_ses <- function(bs_cohort) {
 }
 
 # ============================================================================
-# MAIN
+# 3.5 MAIN: RUN AND SAVE
 # ============================================================================
 
 main_ses_extraction <- function() {
