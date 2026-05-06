@@ -29,20 +29,22 @@
 # Purpose: Extract outcomes and covariates from DST parquet registries
 # Exposure: Using existing bariatric surgery cohort (PNRs already defined)
 #
-# DST register names (load with load_database() from dstDataPrep):
-#   "bef"          - population register       vars: pnr, foed_dag, koen, aar
-#   "dod"          - death register            vars: pnr, doddato
-#   "lpr_adm"      - LPR2 admissions           vars: pnr, recnum, d_inddto
-#   "lpr_diag"     - LPR2 diagnoses            vars: recnum, c_diag, c_diagtype
-#   "t_psyk_adm"   - LPR2 psychiatric (1995-2019) vars: pnr, recnum, d_inddto
-#   "t_psyk_diag"  - LPR2 psychiatric diagnoses  vars: recnum, c_diag, c_diagtype
-#      ** CONFIRM: ask data manager if t_psyk_adm/t_psyk_diag are parquet on project 708421
-#         or SAS files — register names confirmed from psyc2021.R in archive **
-#   "kontakter"  - LPR3 contacts (2019+)   vars: pnr, dw_ek_kontakt, dato_start
-#   "diagnoser"  - LPR3 diagnoses (2019+)  vars: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet
-#   (abbreviated names confirmed working; "lpr3f_kontakter"/"lpr3f_diagnoser" returned 404)
-#   "lmdb"       - prescriptions             vars: pnr, atc, eksd
-#   "dbso"       - ** TODO: confirm folder name with data manager **
+# DST register names (via load_database() from dstDataPrep):
+#   "bef"            - population register       vars: pnr, foed_dag, koen, aar
+#   "dodsaars"       - individual death register  vars: pnr, doddato
+#   "lpr_adm"        - LPR2 admissions           vars: pnr, recnum, d_inddto, c_pattype
+#   "lpr_diag"       - LPR2 diagnoses            vars: recnum, c_diag, c_diagtype
+#   "lpr_a_kontakt"  - LPR3 contacts (2019+)     vars: pnr, dw_ek_kontakt, dato_start, kontakttype
+#   "lpr_a_diagnose" - LPR3 diagnoses (2019+)    vars: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet
+#   "lmdb"           - prescriptions             vars: pnr, atc, eksd
+#
+# Psychiatric LPR2 (via arrow::open_dataset, NOT load_database — confirmed CONFIRM-6):
+#   t_psyk_adm  — parquet-external; raw names v_cpr, k_recnum -> renamed pnr, recnum
+#   t_psyk_diag — parquet-external; raw names v_recnum, c_diag, c_diagtype -> renamed recnum
+#
+# DBSO (via arrow::open_dataset — converted from SAS by prepare_dbso.R):
+#   Path: parquet-external/databasesvaerovervaegt/ (path_dbso defined above)
+#   Key columns: pnr, surgery_date, surgery_type, datoper_prim, datofol, bmi_pre, etc.
 #
 # ICD-10 note: All diagnosis codes have a leading "D" (e.g. "DG30").
 #   Use substr(c_diag, 2, 4) to strip the prefix when matching.
@@ -426,6 +428,59 @@ extract_weight_outcomes <- function(bs_cohort) {
       pct_twl_24mo  = twl_24mo / weight_preop * 100,
       pct_ewl_24mo  = twl_24mo / excess_weight * 100
     )
+}
+
+# ============================================================================
+# PART 3.5: DBSO CLINICAL OUTCOMES (Study 2 only — BS patients)
+# ============================================================================
+# Extracts DBSO-computed clinical outcome flags not covered by extract_weight_outcomes().
+# All columns here are patient-level constants (same value across all visit rows per patient).
+# Only meaningful for BS patients; GP and Obesity comparators have no DBSO data.
+#
+# CONFIRM before running: run inspect_dbso() on DST and verify that column names below
+# match names(raw). In particular, confirm exact names of medkomplik* columns.
+#
+# Output saved as: datasets/extract_dbso_clinical.rds
+
+extract_dbso_clinical <- function(bs_cohort) {
+  if (!dir.exists(path_dbso)) {
+    stop("DBSO parquet folder not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
+  }
+
+  # Columns to extract — all are patient-level constants in the DBSO long-format table.
+  # medkomplik* column names must be confirmed on DST (run inspect_dbso() first).
+  clinical_cols <- c(
+    "pnr",
+    "akutgenindlaeggelse30d",    # 1 = acute unplanned readmission within 30 days of surgery
+    "reop30d_3",                 # 1 = reoperation within 30 days
+    "reoplaar_3",                # 1 = reoperation within 1 year
+    "reop5aar_2",                # 1 = reoperation within 5 years
+    "eoss",                      # Edmonton Obesity Staging System score at pre-op (0-4)
+    "obstruktivsoevnapnoepre",   # 1 = obstructive sleep apnea present at pre-op assessment
+    "obstruktivsoevnapnoefol",   # 1 = obstructive sleep apnea present at follow-up
+    "b12",                       # vitamin B12 supplement status / compliance at follow-up
+    "jern",                      # iron supplement status / compliance at follow-up
+    "kalk"                       # calcium supplement status / compliance at follow-up
+    # medkomplik* columns not listed — exact names must be confirmed on DST.
+    # After confirmation, add here (e.g., "medkomplik", "medkomplik_dato", etc.)
+  )
+
+  dbso_raw <- arrow::open_dataset(path_dbso)   # open DBSO parquet folder lazily; no data in memory yet
+
+  # Check which expected columns are actually present before pulling data.
+  available_cols <- intersect(clinical_cols, names(dbso_raw))   # columns confirmed present in parquet
+  missing_cols   <- setdiff(clinical_cols, names(dbso_raw))     # expected columns not found
+  if (length(missing_cols) > 0) {
+    message("NOTE: Expected DBSO clinical columns not found in parquet. ",
+            "Verify names with inspect_dbso() on DST: ",
+            paste(missing_cols, collapse = ", "))   # names mismatch likely — check prepare_dbso.R output
+  }
+
+  dbso_raw %>%
+    filter(pnr %in% !!bs_cohort$pnr) %>%    # push pnr filter to parquet reader; only BS cohort
+    select(all_of(available_cols)) %>%        # push column selection to parquet reader; reduces data before collect
+    collect() %>%                             # bring only filtered + selected rows into R memory
+    distinct(pnr, .keep_all = TRUE)           # one row per patient; patient-level constants are identical across all visit rows
 }
 
 # ============================================================================
@@ -843,29 +898,29 @@ extract_baseline_medications <- function(bs_cohort) {
     antidementia     = "N06D"
   )
 
-  lmdb <- load_database("lmdb") %>% rename_with(tolower)
+  lmdb <- load_database("lmdb") %>% rename_with(tolower)   # open LMDB (prescription register) lazily
 
   lmdb_baseline <- lmdb %>%
-    filter(pnr %in% !!bs_cohort$pnr) %>%
-    select(pnr, atc, eksd) %>%
-    collect() %>%
-    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%
+    filter(pnr %in% !!bs_cohort$pnr) %>%   # keep only cohort members' prescriptions before collect
+    select(pnr, atc, eksd) %>%              # ATC code and prescription date are the only columns needed
+    collect() %>%                           # bring filtered prescriptions into R memory
+    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%  # attach surgery date for per-person lookback
     filter(
-      eksd >= surgery_date - 365 * 5,
-      eksd <  surgery_date
+      eksd >= surgery_date - 365 * 5,   # prescription must be within 5-year lookback window
+      eksd <  surgery_date               # and must precede surgery (not post-surgery prescriptions)
     )
 
-  result <- bs_cohort %>% select(pnr)
+  result <- bs_cohort %>% select(pnr)   # one row per cohort member; medication flag columns added in loop below
 
   for (med_class in names(atc_groups)) {
-    prefixes <- atc_groups[[med_class]]
-    pattern  <- paste0("^(", paste(prefixes, collapse = "|"), ")")
+    prefixes <- atc_groups[[med_class]]                                    # ATC prefixes for this medication class
+    pattern  <- paste0("^(", paste(prefixes, collapse = "|"), ")")        # regex anchored at start: matches any prefix in class
     flag <- lmdb_baseline %>%
-      filter(grepl(pattern, atc)) %>%
-      distinct(pnr) %>%
-      mutate(!!med_class := 1L)
-    result <- result %>% left_join(flag, by = "pnr")
-    result[[med_class]] <- coalesce(result[[med_class]], 0L)
+      filter(grepl(pattern, atc)) %>%   # keep prescriptions whose ATC code matches this class
+      distinct(pnr) %>%                 # one row per person who had any prescription in this class
+      mutate(!!med_class := 1L)         # flag column named dynamically (tidy eval !! unquotes the variable name)
+    result <- result %>% left_join(flag, by = "pnr")          # merge flag into result; non-users get NA
+    result[[med_class]] <- coalesce(result[[med_class]], 0L)  # replace NA with 0: no prescription = 0
   }
 
   result
@@ -941,6 +996,10 @@ main_extraction <- function() {
   cat("Extracting weight outcomes (BS patients only -- DBSO)...\n")
   weights <- extract_weight_outcomes(bs_only)
   saveRDS(weights, file.path(path_output, "extract_weights.rds"))
+
+  cat("Extracting DBSO clinical outcomes (BS patients only -- Study 2)...\n")
+  dbso_clinical <- extract_dbso_clinical(bs_only)   # reoperation flags, EOSS, sleep apnea, nutritional supplements
+  saveRDS(dbso_clinical, file.path(path_output, "extract_dbso_clinical.rds"))
 
   cat("Extracting insulin outcomes (BS patients only)...\n")
   insulin <- extract_insulin_outcomes(bs_only)

@@ -12,32 +12,31 @@ run at all. Items marked [MINOR] are refinements that can wait.
 CRITICAL — MISSING DATA / WRONG RESULTS IF NOT FIXED
 ================================================================================
 
-[CRITICAL-2] DBSO FILE LOCATION AND FORMAT UNKNOWN
-  Problem:  DBSO (Databasen for Behandling af Svær Overvægt) is operated by
-            SunDK (not Statistics Denmark). It is delivered as a separate data
-            extract, NOT as a parquet folder accessible via load_database().
-            Current code uses load_database("dbso") as a placeholder — this
-            will fail.
-  Action:   Ask data manager:
-            - Exact file path of DBSO extract on project 708421
-              (likely a .sas7bdat, .csv, or .rds file in workdata folder)
-            - Column names: patient ID (CPR/pnr), surgery date, surgery type,
-              exam date, weight (kg), height (cm), BMI
-            - Whether data covers both public and private hospital surgeries
-  Code:     Update extract_weight_outcomes() in extract_outcomes_covariates.R
-            Replace load_database("dbso") with the appropriate read function
+[CRITICAL-2] DBSO FILE LOCATION AND FORMAT — RESOLVED (2026-05-05)
+  File:     E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
+            -> converted to parquet by prepare_dbso.R
+            -> saved as parquet-external/databasesvaerovervaegt/part-0.parquet
+            -> read via arrow::open_dataset(path_dbso) in all downstream scripts
+  Confirmed columns (lowercased): cpr (-> pnr), datoper_prim (surgery date),
+            gastricbypass_prim, gastricsleeve_prim, redo_prim (surgery type flags),
+            datopre, datofol, udgangsvaegtpre_prim, vaegtper_prim, vaegtfol,
+            hoejde, opdatelpr, koen, plus medication columns.
+  FoersteFedmeOpr_Dato: present but all NA — not used in pipeline.
+  Run prepare_dbso.R ONCE before running the main pipeline.
 
 
 ================================================================================
 CONFIRM — CODE WILL NOT RUN WITHOUT THESE
 ================================================================================
 
-[CONFIRM-1] bs_cohort.rds already exists and has correct structure
-  Required columns: pnr (character), surgery_date (Date), surgery_type
-                    ("RYGB" or "SG")
-  File path: E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/bs_cohort.rds
-  Action:   Verify file exists and column names match. If surgery_type uses
-            different labels, update case_when in build_cohorts.R.
+[CONFIRM-1] bs_cohort.rds — RESOLVED AND ELIMINATED (2026-05-06)
+  Resolution: bs_cohort.rds no longer exists as an intermediate file.
+  build_bs_cohort() now reads directly from the DBSO parquet
+  (parquet-external/databasesvaerovervaegt/) via arrow::open_dataset(path_dbso).
+  Surgery type is derived from DBSO flags (gastricbypass_prim / gastricsleeve_prim /
+  redo_prim) set in prepare_dbso.R. Revision surgeries (ReDo) are excluded by
+  filter(surgery_type %in% c("RYGB", "SG")) inside build_bs_cohort().
+  path_bs_cohort variable removed from build_cohorts.R.
 
 [CONFIRM-2] Column names after rename_with(tolower) for each register
   Confirmed from onboarding doc, Dokumentation-af-LPR2.pdf, and OSDC source (2026-05).
@@ -85,32 +84,54 @@ CONFIRM — CODE WILL NOT RUN WITHOUT THESE
   Action:   Build from E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj
             before running any extraction script.
 
-[CONFIRM-5] EMIGRATION DATE — missing censoring event (currently not implemented)
+[CONFIRM-5] EMIGRATION DATE — register identified, implementation pending
   Problem:  Persons who emigrate from Denmark leave the Danish registers and
             cannot be followed further. Their at-risk time after emigration is
             unobservable. Not censoring at emigration overstates person-time and
             can bias incidence rate estimates.
-  Current:  Persons are only censored at death (dod register) or 2025-12-31.
+  Current:  Persons are only censored at death (dodsaars) or 2025-12-31.
             Emigration is not a censoring event in any script.
-  Reference: archive/other peoples code/healthcarecosts2007_2020.R uses a pre-computed
-            "LifeLines1986_2021.RData" dataset (project 708614) with entry_d/exit_d columns
-            tracking when each person is registered in Denmark. The underlying data comes
-            from bef_bop (bop_vtil = residence-until date) and bef_adr registers.
-  Action:   Ask data manager: what is the register/variable for exact emigration
-            date on project 708421?
-            Likely candidates:
-              - vnds (vandrestatistik / migration statistics) register
-              - bef_bop register with bop_vtil (residence-until date) — confirmed approach
-                in reference project 708614 (see healthcarecosts2007_2020.R)
-              - CPR direct extract with emigration date
-            Approximate alternative: detect last year of BEF appearance and use
-            January 1 of the following year as a proxy emigration date (loses
-            precision but captures most cases).
-  Code:     Add emigration date to extract_demographics() in
-            extract_outcomes_covariates.R. Then add it to censor_date
-            computation in format_variables() in data_management_dementia.R:
-            censor_date = pmin(follow_up_end, bs_crossover_date,
-                               emigration_date, na.rm = TRUE)
+
+  REGISTER CONFIRMED (from archive/other peoples code/population1986-2021.R,
+  project 708614):
+    Register:  bef_bop  (SAS file: E:/rawdata/708614/grunddata/befbop202112.sas7bdat)
+    Key vars:  pnr, adresse_id, bop_vtil (residence-until date), bop_fra (residence-from)
+    Companion: bef_adr  (SAS: befadr202203.sas7bdat) — vars: adresse_id, kom (municipality)
+    Method:    (1) Filter bef_adr to Danish municipality codes (kom in DK range).
+               (2) Filter bef_bop to adresse_ids in Danish bef_adr.
+               (3) Per person: emigration_date = max(bop_vtil) across Danish addresses.
+               A person whose max(bop_vtil) < study_end and who has not died has emigrated.
+    Note:      LifeLines1986_2021.RData (project 708614) was a pre-computed derivative;
+               no creation script exists. Use bef_bop directly instead.
+
+  ASK DATA MANAGER:
+    "For project 708421, I need bef_bop (residence registration periods) with bop_vtil
+    (residence-until date) to compute emigration dates for survival analysis censoring.
+    (1) Is bef_bop accessible on project 708421? Path: SAS in grunddata, or parquet?
+    (2) Do I also need bef_adr to filter to Danish municipalities?
+    (3) Is there already a pre-computed emigration/residency file on this project?"
+
+  Fallback if bef_bop unavailable:
+    BEF annual snapshot approach: person appears in BEF year Y but not Y+1 and has
+    not died -> proxy emigration_date = as.Date(paste0(Y+1, "-01-01")).
+    Loses up to 12 months precision but captures most emigrants. Last resort only.
+
+  Code (once register path is confirmed):
+    1. Add to extract_demographics() in extract_outcomes_covariates.R:
+         bef_bop  <- read_sas(path_bef_bop) %>% rename_with(tolower)
+         bef_adr  <- read_sas(path_bef_adr) %>% rename_with(tolower) %>%
+                     filter(kom %in% municipalities_DK)
+         emigration <- bef_bop %>%
+           filter(adresse_id %in% unique(bef_adr$adresse_id),
+                  pnr %in% !!pnrs) %>%
+           group_by(pnr) %>%
+           summarise(emigration_date = max(as.Date(bop_vtil)), .groups = "drop")
+         Output: add emigration_date column to extract_demographics.rds
+    2. In format_variables() in data_management_dementia.R, update:
+         censor_date = pmin(follow_up_end, bs_crossover_date,
+                            emigration_date, na.rm = TRUE)
+    3. In build_cohorts.R, add emigration-before-index exclusion to
+       build_bs_cohort(), build_gp_comparator(), and build_obesity_comparator().
 
 [CONFIRM-6] PSYCHIATRIC LPR2 REGISTER — RESOLVED
   Access:   arrow::open_dataset() with confirmed paths:

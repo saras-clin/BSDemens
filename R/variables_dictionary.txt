@@ -249,10 +249,82 @@
 #   Key vars: pnr, socio13 (socioeconomic group code), aar
 #   Use: filter aar == year(surgery_date) - 1
 #
-# DBSO - Danish Obesity Surgery Registry (Fedmekirurgiregisteret)
-#   DST folder: ** ASK DATA MANAGER FOR EXACT FOLDER NAME **
-#   Expected key vars: pnr, surgery_date, surgery_type, exam_date, weight_kg, height_cm, bmi
-#   Note: mandatory reporting since 2010, covers both public and private hospitals
+# DBSO - Danish Obesity Surgery Registry (Databasen for Behandling af Svær Overvægt)
+#   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by prepare_dbso.R
+#   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/
+#   Access: arrow::open_dataset(path_dbso) — NOT via load_database()
+#   Format: LONG — one row per clinic visit per patient (PRE=pre-op, PER=surgery, FOL=follow-up)
+#   Note: mandatory reporting since 2010, covers all public and private bariatric procedures
+#   All column names below are lowercase (rename_with(tolower) applied in prepare_dbso.R)
+#
+#   --- PATIENT IDENTIFIER ---
+#   cpr -> pnr        encrypted CPR number (renamed to pnr for consistency across pipeline)
+#
+#   --- SURGERY TYPE FLAGS (binary 0/1; patient-level: same value across all rows per patient) ---
+#   gastricbypass_prim    1 = primary Roux-en-Y gastric bypass (RYGB)
+#   gastricsleeve_prim    1 = primary sleeve gastrectomy (SG)
+#   redo_prim             1 = revision/redo bariatric surgery of any type
+#                             includes: revision bypass (gastricbypass_prim=1 AND redo_prim=1)
+#                                       revision sleeve (gastricsleeve_prim=1 AND redo_prim=1)
+#   gastricsleeveredo     1 = revision sleeve gastrectomy (sleeve-specific revision flag)
+#   konverteret           1 = conversion procedure (e.g., SG converted to RYGB)
+#
+#   --- DERIVED COLUMN (added by prepare_dbso.R) ---
+#   surgery_type          "RYGB" / "SG" / "ReDo" / "Unknown"
+#                         derived from flags above; redo_prim checked FIRST so revision bypass
+#                         is classified "ReDo" not "RYGB" (case_when priority fix)
+#
+#   --- VISIT DATES ---
+#   datopre               date of pre-operative assessment visit (DatoPRE)
+#   datoper_prim          date of primary bariatric surgery — DBSO clinical record (DatoPER_prim)
+#                         used as index date (surgery_date); confirmed as preferred over OpDateLPR
+#   opdatelpr             surgery date as recorded in LPR / D_ODTO; used only for data quality
+#                         check (DatoPER_prim vs OpDateLPR discrepancy) in explore_dbso()
+#   datofol               date of this follow-up clinic visit; varies across rows per patient
+#
+#   --- FOLLOW-UP WINDOW FLAGS (binary 0/1; visit-level) ---
+#   fumellem6mdr1aar      1 = this follow-up visit falls in the 6-month to 1-year window
+#   fumellem1_5aar2_5aar  1 = this follow-up visit falls in the 1.5-year to 2.5-year window
+#   id_funaermest2aar     row identifier for the follow-up visit nearest to 2 years post-surgery
+#
+#   --- WEIGHT AND HEIGHT (continuous; some columns patient-level, vaegtfol is visit-level) ---
+#   udgangsvaegt          weight (kg) at program entry / referral (Udgangsvaegt)
+#   udgangsvaegtpre_prim  weight (kg) at last pre-operative assessment (UdgangsvaegtPRE_prim)
+#                         patient-level constant; used to compute bmi_pre
+#   vaegtper_prim         weight (kg) at surgery day (VaegtPER_prim); patient-level
+#   vaegtfol              weight (kg) at THIS follow-up visit; varies across rows
+#   hoejde                height (cm); patient-level constant across all visit rows (Hoejde)
+#   bmi_pre               derived: udgangsvaegtpre_prim / (hoejde/100)^2; added by prepare_dbso.R
+#
+#   --- DBSO-COMPUTED CLINICAL OUTCOMES (Study 2; patient-level flags) ---
+#   akutgenindlaeggelse30d  1 = acute unplanned readmission within 30 days of surgery
+#   reop30d_3               1 = reoperation within 30 days
+#   reoplaar_3              1 = reoperation within 1 year
+#   reop5aar_2              1 = reoperation within 5 years
+#   medkomplik*             5 medical complication flag columns — exact names must be
+#                           confirmed by running inspect_dbso() on DST (run names(raw))
+#                           Expected pattern: medkomplik, medkompliktype, medkomplikdato, etc.
+#
+#   --- COMORBIDITIES AND STAGING (Study 2; patient-level) ---
+#   eoss                    Edmonton Obesity Staging System score at pre-op assessment (0-4)
+#   obstruktivsoevnapnoepre  1 = obstructive sleep apnea documented at pre-op
+#   obstruktivsoevnapnoefol  1 = obstructive sleep apnea documented at follow-up
+#
+#   --- NUTRITIONAL SUPPLEMENTS (Study 2; patient-level or visit-level — confirm on DST) ---
+#   b12                     vitamin B12 supplement status or compliance flag
+#   jern                    iron supplement status or compliance flag
+#   kalk                    calcium supplement status or compliance flag
+#                           Compliance sub-columns likely suffixed _compliance or similar;
+#                           exact names must be confirmed by inspect_dbso() on DST
+#
+#   --- VARIABLE COVERAGE BY STUDY ---
+#   Study 1 (Dementia):   surgery_date, surgery_type (exposure definition only)
+#                         bmi_pre from extract_weights.rds (Table 1 descriptive)
+#   Study 2 (T1D):        all weight/height columns (extract_weights.rds)
+#                         akutgenindlaeggelse30d, reop30d_3, reoplaar_3, reop5aar_2 (extract_dbso_clinical.rds)
+#                         eoss, obstruktivsoevnapnoepre/fol (extract_dbso_clinical.rds)
+#                         b12, jern, kalk (extract_dbso_clinical.rds)
+#                         medkomplik* (extract_dbso_clinical.rds — confirm column names first)
 #
 # OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
 #   File path: confirm with data manager (likely dm_population_YYYY_YYYY.rds)

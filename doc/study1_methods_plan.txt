@@ -1,7 +1,7 @@
 ================================================================================
 STUDY 1: BARIATRIC SURGERY AND DEMENTIA — METHODS PLAN
 ================================================================================
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 Based on: protocol draft "BS and dementia_SS.txt" (doc/) — reviewed and reconciled
 Journal target: to be decided
 
@@ -46,13 +46,40 @@ Minimum lookback required before index: 5 years
 --------------------------------------------------------------------------------
 
 3a. Exposed cohort — bariatric surgery (BS) patients
-    All Danish residents who underwent primary RYGB (SKS: KJDF10, KJDF11) or
-    sleeve gastrectomy (SG; KJDF40, KJDF41, KJDF96, KJDF97) between
-    January 1, 2010 and December 31, 2024. Surgery codes retrieved from DNPR.
+    All Danish residents who underwent primary RYGB or sleeve gastrectomy (SG)
+    between January 1, 2010 and December 31, 2024, as recorded in DBSO.
+    Cohort defined from DBSO (national mandatory bariatric surgery registry, operated
+    by SunDK), which covers all public and private procedures and has been mandatory
+    since 2010. DBSO is used in preference to LPR procedure codes because it provides
+    the authoritative surgery date (DatoPER_prim as index date) and is more complete
+    for private-clinic procedures.
+    RYGB: GastricBypass_prim = 1 (corresponding SKS codes: KJDF10, KJDF11).
+    SG:   GastricSleeve_prim = 1 (corresponding SKS codes: KJDF40, KJDF41, KJDF96, KJDF97).
     The cohort is divided into an RYGB sub-cohort and an SG sub-cohort.
 
     Exclusion criteria (applied in order):
-      1. Revision surgery or any prior bariatric procedure
+      1. Revision surgery or any prior bariatric procedure.
+         DBSO records ReDo_prim = 1 for all revision/redo operations. This flag
+         covers three scenarios:
+           (a) Revision bypass: GastricBypass_prim = 1 AND ReDo_prim = 1
+               (patient had a prior procedure and the current op is a bypass revision)
+           (b) Revision sleeve: GastricSleeve_prim = 1 AND ReDo_prim = 1,
+               or GastricSleeveReDo = 1 (sleeve-specific revision flag)
+           (c) Conversion procedure: Konverteret = 1 (e.g., prior sleeve converted
+               to bypass at this operation)
+         Implementation: prepare_dbso.R checks ReDo_prim FIRST in the surgery_type
+         case_when — a revision bypass (GastricBypass_prim = 1 AND ReDo_prim = 1)
+         is therefore classified as "ReDo", not "RYGB". build_bs_cohort() then
+         filters surgery_type %in% c("RYGB", "SG"), which automatically excludes
+         "ReDo" and "Unknown" rows.
+         Verification: explore_dbso() cross-tabulates GastricBypass_prim /
+         GastricSleeve_prim / ReDo_prim to confirm flag combinations are as
+         expected. Run explore_dbso(raw) before prepare_dbso() and inspect
+         the combinations table for unexpected patterns (e.g., both bypass and
+         sleeve flags = 1 simultaneously).
+         Limitation: DBSO records the current operation only. Prior bariatric
+         procedures performed before DBSO's 2010 start or carried out abroad
+         cannot be identified through this flag alone.
          [Protocol reviewer comment: confirm proportion of re-operations]
       2. Dementia diagnosis (ICD-10: F00–F03, G30–G31) at any time before index
          — from DNPR (somatic) AND DCPRR (psychiatric)

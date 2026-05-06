@@ -1,290 +1,242 @@
-# ============================================================================
-# BS & DEMENTIA / T1D STUDIES - DATA EXTRACTION SETUP GUIDE
-# ============================================================================
+# BS & DEMENTIA / T1D STUDIES — PIPELINE OVERVIEW
+Last updated: 2026-05-06
+
+---
 
 ## Overview
 
 This project extracts data from Danish Statistics (DST) registers for two studies:
-1. **Study 1:** Association between bariatric surgery and dementia
-2. **Study 2:** Outcomes of bariatric surgery in Type 1 Diabetes patients
 
-The exposure (bariatric surgery cohort) is already defined through the Danish Quality Registry for Severe Obesity Treatment (DBSO). This guide focuses on extracting **outcomes and covariates only**.
+- **Study 1:** Bariatric surgery and risk of dementia (BS vs general population and obesity comparators)
+- **Study 2:** Bariatric surgery outcomes in Type 1 Diabetes (glycaemic and hospital endpoints)
 
----
-
-## Project Structure
-
-```
-BS_demens/
-├── R/
-│   ├── variables_dictionary.txt      # All variables needed for studies
-│   ├── extract_outcomes_covariates.R # Main extraction script
-│   └── [your scripts]
-├── data/
-│   ├── extracted/                      # Output: cleaned datasets
-│   ├── bs_cohort.rds                   # Input: existing BS cohort
-│   └── [raw data folder on DST]
-├── claude.md                           # Project documentation
-└── doc/
-    └── [protocol documents]
-```
+Data live on the DST server (project 708421). All analysis runs on DST — data cannot be
+downloaded. Registers are stored as Parquet files and accessed via `dstDataPrep::load_database()`
+or `arrow::open_dataset()` (for DBSO and psychiatric registers in parquet-external).
 
 ---
 
-## Key Learning Points from Onboarding
+## Directory structure
 
-### 1. DST Environment Basics
-
-- **Remote access:** You work on Statistics Denmark's virtual machines
-- **Security:** Data cannot be downloaded; analysis must be done on DST
-- **Registers available:**
-  - CRS (Civil Registration System): Demographics, death dates
-  - DNPR (National Patient Registry): Diagnoses, hospital admissions
-  - DNPD (Prescription Database): Medications
-  - DCPRR (Psychiatric Registry): Psychiatric diagnoses
-  - DBSO (Obesity Registry): Surgical & anthropometric data
-  - IDLMR (Labour Market Database): Education, income
-
-### 2. Data Formats: Parquet & DuckDB
-
-**Why use them?**
-- Data on DST is stored as **Parquet files** (columnar format)
-- More memory-efficient than CSV
-- **DuckDB** processes data without loading everything into RAM
-- **duckplyr** lets you use familiar `dplyr` syntax
-
-**Basic workflow:**
-```r
-# Open dataset
-data <- arrow::open_dataset("E:/workdata/708421/cleaned-data/parquet-registers/<registry-name>") |>
-  duckplyr::as_duckplyr_table()
-
-# Use familiar dplyr verbs (lazy evaluation)
-result <- data |>
-  filter(condition) |>
-  select(columns)
-
-# Execute and get results
-result |> collect()
 ```
-
-### 3. DST Best Practices (from onboarding)
-
-- **Memory management:** Only load data you need. Use filtering early
-- **Lazy evaluation:** Operations aren't executed until you call `collect()`
-- **Working directories:** Set up a project folder in Workspaces
-- **Naming:** Keep ICD-10 codes in consistent format
-- **Variables:** Use `names()`, `str()`, `glimpse()` to explore data before processing
-
-### 4. Code Patterns from Existing Projects
-
-The existing code in `archive/other peoples code/` shows:
-- How to loop through yearly datasets (e.g., SSSY, SYSI for services)
-- How to stack multiple data sources (e.g., psychiatric register pre/post 1995)
-- How to harmonize diagnoses across time periods
-- How to distinguish patient types (inpatient, outpatient, ER)
-- How to create derived variables (e.g., time between prescriptions)
+R/
+  prepare_dbso.R              # Step 0 (one-time): convert DBSO SAS -> parquet
+  build_cohorts.R             # Step 1: BS cohort + GP comparator + obesity comparator
+  extract_outcomes_covariates.R  # Step 2: outcomes, comorbidities, medications, demographics
+  extract_ses.R               # Step 3: socioeconomic variables (UDDA, FAIK, AKM)
+  data_management_dementia.R  # Step 4: merge + exclusions + variable formatting (Study 1)
+  variables_dictionary.txt    # Register variable reference
+  functions_guide.txt         # Function inventory
+  README_EXTRACTION.md        # This file
+datasets/                     # gitignored: all .rds outputs
+  full_cohort.rds             # produced by Step 1; one row per person (BS + GP + Obesity)
+  extract_demographics.rds    # produced by Step 2
+  extract_dementia.rds
+  extract_comorbidities.rds
+  extract_nmi.rds
+  extract_medications.rds
+  extract_diabetes.rds
+  extract_weights.rds
+  extract_dbso_clinical.rds
+  extract_insulin.rds
+  ses_data.rds                # produced by Step 3
+  study1_clean.rds            # produced by Step 4; analysis-ready for Study 1
+```
 
 ---
 
-## Data Extraction Strategy
+## Pipeline steps
 
-### Step 1: Load Existing BS Cohort
-- Source: DBSO (mandatory registry since 2010)
-- Variables: PNR, surgery date, surgery type (RYGB vs SG)
-- This is your denominator for all downstream extractions
-- **Workspace save path:** `E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets`
+### Step 0 — prepare_dbso.R (one-time only)
 
-### Step 2: Extract by Data Source
+Converts the DBSO SAS file from SunDK into a Parquet folder that the rest of the pipeline
+can read via `arrow::open_dataset()`.
 
-Each `extract_*` function loads one register and:
-1. Filters to your BS cohort PNRs
-2. Takes observations relevant to index date
-3. Extracts needed variables
-4. Returns clean, wide format (one row per person)
+- Input:  `E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat`
+- Output: `E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/part-0.parquet`
 
-### DST Registry Mapping
-- **CRS / CPR:** demographics, sex, birth date, death date
-- **LPR2:** `lpr_adm` (contacts) + `lpr_diag` (diagnoses)
-- **LPR3:** `kontakter` (contacts) + `diagnoser` (diagnoses)
-- **SES:** `faik` (family income), `udda` (education)
-- **Diabetes classification:** OSDC cohort or `dm_population_1977_2022.rds`
+Run phases in order:
+1. `inspect_dbso()` — print column names and first rows; verify the file is DFR_population
+2. `explore_dbso(raw)` — structural checks including DatoPER_prim vs OpDateLPR date quality check
+3. `prepare_dbso()` — clean and save as parquet
 
-### Diabetes covariate classification
-Use the Open Source Diabetes Classifier (OSDC) for diabetes type. The onboarding guide already refers to a locally prepared diabetes cohort file:
+Key derived columns written to parquet:
+- `pnr` — character patient ID (from CPR column)
+- `surgery_date` — Date (from DatoPER_prim)
+- `surgery_type` — "RYGB" / "SG" / "ReDo" / "Unknown" (from GastricBypass_prim / GastricSleeve_prim / ReDo_prim flags)
+- `bmi_pre` — calculated from UdgangsvaegtPRE_prim and Hoejde
 
-`E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds`
-
-This is the preferred source for classifying T1D vs T2D vs non-diabetes.
-
-**Study 1 needs:**
-- Dementia diagnoses (DNPR + DCPRR) → outcome
-- NMI comorbidities (DNPR) → covariates
-- Medications (DNPD) → covariates
-- Education (IDLMR) → covariates
-
-**Study 2 needs:**
-- Weight/BMI (DBSO) → outcome
-- Insulin doses (DNPD) → outcome
-- Hospital contacts (DNPR) → outcome
-- Comorbidities (DNPR) → covariates
-- Medications (DNPD) → covariates
-
-### Step 3: Join Everything
-- Use `pnr` as join key
-- Keep all BS cohort members (left join)
-- Missing values indicate no event or medication
+The DBSO parquet is **long format**: one row per clinic visit per patient
+(PRE = pre-op assessment, PER = surgery visit, FOL = follow-up visits).
+`surgery_date` and `surgery_type` are patient-level and identical across all visit rows.
+Weight/BMI columns vary by visit row and are used by `extract_weight_outcomes()` in Step 2.
 
 ---
 
-## How to Run This On DST
+### Step 1 — build_cohorts.R
 
-### 1. Set Up Your Environment
+Defines the three study groups and applies inclusion/exclusion criteria.
+Run this before any extraction.
+
+**BS cohort** is built directly from the DBSO parquet:
+- Filters to `surgery_type %in% c("RYGB", "SG")` (drops revisions and unknowns)
+- Filters to study period 2010–2024
+- `distinct(pnr)` reduces to one row per patient (all visit rows for a patient
+  share the same surgery_date and surgery_type, so no information is lost)
+- Applies exclusions: death before surgery, age < 18, < 5 years registry history,
+  pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
+
+**GP comparator** (1:25): sampled from BEF, matched on sex + birth year (±1).
+Dead persons and prior-BS persons excluded from pool. Matched alive at each index date.
+Pre-index dementia excluded after matching.
+
+**Obesity comparator** (1:5): persons with ICD E66 in LPR before their matched BS
+patient's index date. Same alive + prior-BS + dementia exclusions.
+
+Output: `datasets/full_cohort.rds` — one row per person, columns:
+`pnr`, `index_date`, `cohort` ("BS"/"GP"/"Obesity"), `surgery_type`, `matched_pnr`
+
+---
+
+### Step 2 — extract_outcomes_covariates.R
+
+Extracts all outcomes and covariates for every person in full_cohort.rds.
+Run after Steps 0 and 1. Can run in parallel with Step 3.
+
+**Register access:**
+
+| Register | Access method | Key columns |
+|---|---|---|
+| bef | `load_database("bef")` | pnr, foed_dag, koen, aar |
+| dodsaars | `load_database("dodsaars")` | pnr, doddato |
+| lpr_adm | `load_database("lpr_adm")` | pnr, recnum, d_inddto, c_pattype |
+| lpr_diag | `load_database("lpr_diag")` | recnum, c_diag, c_diagtype |
+| lpr_a_kontakt | `load_database("lpr_a_kontakt")` | pnr, dw_ek_kontakt, dato_start, kontakttype |
+| lpr_a_diagnose | `load_database("lpr_a_diagnose")` | dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet |
+| lmdb | `load_database("lmdb")` | pnr, atc, eksd |
+| t_psyk_adm | `arrow::open_dataset(path_psyk_adm)` | v_cpr→pnr, k_recnum→recnum, d_inddto |
+| t_psyk_diag | `arrow::open_dataset(path_psyk_diag)` | v_recnum→recnum, c_diag, c_diagtype |
+| DBSO | `arrow::open_dataset(path_dbso)` | pnr, surgery_date, surgery_type, vaegtfol, etc. |
+
+**ICD-10 note:** All diagnosis codes in DST have a leading "D" prefix (e.g., "DG30").
+Strip with `substr(code, 2, 4)` (3-char) or `substr(code, 2, 5)` (4-char) before matching.
+
+**LPR versions:**
+- LPR2 (up to March 2019): `lpr_adm` + `lpr_diag`, joined on `recnum`
+- LPR2 psychiatric (1995–March 2019): `t_psyk_adm` + `t_psyk_diag` via `open_dataset`
+- LPR3 (March 2019+): `lpr_a_kontakt` + `lpr_a_diagnose`, joined on `dw_ek_kontakt`
+  LPR3 is unified — covers somatic and psychiatric in one register.
+
+**diagtype filters:**
+- Outcomes (dementia events): diagtypes A and B only
+- Baseline comorbidities (NMI): diagtypes A, B, and G (grundmorbus)
+
+**Output files** saved to `datasets/`:
+
+| File | Contents |
+|---|---|
+| extract_demographics.rds | sex, birth_date, death_date, age_at_surgery, follow_up_end |
+| extract_dementia.rds | date_dementia, date_alzheimers, date_vascular |
+| extract_comorbidities.rds | 33 binary NMI condition flags (baseline 5-year window) |
+| extract_nmi.rds | nmi_score (Kristensen 2022 weighted sum across 50 predictors) |
+| extract_medications.rds | antihypertensive, lipid_lowering, insulin, antidepressant, antidementia (binary) |
+| extract_diabetes.rds | diabetes_type ("T1D"/"T2D"/"No_diabetes") from OSDC |
+| extract_weights.rds | bmi_pre, weight at 3/6/12/24 months, %TWL, %EWL (Study 2 / BS only) |
+| extract_dbso_clinical.rds | DBSO-computed outcomes: 30-day readmission, reoperation flags, EOSS, sleep apnea, nutritional supplements (Study 2 / BS only) |
+| extract_insulin.rds | insulin prescription counts pre/post surgery by period (Study 2 / BS only) |
+| extract_hospitals.rds | first acute inpatient admission dates for glycaemic and other endpoints (Study 2) |
+
+---
+
+### Step 3 — extract_ses.R
+
+Extracts socioeconomic position (SEP) for all cohort members.
+Run in parallel with Step 2 (both read full_cohort.rds independently).
+Follows SEPLINE guidelines (Hjorth et al. Clin Epidemiol 2025;17:593–624).
+
+Reference year: `year(index_date) - 1` (year before surgery / matched index date).
+
+| Dimension | Register | Variable | Categories |
+|---|---|---|---|
+| Education | UDDA / hfaudd | Most recent record up to index year | Short / Medium / Long / Unknown |
+| Income | FAIK via BEF familie_id | famaekvivadisp_13, within-cohort quintile | Low (Q1) / Medium (Q2–4) / High (Q5) / Unknown |
+| Occupation | AKM / socio13 | Record at index year | Working / Unemployed / Outside_workforce / Retired / Student / Unknown |
+| Composite SEP | — | High = all three high; Low = any one low | High / Medium / Low / Unknown |
+
+Output: `datasets/ses_data.rds`
+
+---
+
+### Step 4 — data_management_dementia.R (Study 1)
+
+Merges all extract_*.rds and ses_data.rds into one analysis-ready dataset.
+
+1. Load & merge — left-joins all extracts onto full_cohort.rds via pnr
+2. Safety check — removes any pre-surgery dementia that slipped through
+3. ICD + Rx supplement — combines hospital ICD flags with prescriptions for
+   hypertension (C02/C03/C07–C09) and dyslipidemia (C10); these conditions are
+   under-captured by hospital codes alone
+4. NMI count — counts how many of 33 GMC conditions each person has (for Table 1
+   descriptives); distinct from nmi_score (the weighted Kristensen 2022 score)
+5. Format variables — factors with reference levels, censor_date, outcome event flags,
+   follow-up time in days, age categories, calendar period
+
+Output: `datasets/study1_clean.rds` — one row per person, ready for Cox models and Table 1.
+
+Note: `data_management_t1d.R` (Study 2 equivalent) does not yet exist.
+
+---
+
+## Running the pipeline on DST
 
 ```r
-# Install packages (first time only)
-packages_needed <- c("dplyr", "duckplyr", "arrow", "tidyr", "lubridate", "here")
-install.packages(packages_needed)
+# Step 0: one-time DBSO conversion
+source("R/prepare_dbso.R")
+raw <- inspect_dbso()
+explore_dbso(raw)   # check output before proceeding
+dbso <- prepare_dbso()
 
-# Update duckplyr if on old DST version
-install.packages("duckplyr")
-```
+# Step 1: build cohorts
+source("R/build_cohorts.R")
+full_cohort <- main_cohort_build()
 
-### 2. Configure Paths
-
-Edit these paths in `extract_outcomes_covariates.R`:
-
-```r
-path_dst_raw <- "path/to/dst/raw/data"  # Ask DST for correct path
-path_output <- here::here("data", "extracted")
-```
-
-**Note:** DST paths are typically like `/rawdata/[project_number]/grunddata/` or similar.
-
-### 3. Load Your BS Cohort
-
-The script expects `data/bs_cohort.rds` containing:
-```
-pnr (CPR number)
-surgery_date (date of bariatric surgery)
-surgery_type ("RYGB" or "SG")
-```
-
-Create it first:
-```r
-# Example: if you have it as CSV
-bs_cohort <- read.csv("path/to/bs_cohort.csv")
-saveRDS(bs_cohort, "data/bs_cohort.rds")
-```
-
-### 4. Run Extraction
-
-```r
+# Steps 2 + 3: run in parallel (separate R sessions on DST recommended)
 source("R/extract_outcomes_covariates.R")
-results <- main_extraction()
+main_extraction()
 
-# This produces:
-# - data/extracted/study1_dementia_data.rds
-# - data/extracted/study2_t1d_data.rds
-# - (+ CSV versions)
+source("R/extract_ses.R")
+main_ses_extraction()
+
+# Step 4: merge and clean
+source("R/data_management_dementia.R")
+study1 <- main_data_management()
 ```
 
-### 5. Quality Check
-
-```r
-# Quick data quality checks
-study1 <- readRDS("data/extracted/study1_dementia_data.rds")
-
-nrow(study1)  # How many people?
-colnames(study1)  # What variables?
-summary(study1)  # Descriptive stats
-sum(is.na(study1$pnr))  # Any missing PNRs?
-```
+**Before each session:** build the dstDataPrep package from source:
+`E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
 
 ---
 
-## Common Issues & Solutions
+## Open issues before first run (see TODO.txt)
 
-### Issue: "Package not found on DST"
-**Solution:** DST has a pre-installed snapshot of CRAN. Most packages are there. If not:
-1. Check `packageVersion("package_name")`
-2. Try `install.packages("package_name")` anyway
-3. If duckplyr is old (< 1.1), update it
-
-### Issue: "Data loads but operations are very slow"
-**Solution:** 
-- You're probably not using lazy evaluation correctly
-- Make sure to `filter()` early before `collect()`
-- Check memory indicator in RStudio (red = bad)
-- Consider splitting work across multiple scripts
-
-### Issue: "Can't find the Parquet files"
-**Solution:**
-- Ask DST exactly where data is stored
-- Use `dir()` to browse folders
-- Path might be `/rawdata/[your_project_id]/grunddata/DNPR/`
-
-### Issue: "Diagnosis codes don't match expected results"
-**Solution:**
-- ICD-10 codes vary in length (e.g., "I10" vs "I10A0")
-- Use `substr()` to extract consistent portions
-- Check existing code for how they handle it
-- Reference: https://www.dst.dk/da/Statistik/dokumentation/Times
+- **CONFIRM-2:** Verify `doddato` is the correct column name in dodsaars
+  (`load_database("dodsaars") %>% rename_with(tolower) %>% glimpse()`)
+- **CONFIRM-3:** Verify diabetes_type values in OSDC file
+  (`table(dm$diabetes_type)` — code assumes "T1D" / "T2D" string labels)
+- **CONFIRM-5:** Emigration date register — ask data manager about bef_bop availability
+  on project 708421 (see CONFIRM-5 in TODO.txt for full detail and code sketch)
+- **MINOR-8:** Confirm `aar` column name in UDDA, FAIK, AKM
 
 ---
 
-## Key ICD-10 Codes to Know
+## Key references
 
-**Dementia (Study 1):**
-- G30: Alzheimer's disease
-- G31: Other degenerative diseases
-- F01: Vascular dementia
-
-**Diabetes (Study 2):**
-- E10: Type 1 Diabetes
-- E11: Type 2 Diabetes
-- E15: Nondiabetic hypoglycemia
-
-**NMI Conditions:**
-- I21-I23: Myocardial infarction
-- I63-I64: Stroke
-- J40-J44: COPD
-- K70-K74: Liver disease
-- N18-N19: Kidney disease
-
-**ATC Codes:**
-- A10A: Insulin
-- A10B: Other antidiabetic drugs
-- C10: Lipid-lowering drugs
-- N06A: Antidepressants
-
----
-
-## Important Considerations
-
-1. **Time windows:** Always specify date ranges to avoid loading unnecessary data
-2. **Lookback periods:** Use 5 years before surgery for baseline covariates
-3. **First occurrence:** Usually take first diagnosis/prescription date
-4. **Missing data:** NAs are expected for people without events
-5. **Competing risk:** Death is a competing risk for dementia and hospitalizations
-6. **Follow-up duration:** Different studies end at different dates (2025 vs 2024)
-
----
-
-## Next Steps
-
-1. **Validate BS cohort:** Confirm it matches DBSO expectations
-2. **Test extraction:** Start with one small register (e.g., CRS)
-3. **Check outputs:** Compare with known cohort size/characteristics
-4. **Iterate:** Adjust ICD-10 codes based on domain knowledge
-5. **Document:** Keep notes on any modifications made
-
----
-
-## Resources
-
-- **DST documentation:** https://www.dst.dk/da/Statistik/dokumentation/Times
-- **Onboarding guide:** See `archive/onbording/`
-- **Existing code examples:** See `archive/other peoples code/`
-- **Open Source Diabetes Classifier:** https://steno-aarhus.github.io/osdc/
-- **STROBE checklist:** https://www.equator-network.org/
+| Topic | Reference |
+|---|---|
+| NMI | Kristensen KB et al. Clin Epidemiol 2022;14:567–79 |
+| SEP / SEPLINE | Hjorth CF et al. Clin Epidemiol 2025;17:593–624 |
+| DBSO registry | Winckelmann LA et al. Surg Obes Relat Dis 2022;18(4):511–9 |
+| DNPR (LPR) | Schmidt M et al. Clin Epidemiol 2015;7:449–90 |
+| DCPRR | Mors O et al. Scand J Public Health 2011;39(7 Suppl):54–7 |
+| Dementia PPV | Phung TK et al. Dement Geriatr Cogn Disord 2007;24(3):220–8 |
+| E66 validity | Gribsholt SB et al. Clin Epidemiol 2019;11:845–54 |

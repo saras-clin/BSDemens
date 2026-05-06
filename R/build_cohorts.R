@@ -56,7 +56,6 @@ library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_
 
 # Paths ----
 path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
-path_bs_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/bs_cohort.rds"
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
 path_psyk_adm  <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
@@ -69,7 +68,9 @@ N_OBESITY_PER_BS <- 5L
 # ICD codes for dementia (3-char, no D prefix)
 DEMENTIA_ICD3 <- c("F00", "F01", "F02", "F03", "G30", "G31")
 
-# SKS/NOMESCO procedure codes for bariatric surgery
+# SKS/NOMESCO procedure codes for bariatric surgery — reference only; not used in code.
+# Cohort is defined via DBSO flags (gastricbypass_prim / gastricsleeve_prim), not SKS codes.
+# RYGB: KJDF10, KJDF11 | SG: KJDF40, KJDF41, KJDF96, KJDF97
 BS_PROC_CODES <- c("KJDF10", "KJDF11", "KJDF40", "KJDF41", "KJDF96", "KJDF97")
 
 # ============================================================================
@@ -193,60 +194,77 @@ get_prior_bs_pnrs <- function(pnr_vector) {
 
 get_bef_demographics <- function(pnr_vector) {
   # Returns one row per pnr: koen (sex), foed_dag (birth date), most recent record
-  bef <- load_database("bef") %>% rename_with(tolower)
+  bef <- load_database("bef") %>% rename_with(tolower)   # open BEF (population register) lazily; lowercase column names
   bef %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, koen, foed_dag, aar) %>%
-    group_by(pnr) %>%
-    arrange(desc(aar)) %>%
-    slice(1) %>%
-    ungroup() %>%
-    select(pnr, koen, foed_dag) %>%
-    collect() %>%
-    mutate(birth_year = year(as.Date(foed_dag)))
+    filter(pnr %in% !!pnr_vector) %>%    # push cohort filter to parquet before pulling data into memory
+    select(pnr, koen, foed_dag, aar) %>%  # only the columns we need; reduces data transferred to R
+    group_by(pnr) %>%                     # group by person to pick one record per person
+    arrange(desc(aar)) %>%                # most recent BEF year first so slice(1) picks the newest record
+    slice(1) %>%                          # keep only the most recent record; BEF may have many years per person
+    ungroup() %>%                         # release grouping after deduplication
+    select(pnr, koen, foed_dag) %>%       # drop aar; no longer needed after dedup
+    collect() %>%                         # pull deduplicated data from parquet into R memory
+    mutate(birth_year = year(as.Date(foed_dag)))  # derive birth year for matching; as.Date needed if foed_dag is character
 }
 
 
 # ============================================================================
-# STEP 1: LOAD AND CLEAN BS COHORT
+# STEP 1: BUILD BS COHORT FROM DBSO
 # ============================================================================
+# Source: DBSO (Databasen for Behandling af Svær Overvægt) — the national mandatory
+# bariatric surgery registry. Covers all public and private procedures since 2010.
+# DBSO is more complete than LPR procedure codes alone because private clinics are
+# obligated to report to DBSO but may not always submit to LPR.
+#
+# DBSO parquet is long format: one row per clinic visit per patient
+# (PRE = pre-op assessment, PER = surgery, FOL = follow-up visits).
+# surgery_type and surgery_date were derived in prepare_dbso.R from:
+#   surgery_type: gastricbypass_prim == 1 -> "RYGB"; gastricsleeve_prim == 1 -> "SG";
+#                 redo_prim == 1 -> "ReDo"; otherwise "Unknown"
+#   surgery_date: datoper_prim (DBSO's own clinical record of surgery date)
 
 build_bs_cohort <- function() {
-  bs_raw <- readRDS(path_bs_cohort)
-  # Expected columns: pnr, surgery_date, surgery_type
+  dbso <- arrow::open_dataset(path_dbso) %>%           # open DBSO parquet lazily; long format
+    filter(
+      surgery_type %in% c("RYGB", "SG"),               # primary procedures only; drops ReDo and Unknown
+      !is.na(surgery_date),                             # must have a valid surgery date (datoper_prim)
+      surgery_date >= as.Date("2010-01-01"),            # DBSO mandatory reporting began 2010; study start
+      surgery_date <= as.Date("2024-12-31")             # study end per protocol
+    ) %>%
+    select(pnr, surgery_date, surgery_type) %>%         # only the three columns needed downstream
+    collect() %>%                                       # pull filtered rows into R memory
+    distinct(pnr, .keep_all = TRUE)                     # one row per patient; DBSO may have multiple visit rows per person
 
-  # Get birth dates for the >=5 year lookback check
-  demo  <- get_bef_demographics(unique(bs_raw$pnr))
-  bs    <- bs_raw %>% left_join(demo, by = "pnr")
+  demo <- get_bef_demographics(unique(dbso$pnr))        # sex and birth date from BEF (for age and lookback checks)
+  bs   <- dbso %>% left_join(demo, by = "pnr")          # attach demographics
 
-  # Exclusion 4+5: died before surgery or insufficient lookback
-  dod <- load_database("dodsaars") %>% rename_with(tolower)
+  # Exclusion: died before surgery, age < 18 at surgery, < 5 years of registry history
+  dod <- load_database("dodsaars") %>% rename_with(tolower)   # individual death records register
   deaths <- dod %>%
-    filter(pnr %in% !!bs$pnr) %>%
-    select(pnr, doddato) %>%
-    collect()
+    filter(pnr %in% !!bs$pnr) %>%   # only DBSO patients' death records before collect
+    select(pnr, doddato) %>%         # doddato = date of death (CONFIRM-2: column name assumed)
+    collect()                         # pull into memory
 
   bs <- bs %>%
-    left_join(deaths, by = "pnr") %>%
+    left_join(deaths, by = "pnr") %>%   # attach death date; NA for living persons (absent from dodsaars)
     filter(
-      is.na(doddato) | doddato >= surgery_date,             # alive at surgery
-      surgery_date - as.Date(foed_dag) >= 365.25 * 18,     # age >= 18
-      surgery_date >= as.Date(foed_dag) + 365.25 * 5       # >= 5 year history
-                                                             # (all 2010+ patients born <= 2005 -> fine)
+      is.na(doddato) | doddato >= surgery_date,          # alive at surgery date
+      surgery_date - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
+      surgery_date >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
     )
 
-  # Exclusion 1: pre-surgery dementia
-  cutoffs <- bs %>% select(pnr, index_date = surgery_date)
-  dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)
-  bs <- bs %>% filter(!pnr %in% dementia_pnrs)
+  # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
+  cutoffs       <- bs %>% select(pnr, index_date = surgery_date)   # per-person cutoff: their own surgery date
+  dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)        # pnrs with any dementia diagnosis before surgery
+  bs <- bs %>% filter(!pnr %in% dementia_pnrs)                     # remove pre-surgery dementia cases
 
   bs %>%
     transmute(
       pnr,
-      index_date    = surgery_date,
-      cohort        = "BS",
+      index_date   = surgery_date,   # surgery date is the index date for the BS cohort
+      cohort       = "BS",
       surgery_type,
-      matched_pnr   = pnr   # matches itself
+      matched_pnr  = pnr             # BS patients reference themselves (used when linking to matched comparators)
     )
 }
 

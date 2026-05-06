@@ -41,6 +41,7 @@
 
 library(dplyr)
 library(lubridate)
+library(heaven)        # exposureMatch(), charlsonIndex(), etc.
 
 # Paths ----
 path_output <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"

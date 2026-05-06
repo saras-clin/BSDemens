@@ -137,6 +137,58 @@ explore_dbso <- function(raw) {
   cat("Hoejde (height, cm):\n")
   print(summary(raw$hoejde))
 
+  # ---- DATA QUALITY: DatoPER_prim vs OpDateLPR date discrepancy ----
+  # DatoPER_prim = DBSO clinical record of surgery date (entered by the operating unit).
+  # OpDateLPR    = surgery date as registered in LPR / the administrative hospital system.
+  # These should agree closely; discrepancies reflect administrative lag or coding differences.
+  # Decision rule per methods plan section 2:
+  #   >= 95% within 7 days -> use DatoPER_prim as index date, skip sensitivity analysis 7g.8.
+  #   < 95% within 7 days  -> add sensitivity analysis 7g.8 (repeat analysis using OpDateLPR).
+  cat("\n=== DatoPER_prim vs OpDateLPR DATE DISCREPANCY (data quality check) ===\n")
+  if (!"opdatelpr" %in% names(raw)) {
+    cat("WARNING: opdatelpr column not found in this file — skipping date comparison.\n")
+    cat("Column names available:", paste(names(raw), collapse = ", "), "\n")
+  } else {
+    date_prim <- as.Date(raw$datoper_prim)   # DBSO clinical surgery date (our index date)
+    date_lpr  <- as.Date(raw$opdatelpr)       # LPR administrative surgery date
+    diff_days <- as.numeric(date_prim - date_lpr)  # signed difference: positive = DBSO later than LPR
+
+    n_total    <- length(diff_days)                              # total rows
+    n_na       <- sum(is.na(diff_days))                         # rows where one or both dates missing
+    n_nonmiss  <- n_total - n_na                                 # rows with both dates present
+    n_exact    <- sum(diff_days == 0,    na.rm = TRUE)           # exact match
+    n_within1  <- sum(abs(diff_days) <= 1, na.rm = TRUE)        # within 1 day (same or adjacent)
+    n_within7  <- sum(abs(diff_days) <= 7, na.rm = TRUE)        # within 7 days (our decision threshold)
+    n_over7    <- sum(abs(diff_days) > 7,  na.rm = TRUE)        # discrepant by more than 7 days
+
+    cat("Total rows:                     ", n_total, "\n")
+    cat("Rows with both dates present:   ", n_nonmiss, "\n")
+    cat("Rows with at least one date NA: ", n_na, "\n")
+    cat("Exact match (diff = 0 days):    ", n_exact,
+        sprintf("(%.1f%% of non-missing)", 100 * n_exact / n_nonmiss), "\n")
+    cat("Within 1 day:                   ", n_within1,
+        sprintf("(%.1f%%)", 100 * n_within1 / n_nonmiss), "\n")
+    cat("Within 7 days:                  ", n_within7,
+        sprintf("(%.1f%%) <- KEY THRESHOLD", 100 * n_within7 / n_nonmiss), "\n")
+    cat("More than 7 days apart:         ", n_over7,
+        sprintf("(%.1f%%)", 100 * n_over7 / n_nonmiss), "\n")
+    cat("\nSigned difference (DatoPER_prim - OpDateLPR), days:\n")
+    print(summary(diff_days))
+    cat("\nDistribution by magnitude (absolute days):\n")
+    print(table(cut(abs(diff_days),
+                    breaks = c(0, 1, 7, 30, 90, Inf),
+                    labels = c("0 days (exact)", "1-7 days", "8-30 days", "31-90 days", ">90 days"),
+                    include.lowest = TRUE, right = FALSE),
+                useNA = "always"))
+    if (n_within7 / n_nonmiss >= 0.95) {
+      cat("\nCONCLUSION: >= 95% within 7 days -> DatoPER_prim is fine as index date.",
+          "Sensitivity analysis 7g.8 (OpDateLPR) is NOT needed.\n")
+    } else {
+      cat("\nCONCLUSION: < 95% within 7 days -> SYSTEMATIC DISCREPANCY DETECTED.",
+          "Add sensitivity analysis 7g.8 and report in methods section 2.\n")
+    }
+  }
+
   invisible(raw)
 }
 
@@ -180,11 +232,13 @@ prepare_dbso <- function() {
     mutate(
       pnr          = as.character(cpr),
       surgery_date = as.Date(datoper_prim),
-      # Derive surgery type from binary flags; RYGB and SG are mutually exclusive at index op
+      # Derive surgery type from binary flags.
+      # redo_prim is checked FIRST: a revision bypass has gastricbypass_prim=1 AND redo_prim=1;
+      # if gastricbypass_prim were checked first it would be misclassified as "RYGB".
       surgery_type = case_when(
+        redo_prim == 1          ~ "ReDo",   # revision/redo surgery — must precede primary type flags
         gastricbypass_prim == 1 ~ "RYGB",
         gastricsleeve_prim == 1 ~ "SG",
-        redo_prim == 1          ~ "ReDo",
         TRUE                    ~ "Unknown"
       ),
       datopre = as.Date(datopre),
