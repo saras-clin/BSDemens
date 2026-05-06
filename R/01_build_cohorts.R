@@ -12,9 +12,9 @@
 #     Obesity comp. — 1:5 matched from persons with ICD-10 E66 (obesity) in LPR
 #                     before their matched BS patient's surgery date
 #
-#   Inputs:  parquet-external/databasesvaerovervaegt/ (DBSO, from 00_prepare_dbso.R)
+#   Inputs:  parquet-external/databasesvaerovervaegt/part-0.parquet (DBSO, from 00_prepare_dbso.R)
 #            load_database("bef")                     — population register
-#            load_database("lpr_adm") + "lpr_diag"   — LPR2 somatic diagnoses
+#            load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
 #            arrow::open_dataset(path_psyk_adm/diag)  — LPR2 psychiatric diagnoses
 #            load_database("lpr_a_kontakt/diagnose")  — LPR3 unified diagnoses
 #            load_database("dodsaars")                — death register
