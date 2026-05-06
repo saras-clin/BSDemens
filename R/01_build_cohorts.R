@@ -22,17 +22,16 @@
 #   Output:  datasets/full_cohort.rds
 #            One row per person. Columns: pnr, index_date, cohort
 #            ("BS"/"GP"/"Obesity"), surgery_type ("RYGB"/"SG"/NA),
-#            matched_pnr, bs_crossover_date
+#            matched_pnr, bs_crossover_date (if comparators later have BS)
 #
 #   Exclusion criteria applied to ALL groups:
 #     1. Dementia (F00–F03, G30–G31) any time before index date
-#     2. Prior bariatric surgery (KJDF10/11, KJDF40/41/96/97) [for pool members]
+#     2. Prior bariatric surgery (KJDF10/11, KJDF40/41/96/97) [for comparator members]
 #     3. Emigration before index date
 #     4. Death before index date
 #     5. Age < 18 at surgery / < 5 years of registry history before index date
 #
-#   NOTE: there is no population-level BMI register in Denmark. The obesity
-#   comparator is defined by E66 diagnosis code — standard approach in Danish
+#   NOTE: The obesity comparator is defined by E66 diagnosis code — standard approach in Danish
 #   register epidemiology.
 #
 #   Psychiatric LPR2: t_psyk_adm and t_psyk_diag are parquet folders in
@@ -171,17 +170,25 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
 }
 
 
-get_prior_bs_pnrs <- function(pnr_vector) {
-  # Returns pnrs from pnr_vector who appear in DBSO — i.e., have had bariatric surgery.
-  # DBSO (Danish Quality Registry for Treatment of Severe Obesity) is the authoritative
-  # source: all public and private BS procedures are mandatorily reported since 2010.
-  # Minor limitation: procedures before DBSO's 2010 start are not captured, but these
-  # are very rare (BS was uncommon in Denmark pre-2010).
+get_bs_surgery_dates <- function(pnr_vector) {
+  # Returns a data frame (pnr, bs_surgery_date) for pool members who appear in DBSO.
+  # bs_surgery_date = the earliest surgery date in DBSO for that person.
+  # Used in the matching loops for two purposes:
+  #   (a) exclude candidates with bs_surgery_date <= index_date from each draw —
+  #       they were already exposed at baseline and cannot serve as unexposed controls
+  #   (b) record bs_crossover_date for sampled comparators whose bs_surgery_date is
+  #       AFTER their assigned index_date — eligible controls at enrolment, censored
+  #       when they later cross over to the exposed group
+  # Pool members absent from DBSO receive bs_surgery_date = NA (left_join fills NA).
+  # DBSO is the authoritative source for all public and private BS since 2010.
   arrow::open_dataset(path_dbso) %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    distinct(pnr) %>%
-    collect() %>%
-    pull(pnr)
+    filter(pnr %in% !!pnr_vector, !is.na(surgery_date)) %>%   # only rows with a recorded surgery date
+    select(pnr, bs_surgery_date = surgery_date) %>%            # rename for clarity in pool context
+    collect() %>%                                               # pull into memory for grouping
+    group_by(pnr) %>%
+    arrange(bs_surgery_date) %>%
+    slice(1) %>%                                               # earliest surgery date per person (DBSO has multiple rows per person)
+    ungroup()
 }
 
 
@@ -254,10 +261,11 @@ build_bs_cohort <- function() {
   bs %>%
     transmute(
       pnr,
-      index_date   = surgery_date,   # surgery date is the index date for the BS cohort
-      cohort       = "BS",
+      index_date        = surgery_date,   # surgery date is the index date for the BS cohort
+      cohort            = "BS",
       surgery_type,
-      matched_pnr  = pnr             # BS patients reference themselves (used when linking to matched comparators)
+      matched_pnr       = pnr,            # BS patients reference themselves (used when linking to matched comparators)
+      bs_crossover_date = NA_Date_        # not applicable for the exposed group; only comparators can cross over
     )
 }
 
@@ -289,11 +297,17 @@ build_gp_comparator <- function(bs_cohort) {
     select(pnr, koen, birth_year) %>%
     filter(!pnr %in% bs_cohort$pnr)   # remove BS patients from pool
 
-  # Remove anyone who already had bariatric surgery (they are exposed, not controls)
-  bs_pnrs_in_pool <- get_prior_bs_pnrs(bef_pool$pnr)
-  bef_pool <- bef_pool %>% filter(!pnr %in% bs_pnrs_in_pool)
+  # Attach BS surgery dates for pool members who appear in DBSO.
+  # We do NOT exclude all DBSO members here — only those with BS before a specific
+  # index date are ineligible for that particular match. The per-person date check
+  # runs inside the matching loop so each BS patient applies its own index date as
+  # the cutoff. Pool members with post-index BS remain eligible and are assigned
+  # bs_crossover_date when sampled (censored in analysis, not excluded).
+  bs_dates_in_pool <- get_bs_surgery_dates(bef_pool$pnr)        # pnr + earliest bs_surgery_date for DBSO members
+  bef_pool <- bef_pool %>%
+    left_join(bs_dates_in_pool, by = "pnr")                      # bs_surgery_date = NA for persons never in DBSO
 
-  # [FIX] Verify alive at each index date: load death dates for pool members.
+  # Verify alive at each index date: load death dates for pool members.
   # BEF is an annual January 1 snapshot — appearing in BEF 2012 means alive 2012-01-01,
   # not necessarily alive on Sept 15 2012. Without this step, persons who died mid-year
   # could be drawn as comparators for surgeries occurring later that same year.
@@ -311,7 +325,7 @@ build_gp_comparator <- function(bs_cohort) {
   # every loop iteration — which scans the whole data frame each time — we do a single
   # split() up front. Inside the loop we do three O(1) list lookups and filter on small dfs.
   # For a BS cohort of n=5000 and BEF pool of n=3M, this avoids 5000 × 3M comparisons.
-  pool_list <- split(bef_pool[, c("pnr", "death_date")],
+  pool_list <- split(bef_pool[, c("pnr", "death_date", "bs_surgery_date")],
                      paste(bef_pool$koen, bef_pool$birth_year, sep = "_"))
 
   # Fetch sex + birth_year for the BS cohort (needed for matching key)
@@ -334,8 +348,13 @@ build_gp_comparator <- function(bs_cohort) {
     group_keys <- paste(sex, by + (-1L:1L), sep = "_")
     cand_df    <- dplyr::bind_rows(pool_list[group_keys])
 
-    # [FIX] Only keep candidates alive at this specific index date.
-    cand_df    <- cand_df[is.na(cand_df$death_date) | cand_df$death_date > idx_date, ]
+    # Keep candidates alive at this index date AND without pre-index bariatric surgery.
+    # Candidates with bs_surgery_date > idx_date remain eligible — they had no BS
+    # exposure at this index date. If sampled, they get bs_crossover_date below
+    # and will be censored in the analysis when they later undergo surgery.
+    cand_df <- cand_df[
+      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date), ]
     candidates <- cand_df$pnr
 
     if (length(candidates) == 0) next   # no eligible match available for this BS patient
@@ -343,12 +362,17 @@ build_gp_comparator <- function(bs_cohort) {
     n_sample     <- min(N_GP_PER_BS, length(candidates))
     sampled_pnrs <- sample(candidates, n_sample)   # random draw without replacement
 
+    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]  # future BS date for each sampled control; NA if never in DBSO
     matched_rows[[i]] <- tibble(
-      pnr          = sampled_pnrs,
-      index_date   = idx_date,
-      cohort       = "GP",
-      surgery_type = NA_character_,
-      matched_pnr  = bs_pnr
+      pnr               = sampled_pnrs,
+      index_date        = idx_date,
+      cohort            = "GP",
+      surgery_type      = NA_character_,
+      matched_pnr       = bs_pnr,
+      bs_crossover_date = if_else(                                   # date this control later undergoes BS; NA if they never do
+        !is.na(sampled_bs_dates) & sampled_bs_dates > idx_date,
+        sampled_bs_dates, NA_Date_
+      )
     )
 
     # Remove sampled pnrs from the pool: filter rows rather than setdiff on vectors.
@@ -444,7 +468,8 @@ build_gp_comparator <- function(bs_cohort) {
 # 1.3 BUILD OBESITY COMPARATOR POOL (1:5 MATCHED, E66 DIAGNOSIS)
 # ============================================================================
 # Pool: persons with E66 (obesity) diagnosis in LPR BEFORE their matched BS
-# patient's index date, never having had bariatric surgery.
+# patient's index date, without prior bariatric surgery at the time of matching.
+# (Post-index BS is handled by censoring at bs_crossover_date, not exclusion.)
 # Same sex + birth year (±1) matching as GP comparator.
 
 build_obesity_comparator <- function(bs_cohort) {
@@ -497,11 +522,14 @@ build_obesity_comparator <- function(bs_cohort) {
     filter(!pnr %in% bs_cohort$pnr) %>%
     inner_join(obesity_dates, by = "pnr")   # attach earliest_e66
 
-  # Remove prior BS from pool
-  bs_in_pool <- get_prior_bs_pnrs(obesity_pool$pnr)
-  obesity_pool <- obesity_pool %>% filter(!pnr %in% bs_in_pool)
+  # Attach BS surgery dates — same approach as GP comparator.
+  # Date-specific check inside the loop prevents pre-index BS from entering the pool
+  # while allowing post-index BS candidates to be enrolled and later censored.
+  bs_dates_in_pool <- get_bs_surgery_dates(obesity_pool$pnr)        # pnr + earliest bs_surgery_date for DBSO members
+  obesity_pool <- obesity_pool %>%
+    left_join(bs_dates_in_pool, by = "pnr")                          # bs_surgery_date = NA for persons never in DBSO
 
-  # [FIX] Verify alive at each index date: load death dates for pool members.
+  # Verify alive at each index date: load death dates for pool members.
   dod <- load_database("dodsaars") %>% rename_with(tolower)
   pool_deaths <- dod %>%
     filter(pnr %in% !!obesity_pool$pnr) %>%
@@ -512,15 +540,15 @@ build_obesity_comparator <- function(bs_cohort) {
     left_join(pool_deaths, by = "pnr")   # death_date = NA means still alive
 
   # Match to BS cohort (1:N_OBESITY_PER_BS) — same pre-split approach as GP comparator.
-  # Splits into per-(koen, birth_year) data frames so we can filter on earliest_e66
-  # and death_date inside the loop without scanning the full pool each iteration.
+  # Splits into per-(koen, birth_year) data frames so we can filter on earliest_e66,
+  # death_date, and bs_surgery_date inside the loop without scanning the full pool.
   bs_key <- bs_cohort %>%
     left_join(
       get_bef_demographics(bs_cohort$pnr) %>% select(pnr, koen, birth_year),
       by = "pnr"
     )
 
-  pool_list <- split(obesity_pool[, c("pnr", "earliest_e66", "death_date")],
+  pool_list <- split(obesity_pool[, c("pnr", "earliest_e66", "death_date", "bs_surgery_date")],
                      paste(obesity_pool$koen, obesity_pool$birth_year, sep = "_"))
 
   set.seed(42)
@@ -535,10 +563,13 @@ build_obesity_comparator <- function(bs_cohort) {
     group_keys <- paste(sex, by + (-1L:1L), sep = "_")
     cand_df    <- dplyr::bind_rows(pool_list[group_keys])
 
-    # [FIX] Only candidates whose E66 diagnosis predates the index date, AND who are alive.
-    cand_df    <- cand_df[
+    # Keep candidates whose E66 predates the index date, alive, and without pre-index BS.
+    # Candidates with bs_surgery_date > idx_date are eligible — they will be assigned
+    # bs_crossover_date and censored in the analysis if sampled.
+    cand_df <- cand_df[
       cand_df$earliest_e66 < idx_date &
-      (is.na(cand_df$death_date) | cand_df$death_date > idx_date), ]
+      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date), ]
     candidates <- cand_df$pnr
 
     if (length(candidates) == 0) next
@@ -546,12 +577,17 @@ build_obesity_comparator <- function(bs_cohort) {
     n_sample     <- min(N_OBESITY_PER_BS, length(candidates))
     sampled_pnrs <- sample(candidates, n_sample)
 
+    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]  # future BS date for each sampled control; NA if never in DBSO
     matched_rows[[i]] <- tibble(
-      pnr          = sampled_pnrs,
-      index_date   = idx_date,
-      cohort       = "Obesity",
-      surgery_type = NA_character_,
-      matched_pnr  = bs_pnr
+      pnr               = sampled_pnrs,
+      index_date        = idx_date,
+      cohort            = "Obesity",
+      surgery_type      = NA_character_,
+      matched_pnr       = bs_pnr,
+      bs_crossover_date = if_else(                                   # date this control later undergoes BS; NA if they never do
+        !is.na(sampled_bs_dates) & sampled_bs_dates > idx_date,
+        sampled_bs_dates, NA_Date_
+      )
     )
 
     for (k in group_keys) {
@@ -656,21 +692,12 @@ main_build_cohorts <- function() {
   ob_cohort <- build_obesity_comparator(bs_cohort)
   cat("  Obesity comparator n =", nrow(ob_cohort), "\n")
 
+  # bs_crossover_date is set inside build_gp_comparator() and build_obesity_comparator()
+  # at match time, so it is already present in gp_cohort and ob_cohort rows.
+  # bs_cohort rows carry bs_crossover_date = NA_Date_ (set in build_bs_cohort()).
+  # bind_rows aligns columns by name; no additional crossover logic needed here.
   full_cohort <- bind_rows(bs_cohort, gp_cohort, ob_cohort) %>%
     mutate(cohort = factor(cohort, levels = c("BS", "GP", "Obesity")))
-
-  # Flag comparators who later undergo bariatric surgery.
-  # These must be censored at their own surgery date in time-to-event analyses.
-  bs_raw_dates <- readRDS(path_bs_cohort) %>% select(pnr, bs_surgery_date = surgery_date)
-  full_cohort <- full_cohort %>%
-    left_join(bs_raw_dates, by = "pnr") %>%
-    mutate(
-      bs_crossover_date = if_else(
-        as.character(cohort) != "BS" & !is.na(bs_surgery_date) & bs_surgery_date > index_date,
-        bs_surgery_date, NA_Date_
-      )
-    ) %>%
-    select(-bs_surgery_date)
 
   cat("Total full_cohort n =", nrow(full_cohort), "\n")
 

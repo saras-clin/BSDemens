@@ -96,21 +96,52 @@ Minimum lookback required before index: 5 years
       and in the sensitivity analysis (exclusion of early events, criterion 7g.3).
 
 3b. Comparison cohort 1 — General population (GP)
-    Matched 1:25 to BS cohort on sex, birth year (± 1 year), and index date.
-    Sampled from BEF; must be alive, resident, and dementia-free at index date.
-    Same exclusion criteria 2, 3, 5, 6 as BS cohort.
+    Risk-set matched 1:25 to each BS patient on sex and birth year (± 1 year),
+    sampled from BEF (annual January 1 population snapshots).
+
+    Matching procedure (implemented in 01_build_cohorts.R, build_gp_comparator()):
+      For each BS patient, eligible GP candidates must satisfy all of the following
+      at the BS patient's surgery date (= the candidate's assigned index date):
+        (a) Not be a BS patient themselves
+        (b) Same sex as the BS patient (DST KOEN variable)
+        (c) Birth year within ± 1 year of the BS patient
+        (d) Alive on the exact surgery date (verified via dodsaars death register —
+            BEF is an annual January 1 snapshot so mid-year death is not captured
+            without this check)
+        (e) No prior bariatric surgery: absent from DBSO, or earliest DBSO
+            surgery date strictly after the BS patient's index date
+      N = 25 candidates are drawn at random (without replacement) from the eligible
+      pool. Each person can be matched to at most one BS patient.
+
+    Bariatric surgery crossover (implemented via bs_crossover_date):
+      Pool members who have a DBSO surgery date AFTER a candidate's potential index
+      date are eligible controls at the time of enrolment — they were unexposed at
+      baseline. If sampled, they are enrolled and assigned bs_crossover_date (= their
+      own surgery date). In the survival analysis they contribute unexposed person-time
+      from index date until bs_crossover_date, at which point they are censored.
+      Excluding them entirely would condition on a future event and introduce selection
+      bias — the methodologically correct approach is enrolment followed by censoring.
+
+    Exclusion applied after matching:
+      - Pre-index dementia (F00–F03, G30–G31) from LPR2 somatic, LPR2 psychiatric,
+        and LPR3 (same three-source query as BS cohort)
+
     Index date = surgery date of their matched BS patient.
 
-    Censoring for subsequent BS [Protocol comment n]:
-      Comparators who later undergo bariatric surgery are censored at their
-      surgery date. This prevents contamination of the comparison group.
-
 3c. Comparison cohort 2 — Obesity cohort
-    Individuals with overweight/obesity (BMI > 25 kg/m²), identified using
-    ICD-10 E66 diagnosis codes in DNPR at any time before the index date.
-    Never having undergone bariatric surgery.
-    Matched 1:5 on sex, birth year (± 1 year), and index date.
-    Same dementia-free and registry history criteria.
+    Individuals identified by ICD-10 E66 (obesity) in DNPR (LPR2 or LPR3) at
+    any time before the BS patient's index date.
+    Risk-set matched 1:5 using the same procedure as the GP comparator (see 3b),
+    with one additional eligibility requirement.
+
+    Additional eligibility criterion beyond 3b criteria (a)–(e):
+        (f) Earliest recorded E66 diagnosis date strictly before the BS patient's
+            index date (both LPR2 and LPR3 are searched; the earliest date across
+            both sources is used)
+
+    Bariatric surgery crossover: same approach as GP comparator (see 3b).
+    Candidates without prior BS (criterion e) are eligible at enrolment; those
+    who later undergo BS are censored at their surgery date (bs_crossover_date).
 
     Note: E66 has low sensitivity for overweight; it captures primarily the more
     severely obese end of the weight spectrum. This is acceptable because BS
@@ -398,8 +429,9 @@ PROTOCOL DECISIONS:
   - SEP not in original protocol draft — confirm with co-authors that including
     education, income, and occupation in Model 3 is agreed
   - Define negative control outcome for sensitivity analysis (fracture? cataract?)
-  - Censoring of comparators at time of BS: confirm as main analysis (it is
-    currently coded in 00_build_cohorts.R)
+  - Censoring of comparators at time of BS: confirmed as main analysis.
+    Implemented in 01_build_cohorts.R via bs_crossover_date (set at match time).
+    Pre-index BS → excluded from pool; post-index BS → enrolled then censored.
   - Study period: protocol includes surgery up to Dec 31 2024, meaning patients
     operated in 2024 contribute <1 year by the time follow-up ends Dec 31 2025.
     These patients can only contribute to 1-year landmark analysis. This is
