@@ -20,11 +20,11 @@ or `arrow::open_dataset()` (for DBSO and psychiatric registers in parquet-extern
 
 ```
 R/
-  prepare_dbso.R              # Step 0 (one-time): convert DBSO SAS -> parquet
-  build_cohorts.R             # Step 1: BS cohort + GP comparator + obesity comparator
-  extract_outcomes_covariates.R  # Step 2: outcomes, comorbidities, medications, demographics
-  extract_ses.R               # Step 3: socioeconomic variables (UDDA, FAIK, AKM)
-  data_management_dementia.R  # Step 4: merge + exclusions + variable formatting (Study 1)
+  00_prepare_dbso.R              # Step 0 (one-time): convert DBSO SAS -> parquet
+  01_build_cohorts.R             # Step 1: BS cohort + GP comparator + obesity comparator
+  02_extract_outcomes_covariates.R  # Step 2: outcomes, comorbidities, medications, demographics
+  03_extract_ses.R               # Step 3: socioeconomic variables (UDDA, FAIK, AKM)
+  04_data_management_dementia.R  # Step 4: merge + exclusions + variable formatting (Study 1)
   variables_dictionary.txt    # Register variable reference
   functions_guide.txt         # Function inventory
   README_EXTRACTION.md        # This file
@@ -47,7 +47,7 @@ datasets/                     # gitignored: all .rds outputs
 
 ## Pipeline steps
 
-### Step 0 — prepare_dbso.R (one-time only)
+### Step 0 — 00_prepare_dbso.R (one-time only)
 
 Converts the DBSO SAS file from SunDK into a Parquet folder that the rest of the pipeline
 can read via `arrow::open_dataset()`.
@@ -73,7 +73,7 @@ Weight/BMI columns vary by visit row and are used by `extract_weight_outcomes()`
 
 ---
 
-### Step 1 — build_cohorts.R
+### Step 1 — 01_build_cohorts.R
 
 Defines the three study groups and applies inclusion/exclusion criteria.
 Run this before any extraction.
@@ -98,7 +98,7 @@ Output: `datasets/full_cohort.rds` — one row per person, columns:
 
 ---
 
-### Step 2 — extract_outcomes_covariates.R
+### Step 2 — 02_extract_outcomes_covariates.R
 
 Extracts all outcomes and covariates for every person in full_cohort.rds.
 Run after Steps 0 and 1. Can run in parallel with Step 3.
@@ -148,7 +148,7 @@ Strip with `substr(code, 2, 4)` (3-char) or `substr(code, 2, 5)` (4-char) before
 
 ---
 
-### Step 3 — extract_ses.R
+### Step 3 — 03_extract_ses.R
 
 Extracts socioeconomic position (SEP) for all cohort members.
 Run in parallel with Step 2 (both read full_cohort.rds independently).
@@ -167,7 +167,7 @@ Output: `datasets/ses_data.rds`
 
 ---
 
-### Step 4 — data_management_dementia.R (Study 1)
+### Step 4 — 04_data_management_dementia.R (Study 1)
 
 Merges all extract_*.rds and ses_data.rds into one analysis-ready dataset.
 
@@ -191,24 +191,24 @@ Note: `data_management_t1d.R` (Study 2 equivalent) does not yet exist.
 
 ```r
 # Step 0: one-time DBSO conversion
-source("R/prepare_dbso.R")
+source("R/00_prepare_dbso.R")
 raw <- inspect_dbso()
 explore_dbso(raw)   # check output before proceeding
 dbso <- prepare_dbso()
 
 # Step 1: build cohorts
-source("R/build_cohorts.R")
+source("R/01_build_cohorts.R")
 full_cohort <- main_cohort_build()
 
 # Steps 2 + 3: run in parallel (separate R sessions on DST recommended)
-source("R/extract_outcomes_covariates.R")
+source("R/02_extract_outcomes_covariates.R")
 main_extraction()
 
-source("R/extract_ses.R")
+source("R/03_extract_ses.R")
 main_ses_extraction()
 
 # Step 4: merge and clean
-source("R/data_management_dementia.R")
+source("R/04_data_management_dementia.R")
 study1 <- main_data_management()
 ```
 

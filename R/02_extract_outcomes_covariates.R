@@ -1,9 +1,9 @@
 # ============================================================================
-# PIPELINE STEP 2 of 5 — extract_outcomes_covariates.R
+# PIPELINE STEP 2 of 5 — 02_extract_outcomes_covariates.R
 # ============================================================================
 # WHAT DO WE MEASURE?
 #   Pulls all outcomes and covariates from DST registers for every person in
-#   full_cohort.rds. Run AFTER build_cohorts.R (Step 1) and prepare_dbso.R (Step 0).
+#   full_cohort.rds. Run AFTER 01_build_cohorts.R (Step 1) and 00_prepare_dbso.R (Step 0).
 #
 #   Study 1 (Dementia):
 #     Outcomes:   dementia date — all-cause (F00–F03, G30–G31), Alzheimer's
@@ -55,7 +55,7 @@ path_output        <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/data
 path_psyk_adm      <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag     <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
 path_dbso          <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
-# full_cohort.rds is produced by build_cohorts.R (BS + GP + obesity, with index_date)
+# full_cohort.rds is produced by 01_build_cohorts.R (BS + GP + obesity, with index_date)
 path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/full_cohort.rds"
 # OSDC path confirmed in DARTER kickstarter. Covers to 2022; sufficient for baseline
 # diabetes classification for surgeries up to 2022. Patients with surgery 2023-2024
@@ -187,7 +187,7 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
 # ============================================================================
 # 2.1 LOAD FULL COHORT (BS + GP + OBESITY)
 # ============================================================================
-# Produced by build_cohorts.R.
+# Produced by 01_build_cohorts.R.
 # Columns: pnr, index_date, cohort ("BS"/"GP"/"Obesity"), surgery_type, matched_pnr
 #
 # Internally, all extraction functions use "surgery_date" as the reference date
@@ -239,7 +239,7 @@ extract_demographics <- function(bs_cohort) {
   # TODO (CONFIRM-5): emigration date is not extracted here.
   # Persons who emigrate should be censored at their emigration date.
   # Ask data manager for the emigration date register (vnds, flyt, or CPR extract).
-  # Add emigration_date to the output and update censor_date in data_management_dementia.R.
+  # Add emigration_date to the output and update censor_date in 04_data_management_dementia.R.
 
   bs_cohort %>%
     left_join(bef_person %>% select(pnr, koen, foed_dag), by = "pnr") %>%
@@ -341,14 +341,14 @@ extract_dementia_outcomes <- function(bs_cohort) {
 
 extract_weight_outcomes <- function(bs_cohort) {
   # DBSO is a SAS extract from SunDK, saved as part-0.parquet in parquet-external.
-  # Prepared by prepare_dbso.R. Read with open_dataset() (Arrow folder convention).
+  # Prepared by 00_prepare_dbso.R. Read with open_dataset() (Arrow folder convention).
   if (!dir.exists(path_dbso)) {
-    stop("DBSO parquet folder not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
+    stop("DBSO parquet folder not found. Run 00_prepare_dbso.R first.\nExpected: ", path_dbso)
   }
 
   dbso <- arrow::open_dataset(path_dbso) %>% collect()
 
-  # DBSO column names (from prepare_dbso.R):
+  # DBSO column names (from 00_prepare_dbso.R):
   #   pnr, surgery_date, surgery_type — person-level identifiers
   #   udgangsvaegtpre_prim            — weight at last pre-op visit before surgery (kg)
   #   hoejde                          — height (cm)
@@ -431,7 +431,7 @@ extract_weight_outcomes <- function(bs_cohort) {
 
 extract_dbso_clinical <- function(bs_cohort) {
   if (!dir.exists(path_dbso)) {
-    stop("DBSO parquet folder not found. Run prepare_dbso.R first.\nExpected: ", path_dbso)
+    stop("DBSO parquet folder not found. Run 00_prepare_dbso.R first.\nExpected: ", path_dbso)
   }
 
   # Columns to extract — all are patient-level constants in the DBSO long-format table.
@@ -460,7 +460,7 @@ extract_dbso_clinical <- function(bs_cohort) {
   if (length(missing_cols) > 0) {
     message("NOTE: Expected DBSO clinical columns not found in parquet. ",
             "Verify names with inspect_dbso() on DST: ",
-            paste(missing_cols, collapse = ", "))   # names mismatch likely — check prepare_dbso.R output
+            paste(missing_cols, collapse = ", "))   # names mismatch likely — check 00_prepare_dbso.R output
   }
 
   dbso_raw %>%
@@ -943,16 +943,16 @@ extract_diabetes_classification <- function(bs_cohort) {
 }
 
 # ============================================================================
-# 2.12 SOCIOECONOMIC STATUS (SEE extract_ses.R — STEP 3 of 5)
+# 2.12 SOCIOECONOMIC STATUS (SEE 03_extract_ses.R — STEP 3 of 5)
 # ============================================================================
-# SES is extracted in extract_ses.R — run that script separately.
+# SES is extracted in 03_extract_ses.R — run that script separately.
 # Produces: path_output/ses_data.rds
 # Variables: pnr, education_cat, income_cat, occupation_cat, sep_category
 
 load_ses <- function() {
   ses_file <- file.path(path_output, "ses_data.rds")
   if (!file.exists(ses_file)) {
-    stop("SES data not found. Run extract_ses.R first.")
+    stop("SES data not found. Run 03_extract_ses.R first.")
   }
   readRDS(ses_file) %>%
     select(pnr, education_cat, income_cat, occupation_cat, sep_category)
@@ -1013,7 +1013,7 @@ main_extraction <- function() {
   saveRDS(diabetes, file.path(path_output, "extract_diabetes.rds"))
 
   cat("Done! Individual extracts saved to", path_output, "\n")
-  cat("Next: run extract_ses.R, then data_management_dementia.R\n")
+  cat("Next: run 03_extract_ses.R, then 04_data_management_dementia.R\n")
   invisible(NULL)
 }
 

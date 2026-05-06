@@ -1,5 +1,5 @@
 # ============================================================================
-# PIPELINE STEP 0 (one-time) — prepare_dbso.R
+# PIPELINE STEP 0 (one-time) — 00_prepare_dbso.R
 # ============================================================================
 # CONVERT DBSO FROM SAS TO PARQUET
 #   DBSO (Databasen for Behandling af Svær Overvægt) is NOT part of the DST
@@ -20,7 +20,7 @@
 #
 #   Input:   E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
 #   Output:  parquet-external/databasesvaerovervaegt/part-0.parquet
-#            (read via arrow::open_dataset() in extract_outcomes_covariates.R)
+#            (read via arrow::open_dataset() in 02_extract_outcomes_covariates.R)
 # ============================================================================
 
 library(haven)      # read_sas()

@@ -1,12 +1,12 @@
 # ============================================================================
-# PIPELINE STEP 4 of 5 — data_management_dementia.R
+# PIPELINE STEP 4 of 5 — 04_data_management_dementia.R
 # ============================================================================
 # MAKE THE DATA ANALYSIS-READY (STUDY 1 ONLY)
 #   Merges all extracted pieces into one clean dataset for the dementia study.
 #   Run AFTER Steps 1–3 have completed:
-#     build_cohorts.R               → full_cohort.rds
-#     extract_outcomes_covariates.R → extract_*.rds files
-#     extract_ses.R                 → ses_data.rds
+#     01_build_cohorts.R               → full_cohort.rds
+#     02_extract_outcomes_covariates.R → extract_*.rds files
+#     03_extract_ses.R                 → ses_data.rds
 #   Study 2 (T1D) will have its own script: 05_data_management_t1d.R
 #
 #   What this script does, in order:
@@ -67,7 +67,7 @@ load_and_merge <- function() {
 # ============================================================================
 # 4.2 EXCLUSIONS: PRE-SURGERY DEMENTIA (SAFETY CHECK)
 # ============================================================================
-# The primary pre-surgery dementia exclusion runs in build_cohorts.R using
+# The primary pre-surgery dementia exclusion runs in 01_build_cohorts.R using
 # get_prior_dementia_pnrs(). That function covers LPR2 somatic (lpr_adm/lpr_diag),
 # LPR2 psychiatric (psyk_adm/psyk_diag via arrow::open_dataset), and LPR3
 # (lpr_a_kontakt/lpr_a_diagnose). All three sources are now included.
@@ -84,7 +84,7 @@ load_and_merge <- function() {
 apply_exclusions <- function(df) {
   n_before <- nrow(df)
 
-  # date_dementia is the raw first dementia date from extract_outcomes_covariates.R.
+  # date_dementia is the raw first dementia date from 02_extract_outcomes_covariates.R.
   # Keep only rows where dementia is absent (NA) or occurred AFTER the surgery/index date.
   # Rows where date_dementia <= surgery_date have prevalent dementia: exclude them.
   df <- df %>%
@@ -225,7 +225,7 @@ format_variables <- function(df) {
       #   (a) follow_up_end — already the minimum of:
       #         - death_date (from dod register; DODDATO, Danish Death Register)
       #         - 2025-12-31 (administrative end of study, no more data after this)
-      #       Computed in extract_demographics() in extract_outcomes_covariates.R.
+      #       Computed in extract_demographics() in 02_extract_outcomes_covariates.R.
       #
       #   (b) bs_crossover_date — applies ONLY to GP and Obesity comparators who
       #       LATER underwent bariatric surgery after their index date.
@@ -234,7 +234,7 @@ format_variables <- function(df) {
       #       time as control person-time at the date of their BS.
       #       They are CENSORED at that date — they do NOT become cases even if
       #       they develop dementia later (that would be on the BS side of the
-      #       comparison). bs_crossover_date is set in build_cohorts.R.
+      #       comparison). bs_crossover_date is set in 01_build_cohorts.R.
       #       It is NA for all BS patients and for comparators who never had BS.
       #
       # NOTE — emigration NOT yet implemented as a censoring event.
@@ -255,7 +255,7 @@ format_variables <- function(df) {
       # -----------------------------------------------------------------------
       # date_dementia: first contact with ANY dementia ICD code (F00-F03, G30-G31)
       # AFTER the index date. Extracted from LPR2 + LPR3 in
-      # extract_dementia_outcomes() in extract_outcomes_covariates.R.
+      # extract_dementia_outcomes() in 02_extract_outcomes_covariates.R.
       # NA if the person never received a dementia diagnosis during follow-up.
       #
       # dementia_event: 1 if dementia occurred AND before censor_date, else 0.
@@ -308,7 +308,7 @@ format_variables <- function(df) {
       # In DST registers, sex is stored as KOEN (Danish: "køn" = gender/sex).
       # KOEN = 1 → Male, KOEN = 2 → Female (DST coding convention for BEF register).
       # The conversion KOEN → sex ("Male"/"Female") was done in
-      # extract_demographics() in extract_outcomes_covariates.R.
+      # extract_demographics() in 02_extract_outcomes_covariates.R.
       # Here we make it a factor for Cox regression. Reference level: Male.
       sex = factor(sex, levels = c("Male", "Female")),
 
@@ -356,7 +356,7 @@ format_variables <- function(df) {
       # -----------------------------------------------------------------------
       # 4.5j SOCIOECONOMIC POSITION (SEP)
       # -----------------------------------------------------------------------
-      # All SEP variables derived in extract_ses.R following the SEPLINE
+      # All SEP variables derived in 03_extract_ses.R following the SEPLINE
       # algorithm (Hjorth et al., Clin Epidemiol 2025;17:593–624).
       #   education_cat: from UDDA register (hfaudd = ISCED education code).
       #                  Short (<= upper secondary), Medium (further/vocational),

@@ -52,7 +52,7 @@ DATA LOADING
     Different from load_database() which works with partitioned parquet folders.
 
   haven::read_sas("path/file.sas7bdat")
-    Reads a SAS data file into R. Used only in prepare_dbso.R to load
+    Reads a SAS data file into R. Used only in 00_prepare_dbso.R to load
     the raw DBSO file from SunDK before converting it to parquet.
 
   saveRDS(object, "path/file.rds")
@@ -60,7 +60,7 @@ DATA LOADING
     intermediate extract_*.rds files and the final study1_clean.rds.
 
   arrow::write_parquet(df, "path/file.parquet")
-    Saves a data frame as a parquet file. Used in prepare_dbso.R
+    Saves a data frame as a parquet file. Used in 00_prepare_dbso.R
     to convert DBSO from SAS to parquet.
 
   file.path(dir, "filename.rds")
@@ -198,7 +198,7 @@ dplyr — GROUPING AND AGGREGATION
 
   ntile(x, n)
     Assigns each row to one of n equal-sized groups (quintile buckets).
-    ntile(income, 5) creates quintiles 1-5. Used in extract_ses.R for income.
+    ntile(income, 5) creates quintiles 1-5. Used in 03_extract_ses.R for income.
 
   n()
     Counts rows within a group. Used inside summarise() or mutate().
@@ -428,7 +428,7 @@ BASE R — PRINTING AND DIAGNOSTICS
 CUSTOM PROJECT FUNCTIONS
 ================================================================================
 
-  -- build_cohorts.R --
+  -- 01_build_cohorts.R --
 
   get_prior_dementia_pnrs(pnr_vector, before_dates)
     Queries LPR2 somatic + LPR2 psychiatric + LPR3 for dementia codes (F00-F03,
@@ -461,7 +461,7 @@ CUSTOM PROJECT FUNCTIONS
     surgery in comparators, saves full_cohort.rds.
 
 
-  -- extract_outcomes_covariates.R --
+  -- 02_extract_outcomes_covariates.R --
 
   get_lpr_diagnoses(pnr_vector, diagtypes, inpatient_only)
     Core helper: queries LPR2 somatic + LPR2 psychiatric + LPR3 and returns
@@ -517,7 +517,7 @@ CUSTOM PROJECT FUNCTIONS
     Runs all extract_*() functions in sequence, saves each to disk.
 
 
-  -- extract_ses.R --
+  -- 03_extract_ses.R --
 
   extract_ses(bs_cohort)
     Extracts education (UDDA), income (FAIK via BEF), occupation (AKM) at the
@@ -527,7 +527,7 @@ CUSTOM PROJECT FUNCTIONS
     Wrapper that loads full_cohort and runs extract_ses().
 
 
-  -- data_management_dementia.R --
+  -- 04_data_management_dementia.R --
 
   load_rds(name)
     Helper that reads a .rds file from path_output by filename.

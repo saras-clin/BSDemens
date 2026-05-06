@@ -1,10 +1,10 @@
 # ============================================================================
-# PIPELINE STEP 3 of 5 — extract_ses.R
+# PIPELINE STEP 3 of 5 — 03_extract_ses.R
 # ============================================================================
 # WHAT IS EACH PERSON'S SOCIAL POSITION?
 #   Extracts socioeconomic variables for all cohort members following SEPLINE
 #   guidelines (Hjorth et al., Clin Epidemiol 2025;17:593-624).
-#   Can run in parallel with extract_outcomes_covariates.R — both read
+#   Can run in parallel with 02_extract_outcomes_covariates.R — both read
 #   full_cohort.rds independently and write their own output files.
 #
 #   Variables extracted:
@@ -17,7 +17,7 @@
 #
 #   Reference year: year(surgery_date) - 1  (year before surgery/index date)
 #
-#   Inputs:  datasets/full_cohort.rds (from build_cohorts.R)
+#   Inputs:  datasets/full_cohort.rds (from 01_build_cohorts.R)
 #            load_database("udda")  — education register (pnr, hfaudd, aar)
 #            load_database("faik")  — household income register (familie_id,
 #                                     famaekvivadisp_13, aar)
@@ -236,7 +236,7 @@ main_ses_extraction <- function() {
   bs_cohort <- load_full_cohort()                                              # loads full_cohort.rds (all three cohort groups: BS, GP, Obesity)
   ses_data  <- extract_ses(bs_cohort)                                          # runs education, income, and occupation extractions; combines into one data frame
   dir.create(path_output, showWarnings = FALSE, recursive = TRUE)              # create output directory if it does not already exist
-  saveRDS(ses_data, file.path(path_output, "ses_data.rds"))                    # write results to disk; loaded by data_management_dementia.R
+  saveRDS(ses_data, file.path(path_output, "ses_data.rds"))                    # write results to disk; loaded by 04_data_management_dementia.R
   invisible(ses_data)                                                          # return silently; caller can capture result if needed
 }
 

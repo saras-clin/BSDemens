@@ -73,7 +73,7 @@
 #   Peripheral neuropathies: G50-G64
 
 ### Socioeconomic Status (SES)
-# Extracted separately in: extract_ses.R
+# Extracted separately in: 03_extract_ses.R
 # Per SEPLINE guidelines (Hjorth et al. 2025, doi:10.2147/CLEP.S520772)
 #
 #   education_cat: HFAUDD from UDDA (highest completed education by year before surgery)
@@ -250,12 +250,12 @@
 #   Use: filter aar == year(surgery_date) - 1
 #
 # DBSO - Danish Obesity Surgery Registry (Databasen for Behandling af Svær Overvægt)
-#   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by prepare_dbso.R
+#   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by 00_prepare_dbso.R
 #   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/
 #   Access: arrow::open_dataset(path_dbso) — NOT via load_database()
 #   Format: LONG — one row per clinic visit per patient (PRE=pre-op, PER=surgery, FOL=follow-up)
 #   Note: mandatory reporting since 2010, covers all public and private bariatric procedures
-#   All column names below are lowercase (rename_with(tolower) applied in prepare_dbso.R)
+#   All column names below are lowercase (rename_with(tolower) applied in 00_prepare_dbso.R)
 #
 #   --- PATIENT IDENTIFIER ---
 #   cpr -> pnr        encrypted CPR number (renamed to pnr for consistency across pipeline)
@@ -269,7 +269,7 @@
 #   gastricsleeveredo     1 = revision sleeve gastrectomy (sleeve-specific revision flag)
 #   konverteret           1 = conversion procedure (e.g., SG converted to RYGB)
 #
-#   --- DERIVED COLUMN (added by prepare_dbso.R) ---
+#   --- DERIVED COLUMN (added by 00_prepare_dbso.R) ---
 #   surgery_type          "RYGB" / "SG" / "ReDo" / "Unknown"
 #                         derived from flags above; redo_prim checked FIRST so revision bypass
 #                         is classified "ReDo" not "RYGB" (case_when priority fix)
@@ -294,7 +294,7 @@
 #   vaegtper_prim         weight (kg) at surgery day (VaegtPER_prim); patient-level
 #   vaegtfol              weight (kg) at THIS follow-up visit; varies across rows
 #   hoejde                height (cm); patient-level constant across all visit rows (Hoejde)
-#   bmi_pre               derived: udgangsvaegtpre_prim / (hoejde/100)^2; added by prepare_dbso.R
+#   bmi_pre               derived: udgangsvaegtpre_prim / (hoejde/100)^2; added by 00_prepare_dbso.R
 #
 #   --- DBSO-COMPUTED CLINICAL OUTCOMES (Study 2; patient-level flags) ---
 #   akutgenindlaeggelse30d  1 = acute unplanned readmission within 30 days of surgery

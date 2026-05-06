@@ -1,5 +1,5 @@
 # ============================================================================
-# PIPELINE STEP 1 of 5 — build_cohorts.R
+# PIPELINE STEP 1 of 5 — 01_build_cohorts.R
 # ============================================================================
 # WHO ARE WE STUDYING?
 #   Defines the three study groups and applies all inclusion/exclusion criteria.
@@ -12,7 +12,7 @@
 #     Obesity comp. — 1:5 matched from persons with ICD-10 E66 (obesity) in LPR
 #                     before their matched BS patient's surgery date
 #
-#   Inputs:  parquet-external/databasesvaerovervaegt/ (DBSO, from prepare_dbso.R)
+#   Inputs:  parquet-external/databasesvaerovervaegt/ (DBSO, from 00_prepare_dbso.R)
 #            load_database("bef")                     — population register
 #            load_database("lpr_adm") + "lpr_diag"   — LPR2 somatic diagnoses
 #            arrow::open_dataset(path_psyk_adm/diag)  — LPR2 psychiatric diagnoses
@@ -211,7 +211,7 @@ get_bef_demographics <- function(pnr_vector) {
 #
 # DBSO parquet is long format: one row per clinic visit per patient
 # (PRE = pre-op assessment, PER = surgery, FOL = follow-up visits).
-# surgery_type and surgery_date were derived in prepare_dbso.R from:
+# surgery_type and surgery_date were derived in 00_prepare_dbso.R from:
 #   surgery_type: gastricbypass_prim == 1 -> "RYGB"; gastricsleeve_prim == 1 -> "SG";
 #                 redo_prim == 1 -> "ReDo"; otherwise "Unknown"
 #   surgery_date: datoper_prim (DBSO's own clinical record of surgery date)
