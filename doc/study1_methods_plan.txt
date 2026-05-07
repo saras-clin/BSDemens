@@ -135,9 +135,28 @@ Minimum lookback required before index: 5 years
     with one additional eligibility requirement.
 
     Additional eligibility criterion beyond 3b criteria (a)–(e):
-        (f) Earliest recorded E66 diagnosis date strictly before the BS patient's
-            index date (both LPR2 and LPR3 are searched; the earliest date across
-            both sources is used)
+        (f) At least one recorded E66 diagnosis (both LPR2 and LPR3 are searched)
+            with a contact date strictly before the BS patient's index date.
+            The earliest such date across both sources is stored internally
+            (earliest_e66) and used solely as a binary gate: does any E66 record
+            predate the index date? The specific date itself — whether the diagnosis
+            was one month or ten years before surgery — has no further role in
+            eligibility or analysis. Only the yes/no presence of a prior E66
+            record matters.
+
+    Assumption — obesity as a chronic condition:
+        Obesity (E66) is treated as a chronic, persistent disorder. A person who
+        received an E66 diagnosis at any point before the index date is assumed
+        to still be obese or overweight at that date, regardless of the lag
+        between the diagnosis and the index date. This assumption is supported by
+        the clinical literature: body weight at the level qualifying for an E66
+        code (BMI ≥ 30, in practice often ≥ 35–40 in hospital contacts) does not
+        normalise spontaneously or durably in the absence of major intervention.
+        We therefore do not impose a recency requirement on the E66 diagnosis.
+        This approach also avoids introducing an arbitrary time-window that would
+        risk differential exclusion across calendar periods (E66 coding practices
+        changed over time) and reduce comparator pool size without methodological
+        justification.
 
     Bariatric surgery crossover: same approach as GP comparator (see 3b).
     Candidates without prior BS (criterion e) are eligible at enrolment; those
@@ -147,7 +166,9 @@ Minimum lookback required before index: 5 years
     severely obese end of the weight spectrum. This is acceptable because BS
     eligibility itself requires severe obesity (BMI ≥ 40 or ≥ 35 with comorbidity),
     making the E66 population a clinically comparable reference.
-    Reference: Gribsholt SB et al. Clin Epidemiol 2019;11:845–54.
+    References: Gribsholt SB et al. Clin Epidemiol 2019;11:845–54.
+                Sjostrom L et al. N Engl J Med 2007;357:741–52 (weight trajectory
+                without intervention in severe obesity).
 
 
 --------------------------------------------------------------------------------
