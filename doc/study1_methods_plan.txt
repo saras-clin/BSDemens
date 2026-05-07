@@ -170,6 +170,42 @@ Minimum lookback required before index: 5 years
                 Sjostrom L et al. N Engl J Med 2007;357:741–52 (weight trajectory
                 without intervention in severe obesity).
 
+    OPEN QUESTION — GLP-1 receptor agonist use in the obesity comparator:
+        Should obesity comparators who initiate a GLP-1 receptor agonist (ATC A10BJ,
+        e.g., liraglutide/Saxenda, semaglutide/Ozempic or Wegovy) for weight loss
+        be excluded at baseline or censored at treatment initiation?
+
+        Arguments for exclusion or censoring:
+          - GLP-1 RAs at obesity doses achieve 10–15% body weight reduction
+            (Wilding JPH et al. N Engl J Med 2021;384:989–1002; SELECT trial),
+            introducing a competing weight-loss intervention that narrows the
+            contrast between the obesity comparator and the BS cohort.
+          - If GLP-1 RAs themselves affect dementia risk (emerging evidence from
+            SELECT and observational studies), an uncontrolled GLP-1 signal in the
+            obesity comparator could bias the BS–dementia estimate.
+
+        Arguments against exclusion or censoring:
+          - GLP-1 RAs were rare as obesity treatment in Denmark before ~2021; the
+            majority of the study period (2006–2020) has negligible GLP-1 exposure
+            for weight indications. Excluding on GLP-1 would create calendar-period
+            imbalance and disproportionately shrink the pool in recent years.
+          - GLP-1s are also used for T2D at lower doses (A10BJ at diabetes doses
+            vs. obesity doses); separating indication is difficult without dose data.
+          - The obesity comparator is intended to represent the real-world trajectory
+            of severely obese persons who do not undergo BS — GLP-1 use is part of
+            that real-world trajectory and arguably should remain in the comparator.
+          - Censoring at GLP-1 initiation (rather than baseline exclusion) would be
+            more principled if the concern is competing intervention, but would
+            require a full time-varying drug exposure extraction from LMDB.
+
+        Tentative position: do not exclude or censor on GLP-1 in the main analysis
+        (preserves power and avoids calendar-period selection bias). Address as a
+        sensitivity analysis: repeat the BS vs obesity comparator analysis after
+        excluding comparators who ever fill a GLP-1 prescription at obesity-range
+        dose (liraglutide ≥ 2.4 mg, semaglutide ≥ 1 mg) before or during follow-up.
+        This isolates whether GLP-1 contamination materially changes the estimate.
+        DECISION NEEDED before analysis begins — see Section 10 open issues.
+
 
 --------------------------------------------------------------------------------
 4. OUTCOMES
@@ -444,6 +480,12 @@ TABLE 4: Subgroup analysis
 --------------------------------------------------------------------------------
 
 PROTOCOL DECISIONS:
+  - GLP-1 receptor agonist use in the obesity comparator (DECISION NEEDED):
+    Main analysis: include GLP-1 users (no exclusion/censoring) to avoid
+    calendar-period selection bias and preserve pool size.
+    Sensitivity analysis: repeat BS vs obesity comparison after excluding
+    comparators with any GLP-1 fill at obesity-range dose (liraglutide ≥ 2.4 mg,
+    semaglutide ≥ 1 mg). See full discussion in section 3c.
   - Confirm whether NMI individual conditions or only the composite score is
     reported in Table 1 and used as covariate (individual flags give more
     clinical detail; composite is more parsimonious in Cox model)
