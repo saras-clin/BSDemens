@@ -235,6 +235,8 @@ build_bs_cohort <- function() {
     collect() %>%                                       # pull filtered rows into R memory
     distinct(pnr, .keep_all = TRUE)                     # one row per patient; DBSO may have multiple visit rows per person
 
+  n_dbso_start <- nrow(dbso)                            # attrition step 1: all DBSO RYGB/SG with valid date 2010-2024
+
   demo <- get_bef_demographics(unique(dbso$pnr))        # sex and birth date from BEF (for age and lookback checks)
   bs   <- dbso %>% left_join(demo, by = "pnr")          # attach demographics
 
@@ -253,12 +255,14 @@ build_bs_cohort <- function() {
       surgery_date >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
     )
 
+  n_after_eligibility <- nrow(bs)                        # attrition step 2: after death / age / registry history filters
+
   # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
   cutoffs       <- bs %>% select(pnr, index_date = surgery_date)   # per-person cutoff: their own surgery date
   dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)        # pnrs with any dementia diagnosis before surgery
   bs <- bs %>% filter(!pnr %in% dementia_pnrs)                     # remove pre-surgery dementia cases
 
-  bs %>%
+  cohort <- bs %>%
     transmute(
       pnr,
       index_date        = surgery_date,   # surgery date is the index date for the BS cohort
@@ -267,6 +271,13 @@ build_bs_cohort <- function() {
       matched_pnr       = pnr,            # BS patients reference themselves (used when linking to matched comparators)
       bs_crossover_date = NA_Date_        # not applicable for the exposed group; only comparators can cross over
     )
+
+  list(
+    cohort              = cohort,
+    n_dbso_start        = n_dbso_start,        # n before any exclusions
+    n_after_eligibility = n_after_eligibility, # n after death/age/registry filters
+    n_final             = nrow(cohort)         # n after dementia exclusion
+  )
 }
 
 
@@ -410,10 +421,18 @@ build_gp_comparator <- function(bs_cohort) {
             N_GP_PER_BS, " controls (pool exhaustion for rare birth years).")
   }
 
+  n_matched_raw <- nrow(gp_cohort)                        # attrition: GP comparators before dementia exclusion
+
   # Exclude any GP comparators with pre-index dementia
   cutoffs <- gp_cohort %>% select(pnr, index_date)
   dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)
-  gp_cohort %>% filter(!pnr %in% dementia_pnrs)
+  gp_final <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index dementia from GP comparators
+
+  list(
+    cohort        = gp_final,
+    n_matched_raw = n_matched_raw,  # before dementia exclusion
+    n_final       = nrow(gp_final)  # after dementia exclusion
+  )
 }
 
 ## ---------------------------------------------------------------------------
@@ -644,9 +663,17 @@ build_obesity_comparator <- function(bs_cohort) {
             N_OBESITY_PER_BS, " controls.")
   }
 
+  n_matched_raw <- nrow(ob_cohort)                        # attrition: obesity comparators before dementia exclusion
+
   cutoffs <- ob_cohort %>% select(pnr, index_date)
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
-  ob_cohort %>% filter(!pnr %in% dementia_pnrs)
+  ob_final <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index dementia from obesity comparators
+
+  list(
+    cohort        = ob_final,
+    n_matched_raw = n_matched_raw,  # before dementia exclusion
+    n_final       = nrow(ob_final)  # after dementia exclusion
+  )
 }
 
 ## ---------------------------------------------------------------------------
@@ -726,7 +753,8 @@ build_obesity_comparator <- function(bs_cohort) {
 
 main_build_cohorts <- function() {
   cat("Building BS cohort and applying exclusions...\n")
-  bs_cohort <- build_bs_cohort()
+  bs_result <- build_bs_cohort()                         # returns list(cohort, n_dbso_start, n_after_eligibility, n_final)
+  bs_cohort  <- bs_result$cohort                         # extract cohort data frame from the result list
   # Sort by surgery date ascending before matching.
   # In incidence density sampling (risk-set matching), earlier cases draw from the
   # pool first, mimicking the temporal precedence of prospective enrollment. This
@@ -736,11 +764,13 @@ main_build_cohorts <- function() {
   cat("  BS cohort n =", nrow(bs_cohort), "\n")
 
   cat("Building GP comparator cohort...\n")
-  gp_cohort <- build_gp_comparator(bs_cohort)
+  gp_result  <- build_gp_comparator(bs_cohort)           # returns list(cohort, n_matched_raw, n_final)
+  gp_cohort  <- gp_result$cohort                         # extract cohort data frame
   cat("  GP comparator n =", nrow(gp_cohort), "\n")
 
   cat("Building obesity comparator cohort...\n")
-  ob_cohort <- build_obesity_comparator(bs_cohort)
+  ob_result  <- build_obesity_comparator(bs_cohort)      # returns list(cohort, n_matched_raw, n_final)
+  ob_cohort  <- ob_result$cohort                         # extract cohort data frame
   cat("  Obesity comparator n =", nrow(ob_cohort), "\n")
 
   # bs_crossover_date is set inside build_gp_comparator() and build_obesity_comparator()
@@ -748,9 +778,49 @@ main_build_cohorts <- function() {
   # bs_cohort rows carry bs_crossover_date = NA_Date_ (set in build_bs_cohort()).
   # bind_rows aligns columns by name; no additional crossover logic needed here.
   full_cohort <- bind_rows(bs_cohort, gp_cohort, ob_cohort) %>%
-    mutate(cohort = factor(cohort, levels = c("BS", "GP", "Obesity")))
+    mutate(cohort = factor(cohort, levels = c("BS", "GP", "Obesity")))   # ordered factor for table/plot ordering
 
-  cat("Total full_cohort n =", nrow(full_cohort), "\n")
+  # --------------------------------------------------------------------------
+  # Attrition flow table — print to console for documentation and spot-checking.
+  # Printed rather than saved so it is visible in the script log without
+  # creating a separate output file. Capture with sink() if a log file is needed.
+  # --------------------------------------------------------------------------
+  cat("\n")
+  cat(sprintf("%-52s %8s %12s\n", "Attrition step", "n", "Excluded"))
+  cat(strrep("-", 74), "\n")
+  cat(sprintf("%-52s %8d %12s\n",
+      "DBSO: all RYGB/SG 2010-2024",
+      bs_result$n_dbso_start, ""))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: death / age <18 / <5-yr registry",
+      bs_result$n_after_eligibility,
+      bs_result$n_dbso_start - bs_result$n_after_eligibility))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-surgery dementia",
+      bs_result$n_final,
+      bs_result$n_after_eligibility - bs_result$n_final))
+  cat(sprintf("%-52s %8d %12s\n", "BS cohort (final)", bs_result$n_final, ""))
+  cat(strrep("-", 74), "\n")
+  cat(sprintf("%-52s %8d %12s\n",
+      "GP comparators matched (before dementia check)",
+      gp_result$n_matched_raw, ""))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-index dementia",
+      gp_result$n_final,
+      gp_result$n_matched_raw - gp_result$n_final))
+  cat(sprintf("%-52s %8d %12s\n", "GP cohort (final)", gp_result$n_final, ""))
+  cat(strrep("-", 74), "\n")
+  cat(sprintf("%-52s %8d %12s\n",
+      "Obesity comparators matched (before dementia check)",
+      ob_result$n_matched_raw, ""))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-index dementia",
+      ob_result$n_final,
+      ob_result$n_matched_raw - ob_result$n_final))
+  cat(sprintf("%-52s %8d %12s\n", "Obesity cohort (final)", ob_result$n_final, ""))
+  cat(strrep("-", 74), "\n")
+  cat(sprintf("%-52s %8d %12s\n", "TOTAL full_cohort", nrow(full_cohort), ""))
+  cat("\n")
 
   dir.create(path_output, showWarnings = FALSE, recursive = TRUE)
   saveRDS(full_cohort, file.path(path_output, "full_cohort.rds"))

@@ -38,6 +38,43 @@ load_rds <- function(name) {
 }
 
 # ============================================================================
+# 4.0 EMIGRATION DATES [STUB — CRITICAL: NOT YET IMPLEMENTED]
+# ============================================================================
+# Persons who emigrate from Denmark leave Danish registers and can no longer be
+# followed for dementia. Continuing to count their time as at-risk after
+# emigration overstates person-time and biases hazard ratios if emigration rates
+# differ between BS and comparator groups (e.g. if healthy migrants preferentially
+# have surgery abroad, or if obesity affects emigration rates differently).
+#
+# Emigration is a COMPETING RISK for dementia: someone who emigrates can no
+# longer be observed for dementia regardless of whether they later develop it.
+# The correct handling is to CENSOR at the emigration date, exactly as we censor
+# at death or at the end of the study period.
+#
+# This function is a STUB — it returns NA_Date_ for all persons.
+# With emigration_date = NA, pmin(..., na.rm = TRUE) in censor_date below will
+# ignore the NA and fall back to follow_up_end / bs_crossover_date as before.
+# No data are affected until this stub is replaced with a real register query.
+#
+# ACTION REQUIRED from data manager (project 708421):
+#   Confirm which register and column to use:
+#   Option A — VNDS register: load_database("vnds"); check column for departure date.
+#   Option B — BEF-derived: persons who appear in BEF year Y but not in Y+1 are
+#              assumed to have emigrated. Less precise (date unknown within year).
+#   Option C — CPR Registeret (RVNDS): contact DST for direct extract.
+#
+# Once confirmed, replace the body of this function with the register query.
+# pmin() in format_variables() will then automatically apply emigration censoring.
+
+get_emigration_dates <- function(pnr_vector) {
+  # STUB: returns NA for all persons — emigration censoring not yet applied.
+  data.frame(                              # return a data frame for left_join compatibility
+    pnr             = pnr_vector,          # same ordering as input pnrs
+    emigration_date = as.Date(NA_character_)  # NA means no censoring until register is wired up
+  )
+}
+
+# ============================================================================
 # 4.1 LOAD AND MERGE ALL EXTRACTED DATASETS
 # ============================================================================
 
@@ -237,17 +274,16 @@ format_variables <- function(df) {
       #       comparison). bs_crossover_date is set in 01_build_cohorts.R.
       #       It is NA for all BS patients and for comparators who never had BS.
       #
-      # NOTE — emigration NOT yet implemented as a censoring event.
-      #   Persons who emigrate from Denmark leave the Danish registers and can
-      #   no longer be followed. The exact emigration date should be obtained
-      #   from the civil registration / CPR system (e.g. vnds or flyt register
-      #   on DST). Currently these persons are followed until death or 2025-12-31,
-      #   which overstates their at-risk time. See CONFIRM-5 in TODO.txt.
+      # emigration_date: from get_emigration_dates() in section 4.0.
+      #   Currently NA for all persons (stub). Once the register is confirmed,
+      #   persons who emigrate will be censored at their departure date.
+      #   emigration_date is wired into pmin() now so no further code changes
+      #   will be needed when the stub is replaced.
       #
       # pmin(..., na.rm = TRUE): returns the smallest non-NA value per row.
-      #   When bs_crossover_date is NA (most rows), censor_date = follow_up_end.
-      #   When bs_crossover_date is set, censor_date = the earlier of the two.
-      censor_date = pmin(follow_up_end, bs_crossover_date, na.rm = TRUE),
+      #   When bs_crossover_date and emigration_date are NA (most rows),
+      #   censor_date = follow_up_end.
+      censor_date = pmin(follow_up_end, bs_crossover_date, emigration_date, na.rm = TRUE),
 
 
       # -----------------------------------------------------------------------
@@ -392,6 +428,12 @@ main_data_management <- function() {
   cat("Loading and merging extracted data...\n")
   df <- load_and_merge()
   cat("  n =", nrow(df), "before exclusions\n")
+
+  # Attach emigration dates — currently a stub returning NA for all persons.
+  # When the register is confirmed, get_emigration_dates() is updated and
+  # pmin() in format_variables() automatically applies emigration censoring.
+  emigration <- get_emigration_dates(df$pnr)        # one row per person with emigration_date
+  df <- df %>% left_join(emigration, by = "pnr")    # join; emigration_date = NA until stub is replaced
 
   cat("Applying exclusions...\n")
   df <- apply_exclusions(df)
