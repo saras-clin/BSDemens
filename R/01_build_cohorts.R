@@ -325,7 +325,10 @@ build_gp_comparator <- function(bs_cohort) {
   # every loop iteration — which scans the whole data frame each time — we do a single
   # split() up front. Inside the loop we do three O(1) list lookups and filter on small dfs.
   # For a BS cohort of n=5000 and BEF pool of n=3M, this avoids 5000 × 3M comparisons.
-  pool_list <- split(bef_pool[, c("pnr", "death_date", "bs_surgery_date")],
+  # birth_year is kept in the split data frames so the loop can check age >= 18.
+  # This guards against the edge case where a comparator born 1 year later than an
+  # 18-year-old BS patient would be 17 at the index date.
+  pool_list <- split(bef_pool[, c("pnr", "birth_year", "death_date", "bs_surgery_date")],
                      paste(bef_pool$koen, bef_pool$birth_year, sep = "_"))
 
   # Fetch sex + birth_year for the BS cohort (needed for matching key)
@@ -348,13 +351,17 @@ build_gp_comparator <- function(bs_cohort) {
     group_keys <- paste(sex, by + (-1L:1L), sep = "_")
     cand_df    <- dplyr::bind_rows(pool_list[group_keys])
 
-    # Keep candidates alive at this index date AND without pre-index bariatric surgery.
-    # Candidates with bs_surgery_date > idx_date remain eligible — they had no BS
-    # exposure at this index date. If sampled, they get bs_crossover_date below
-    # and will be censored in the analysis when they later undergo surgery.
+    # Keep candidates who are:
+    #   (1) alive at the index date (death_date is NA or after idx_date)
+    #   (2) without bariatric surgery before or on the index date (bs_surgery_date is NA or after)
+    #   (3) at least 18 years old at the index date — matches the BS cohort minimum age.
+    #       This only matters when the BS patient was operated at exactly 18 years, in which
+    #       case a comparator born 1 year later (within the ±1 year matching window) would be
+    #       17 at the index date. Rare but worth enforcing for consistency.
     cand_df <- cand_df[
       (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date), ]
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]
     candidates <- cand_df$pnr
 
     if (length(candidates) == 0) next   # no eligible match available for this BS patient
@@ -384,6 +391,24 @@ build_gp_comparator <- function(bs_cohort) {
   }
 
   gp_cohort <- bind_rows(matched_rows)
+
+  # --------------------------------------------------------------------------
+  # Match rate audit: check how many BS patients received fewer than the target
+  # number of GP comparators. Zero-match patients have no controls and will be
+  # invisible in all analyses — flag them explicitly so they are not silently lost.
+  # --------------------------------------------------------------------------
+  match_counts <- gp_cohort %>%                           # count GP comparators per BS patient
+    dplyr::count(matched_pnr, name = "n_gp")
+  n_zero   <- sum(!bs_cohort$pnr %in% match_counts$matched_pnr)  # BS patients with zero matches
+  n_fewer  <- sum(match_counts$n_gp < N_GP_PER_BS)               # BS patients below the target ratio
+  if (n_zero > 0) {
+    warning("GP comparator: ", n_zero, " BS patient(s) received ZERO matches. ",
+            "Consider widening birth-year window to ±2 years.")
+  }
+  if (n_fewer > 0) {
+    message("GP comparator: ", n_fewer, " BS patient(s) matched to fewer than ",
+            N_GP_PER_BS, " controls (pool exhaustion for rare birth years).")
+  }
 
   # Exclude any GP comparators with pre-index dementia
   cutoffs <- gp_cohort %>% select(pnr, index_date)
@@ -548,7 +573,8 @@ build_obesity_comparator <- function(bs_cohort) {
       by = "pnr"
     )
 
-  pool_list <- split(obesity_pool[, c("pnr", "earliest_e66", "death_date", "bs_surgery_date")],
+  # birth_year kept for the age >= 18 check inside the loop (same edge case as GP comparator).
+  pool_list <- split(obesity_pool[, c("pnr", "birth_year", "earliest_e66", "death_date", "bs_surgery_date")],
                      paste(obesity_pool$koen, obesity_pool$birth_year, sep = "_"))
 
   set.seed(42)
@@ -563,13 +589,13 @@ build_obesity_comparator <- function(bs_cohort) {
     group_keys <- paste(sex, by + (-1L:1L), sep = "_")
     cand_df    <- dplyr::bind_rows(pool_list[group_keys])
 
-    # Keep candidates whose E66 predates the index date, alive, and without pre-index BS.
-    # Candidates with bs_surgery_date > idx_date are eligible — they will be assigned
-    # bs_crossover_date and censored in the analysis if sampled.
+    # Keep candidates whose E66 predates the index date, alive, without pre-index BS,
+    # and at least 18 years old at the index date (same edge-case check as GP comparator).
     cand_df <- cand_df[
       cand_df$earliest_e66 < idx_date &
       (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date), ]
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]
     candidates <- cand_df$pnr
 
     if (length(candidates) == 0) next
@@ -598,6 +624,25 @@ build_obesity_comparator <- function(bs_cohort) {
   }
 
   ob_cohort <- bind_rows(matched_rows)
+
+  # --------------------------------------------------------------------------
+  # Match rate audit for obesity comparator.
+  # Zero matches are more plausible here than for the GP comparator: early index
+  # dates (2010–2012) have a smaller pool of E66-coded persons in LPR, since E66
+  # coding in Danish hospitals ramped up gradually over the study period.
+  # --------------------------------------------------------------------------
+  ob_match_counts <- ob_cohort %>%
+    dplyr::count(matched_pnr, name = "n_ob")
+  n_ob_zero   <- sum(!bs_cohort$pnr %in% ob_match_counts$matched_pnr)
+  n_ob_fewer  <- sum(ob_match_counts$n_ob < N_OBESITY_PER_BS)
+  if (n_ob_zero > 0) {
+    warning("Obesity comparator: ", n_ob_zero, " BS patient(s) received ZERO matches. ",
+            "Consider widening birth-year window to ±2 years or checking E66 pool size by calendar year.")
+  }
+  if (n_ob_fewer > 0) {
+    message("Obesity comparator: ", n_ob_fewer, " BS patient(s) matched to fewer than ",
+            N_OBESITY_PER_BS, " controls.")
+  }
 
   cutoffs <- ob_cohort %>% select(pnr, index_date)
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
@@ -682,6 +727,12 @@ build_obesity_comparator <- function(bs_cohort) {
 main_build_cohorts <- function() {
   cat("Building BS cohort and applying exclusions...\n")
   bs_cohort <- build_bs_cohort()
+  # Sort by surgery date ascending before matching.
+  # In incidence density sampling (risk-set matching), earlier cases draw from the
+  # pool first, mimicking the temporal precedence of prospective enrollment. This
+  # ensures patients with earlier surgery dates are not disadvantaged by pool
+  # depletion caused by later patients being processed first.
+  bs_cohort <- bs_cohort %>% dplyr::arrange(index_date)
   cat("  BS cohort n =", nrow(bs_cohort), "\n")
 
   cat("Building GP comparator cohort...\n")

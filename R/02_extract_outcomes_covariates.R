@@ -361,14 +361,23 @@ extract_weight_outcomes <- function(bs_cohort) {
 
   # Pre-operative weight: udgangsvaegtpre_prim is the weight from the last pre-op
   # form before surgery. It is stored in every row for a patient — take one per person.
+  # Pre-operative weight: udgangsvaegtpre_prim is the weight recorded at the LAST pre-op
+  # clinic visit before surgery. It is stored redundantly in every DBSO row for a patient,
+  # but the value at the most recent pre-op visit (datopre) is the definitive baseline.
+  # We group by patient and take the row with the latest datopre rather than using
+  # distinct(pnr, .keep_all = TRUE), which would pick an arbitrary row and could return
+  # the wrong height if hoejde was updated across visits.
   weight_preop <- dbso_cohort %>%
-    filter(!is.na(udgangsvaegtpre_prim)) %>%
-    distinct(pnr, .keep_all = TRUE) %>%
+    filter(!is.na(udgangsvaegtpre_prim), !is.na(datopre)) %>%  # must have both weight and a datopre to order on
+    group_by(pnr) %>%
+    arrange(desc(datopre)) %>%                                  # most recent pre-op visit first
+    slice(1) %>%                                                # take that row for each patient
+    ungroup() %>%
     select(
       pnr,
-      weight_preop = udgangsvaegtpre_prim,
-      height_preop = hoejde,
-      bmi_preop    = bmi_pre
+      weight_preop = udgangsvaegtpre_prim,  # pre-op weight (kg) from last pre-op form
+      height_preop = hoejde,                 # height (cm) from last pre-op form
+      bmi_preop    = bmi_pre                 # BMI calculated in 00_prepare_dbso.R
     )
 
   # Post-operative weights: rows with a measured follow-up weight.
@@ -379,10 +388,17 @@ extract_weight_outcomes <- function(bs_cohort) {
     mutate(
       days_since_surgery = as.numeric(difftime(datofol, surgery_date, units = "days")),
       target_days = case_when(
+        # 3-month visit: no official DBSO window; clinical visit around 3 months post-surgery
         days_since_surgery >= 60  & days_since_surgery < 120 ~ 90L,
+        # 6-month visit: no official DBSO window; clinical visit around 6 months post-surgery
         days_since_surgery >= 150 & days_since_surgery < 210 ~ 180L,
-        days_since_surgery >= 330 & days_since_surgery < 390 ~ 365L,
-        days_since_surgery >= 670 & days_since_surgery < 760 ~ 730L,
+        # 1-year follow-up: DBSO flag FUMellem6mdr1aar = visits 6–18 months post-surgery
+        # (183–547 days); we pick the visit CLOSEST to day 365 within this window
+        days_since_surgery >= 183 & days_since_surgery < 548 ~ 365L,
+        # 2-year follow-up: DBSO flag FUMellem1_5aar2_5aar = visits 18–30 months post-surgery
+        # (548–913 days); we pick the visit CLOSEST to day 730 within this window.
+        # Previous code used 670–759 days (22–25 months), which missed visits at 26–30 months.
+        days_since_surgery >= 548 & days_since_surgery < 914 ~ 730L,
         TRUE ~ NA_integer_
       )
     ) %>%
@@ -406,14 +422,35 @@ extract_weight_outcomes <- function(bs_cohort) {
     left_join(weight_preop,  by = "pnr") %>%
     left_join(weight_postop, by = "pnr") %>%
     mutate(
+      # Ideal body weight: weight at BMI = 25 using pre-op height.
+      # If height_preop is missing or zero, target_weight = NA and all downstream
+      # pct_ewl values will also be NA (R propagates NA through arithmetic).
       target_weight = 25 * (height_preop / 100)^2,
+
+      # Excess weight = pre-op weight minus ideal weight.
+      # Represents the weight above a BMI-25 body habitus that the patient needs to lose.
+      # Can be 0 if pre-op BMI was exactly 25 (extremely unlikely in a BS cohort);
+      # negative if pre-op BMI < 25 (essentially impossible for BS eligibility).
       excess_weight = weight_preop - target_weight,
+
+      # Total weight loss (TWL) at 12 months: positive means weight was lost.
       twl_12mo      = weight_preop - weight_kg_12mo,
-      pct_twl_12mo  = twl_12mo / weight_preop * 100,
-      pct_ewl_12mo  = twl_12mo / excess_weight * 100,
+
+      # Percentage TWL at 12 months: TWL expressed as % of pre-op weight.
+      # Guard: if weight_preop is 0 or missing, return NA (avoids division by zero).
+      pct_twl_12mo  = if_else(weight_preop > 0, twl_12mo / weight_preop * 100, NA_real_),
+
+      # Percentage excess weight loss (%EWL) at 12 months: TWL expressed as % of excess weight.
+      # This is the standard bariatric outcome metric — 50% EWL is generally considered success.
+      # Guard: excess_weight must be > 0. Returns NA if height is missing, if pre-op BMI was
+      # already ≤ 25, or if weight_preop is missing. These are the only cases where %EWL is
+      # undefined or clinically meaningless.
+      pct_ewl_12mo  = if_else(excess_weight > 0, twl_12mo / excess_weight * 100, NA_real_),
+
+      # Same metrics at 24 months.
       twl_24mo      = weight_preop - weight_kg_24mo,
-      pct_twl_24mo  = twl_24mo / weight_preop * 100,
-      pct_ewl_24mo  = twl_24mo / excess_weight * 100
+      pct_twl_24mo  = if_else(weight_preop > 0, twl_24mo / weight_preop * 100, NA_real_),
+      pct_ewl_24mo  = if_else(excess_weight > 0, twl_24mo / excess_weight * 100, NA_real_)
     )
 }
 
@@ -512,9 +549,26 @@ extract_hospital_contacts <- function(bs_cohort) {
   # admissions (neuropathy, retinopathy, etc.) not just acute hyperglycemia/hypoglycemia.
   # E10.0/E10.1 = T1D coma / ketoacidosis (DKA); E11.0/E11.1 = T2D equivalents.
   # E16.0/E16.1 = drug-induced / other hypoglycemia (main codes for insulin-related hypo).
+  # ICD-10 4-character acute glycaemic event codes.
+  # Each condition gets a date_first_<name> column in the output.
+  #
+  # DKA (diabetic ketoacidosis and hyperglycaemic coma):
+  #   E10.1 = T1D with ketoacidosis (DKA — unambiguously hyperglycaemic)
+  #   E11.0 = T2D with coma — in T2D, coma is predominantly hyperosmolar hyperglycaemic
+  #           state (HHS), not hypoglycaemia; included here as a hyperglycaemic event
+  #   E11.1, E13.0, E13.1, E14.0, E14.1 = other/unspecified diabetes ketoacidosis/coma
+  #   NOTE: E10.0 (T1D with coma) is deliberately EXCLUDED from DKA — in T1D, "coma"
+  #   is predominantly hypoglycaemic, not ketoacidotic; it is listed under hypoglycaemia.
+  #
+  # Hypoglycaemia:
+  #   E10.0 = T1D with coma — almost always hypoglycaemic coma in T1D
+  #   E16.0 = drug-induced hypoglycaemia without coma (most insulin-related events)
+  #   E16.1 = other hypoglycaemia
+  #   E16.2 = hypoglycaemia, unspecified
+  #   NOTE: E11.0 (T2D with coma) is in DKA above — T2D coma is HHS, not hypoglycaemia.
   icd4_conditions <- list(
-    hyperglycemia = c("E100", "E101", "E110", "E111", "E130", "E131", "E140", "E141"),
-    hypoglycemia  = c("E100", "E110", "E160", "E161", "E162")
+    dka          = c("E101", "E110", "E111", "E130", "E131", "E140", "E141"),
+    hypoglycemia = c("E100", "E160", "E161", "E162")
   )
 
   # Non-glycemic conditions are unambiguous at 3-char level.
@@ -633,7 +687,7 @@ extract_baseline_comorbidities <- function(bs_cohort) {
   all_dx <- get_lpr_diagnoses(unique(bs_cohort$pnr), diagtypes = c("A", "B", "G")) %>%  # unique() removes duplicate pnrs so we don't query the same person twice
     inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%  # attach each person's surgery date so we can use it in the date filter below
     filter(
-      date_contact >= surgery_date - 365 * 5,  # only contacts within 5 years before surgery (baseline lookback window)
+      date_contact >= surgery_date - 365.25 * 5,  # 5-year lookback: 365.25 days/year accounts for leap years
       date_contact <  surgery_date              # strictly before surgery — no post-surgery diagnoses counted as baseline
     )
 
@@ -705,7 +759,15 @@ extract_baseline_comorbidities <- function(bs_cohort) {
 # Score = sum of component weights; two components have negative weights (protective):
 #   rx_C09C_C09D (ARBs/sartans) = -2, rx_C10AA (statins) = -3.
 
-extract_nmi <- function(bs_cohort) {
+extract_nmi <- function(bs_cohort, exclude_dementia_predictors = FALSE) {
+  # exclude_dementia_predictors = TRUE: removes dx_F00_G30 (dementia ICD codes) and
+  # rx_N06D (anti-dementia drugs) from the predictor set before computing the score.
+  # Use TRUE for Study 1 (dementia is the outcome): everyone in the analysis cohort
+  # has dx_F00_G30 = 0 by construction (pre-surgery dementia is an exclusion criterion),
+  # and rx_N06D users are also excluded (methods plan criterion 3). Including these
+  # components adds 0 to all scores but creates circular logic that reviewers will flag.
+  # The resulting score is called NMI_no_dementia and covers 28 dx + 20 rx predictors.
+  # Use FALSE (default) for general use / Study 2 (non-dementia outcomes).
 
   # ---- Diagnosis patterns and weights (29 groups, Table 2) ----
   # Patterns match against icd4 = substr(DST_code, 2, 5), which strips the
@@ -727,7 +789,7 @@ extract_nmi <- function(bs_cohort) {
     dx_D50_D64  = "^D5[0-9]|^D6[0-4]",  # Anaemia and other blood disorders
     dx_E11      = "^E11",           # Type 2 diabetes
     dx_E86      = "^E86",           # Volume depletion / dehydration
-    dx_F00_G319 = "^F0[0-3]|^G30", # Dementia (F00-F03) and Alzheimer's (G30)
+    dx_F00_G30  = "^F0[0-3]|^G30", # Dementia (F00-F03) and Alzheimer's (G30). G31 is NOT in NMI per Kristensen 2022 Table 2.
     dx_F10      = "^F10",           # Alcohol use disorder
     dx_F17      = "^F17",           # Tobacco dependence
     dx_G20_G22  = "^G2[0-2]",      # Parkinson's disease
@@ -751,7 +813,7 @@ extract_nmi <- function(bs_cohort) {
   dx_weights <- c(
     dx_B18      = 10, dx_C34      = 19, dx_C50      = 4,  dx_C61      = 5,
     dx_C67      = 8,  dx_C70_D432 = 8,  dx_C76_C80  = 22, dx_C91_C95  = 8,
-    dx_D50_D64  = 5,  dx_E11      = 2,  dx_E86      = 6,  dx_F00_G319 = 9,
+    dx_D50_D64  = 5,  dx_E11      = 2,  dx_E86      = 6,  dx_F00_G30  = 9,
     dx_F10      = 12, dx_F17      = 4,  dx_G20_G22  = 7,  dx_G35      = 7,
     dx_G40_G41  = 5,  dx_I05_I35  = 2,  dx_I110_I50 = 4,  dx_I60_I69  = 4,
     dx_I70_I77  = 5,  dx_I71_I72  = 4,  dx_J12_J18  = 4,  dx_J41_J47  = 4,
@@ -796,6 +858,18 @@ extract_nmi <- function(bs_cohort) {
     rx_N07BC         = 7,  rx_R03AC02_05  = 3,  rx_R03BB04_07  = 5
   )
 
+  # ---- Optionally drop dementia-related predictors for Study 1 ----
+  # For Study 1 (dementia is the outcome), remove dx_F00_G30 and rx_N06D from the
+  # predictor set. Both components are 0 for everyone by construction (pre-surgery
+  # dementia and N06D users are exclusion criteria), so removal does not change scores,
+  # but it eliminates circular logic and pre-empts reviewer concerns.
+  if (exclude_dementia_predictors) {
+    dx_patterns <- dx_patterns[names(dx_patterns) != "dx_F00_G30"]   # drop dementia ICD predictor
+    dx_weights  <- dx_weights[ names(dx_weights)  != "dx_F00_G30"]   # drop corresponding weight
+    rx_patterns <- rx_patterns[names(rx_patterns) != "rx_N06D"]      # drop anti-dementia drug predictor
+    rx_weights  <- rx_weights[ names(rx_weights)  != "rx_N06D"]      # drop corresponding weight
+  }
+
   pnrs   <- unique(bs_cohort$pnr)          # deduplicated list of all person IDs to look up
   result <- bs_cohort %>% select(pnr)       # start with one row per person; flags added below
 
@@ -805,7 +879,7 @@ extract_nmi <- function(bs_cohort) {
   all_dx <- get_lpr_diagnoses(pnrs, diagtypes = c("A", "B", "G")) %>%
     inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%  # attach index date per person
     filter(
-      date_contact >= surgery_date - 365 * 5,   # NMI specifies 5-year lookback for diagnoses
+      date_contact >= surgery_date - 365.25 * 5,  # NMI specifies 5-year lookback; 365.25 accounts for leap years
       date_contact <  surgery_date               # baseline only — no post-surgery diagnoses
     ) %>%
     select(pnr, icd4)   # icd4 = first 4 ICD-10 characters (DST "D" prefix stripped);
@@ -1000,8 +1074,8 @@ main_extraction <- function() {
   comorbidities <- extract_baseline_comorbidities(full_cohort)
   saveRDS(comorbidities, file.path(path_output, "extract_comorbidities.rds"))
 
-  cat("Extracting NMI score (all cohort members)...\n")
-  nmi <- extract_nmi(full_cohort)
+  cat("Extracting NMI score (all cohort members, dementia predictors excluded for Study 1)...\n")
+  nmi <- extract_nmi(full_cohort, exclude_dementia_predictors = TRUE)  # Study 1 uses dementia-free NMI (28 dx + 20 rx predictors)
   saveRDS(nmi, file.path(path_output, "extract_nmi.rds"))
 
   cat("Extracting baseline medications (all cohort members)...\n")

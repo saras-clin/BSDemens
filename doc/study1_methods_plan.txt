@@ -110,6 +110,11 @@ Minimum lookback required before index: 5 years
             without this check)
         (e) No prior bariatric surgery: absent from DBSO, or earliest DBSO
             surgery date strictly after the BS patient's index date
+        (f) Age ≥ 18 years at the index date. This mirrors the BS cohort minimum age.
+            In practice this criterion only binds when a BS patient was operated at
+            exactly 18 years of age and a candidate was born 1 year later (birth year
+            window ±1), making the candidate 17 at the index date. Rare but enforced
+            for consistency.
       N = 25 candidates are drawn at random (without replacement) from the eligible
       pool. Each person can be matched to at most one BS patient.
 
