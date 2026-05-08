@@ -32,6 +32,23 @@ Minimum lookback required before index: 5 years
     Planned data quality check: distribution of (DatoPER_prim − OpDateLPR) in days.
     If ≥95% of patients agree within 7 days → use DatoPER_prim, no sensitivity analysis.
     If systematic discrepancy observed → add sensitivity analysis 7g.8 (see below).
+
+    Reporting completeness note:
+    DBSO became mandatory in 2010 but registration completeness likely improved
+    over the first years of operation. Evidence for this includes: (a) the registry
+    itself was new and clinic onboarding took time; (b) early DBSO patient counts are
+    lower than subsequent years even adjusting for procedure volume trends. Incomplete
+    reporting primarily affects the obesity comparator pool: persons who had bariatric
+    surgery before 2010 would not appear in DBSO, meaning they cannot be flagged as
+    previously bariatric-operated and would incorrectly remain eligible for the
+    obesity comparator pool. This is an inescapable limitation of the DBSO data
+    infrastructure, acknowledged in the registry publication (Winckelmann et al. 2022).
+    The match-rate audit (main_build_cohorts()) will flag any BS patients who receive
+    zero obesity comparator matches — early index dates are the most likely to be
+    affected. If ≥5% of 2010–2012 BS patients have zero obesity comparator matches,
+    a sensitivity analysis restricting to index dates from 2013 onwards will be added.
+    CONFIRM exact completeness figures with DBSO registry managers (SunDK) before
+    citing specific years or percentages in the manuscript.
 - CRS / BEF + DOD: age, sex, birth date, migration, vital status (since 1968)
 - DNPR / LPR2 + LPR3: somatic hospital diagnoses and procedures (since 1995)
 - DCPRR: all psychiatric hospital/clinic contacts (since 1970)
@@ -117,6 +134,24 @@ Minimum lookback required before index: 5 years
             for consistency.
       N = 25 candidates are drawn at random (without replacement) from the eligible
       pool. Each person can be matched to at most one BS patient.
+
+    Pool depletion and temporal ordering:
+      Each sampled comparator is immediately removed from the eligibility pool
+      (sampling without replacement, pool depletion). Without depletion, the same
+      person could serve as control for multiple BS patients, generating correlated
+      risk sets and overstating the effective sample size in the Cox model.
+
+      Under pool depletion, the order in which BS patients are processed matters:
+      a patient processed early encounters a full pool; one processed late encounters
+      a pool already thinned by earlier draws from the same birth-year strata. To
+      minimise artificial match shortfalls, the BS cohort is sorted by surgery date
+      (ascending) before the matching loop begins. This mirrors the natural temporal
+      precedence of incidence density sampling — earlier index dates draw from a
+      larger undepleted cohort. Processing in reverse or arbitrary order would
+      disadvantage early-surgery patients relative to later ones for no substantive
+      reason. A match-rate audit runs after each matching loop; patients who receive
+      fewer than the target number of controls (or zero controls) are flagged in the
+      console output and the pipeline logs a warning.
 
     Bariatric surgery crossover (implemented via bs_crossover_date):
       Pool members who have a DBSO surgery date AFTER a candidate's potential index
@@ -254,7 +289,32 @@ Comorbidities — Nordic Multimorbidity Index (NMI):
     relevant prescription within the lookback window (GMC algorithm).
     All other NMI conditions: ICD-10 diagnosis only.
     NMI reference: Kristensen KB, Lund LC, Jensen PB, et al. Clin Epidemiol
-                   2022;14:567–79.
+                   2022;14:567–79. Code: https://pharmacoepi.sdu.dk/nmi/
+
+    Modified NMI for Study 1 (pre-specified):
+      The original NMI includes two dementia-related predictors: hospital-coded
+      dementia diagnoses F00–F03 / G30 (ICD weight = 9) and dispensed antidementia
+      prescriptions ATC N06D (prescription weight = 11). For Study 1, where incident
+      dementia is the primary outcome, retaining these predictors in the baseline NMI
+      would introduce circular confounding. Persons who later develop dementia are, by
+      definition, more likely to have pre-index register evidence of early dementia —
+      the very diagnoses and prescriptions captured by these two predictors. This
+      creates a spurious correlation between the baseline NMI score and the outcome
+      that reflects outcome ascertainment, not true baseline comorbidity.
+
+      Additionally, mild cognitive impairment and early dementia may be recorded in
+      LPR or LMDB months to years before a formal dementia diagnosis is registered,
+      meaning the predictors capture early-stage disease that should not be treated
+      as a covariate (it IS the disease process of interest).
+
+      For Study 1, a modified NMI is therefore pre-specified that excludes dx_F00_G30
+      and rx_N06D, yielding a 48-predictor score. This modification has no impact on
+      the study population because N06D users are already excluded by criterion #3
+      (antidementia medication as exclusion criterion); the practical effect is the
+      removal of the dementia ICD predictor dx_F00_G30 only. The modified score retains
+      full validity as a baseline comorbidity summary for all non-dementia conditions.
+      Documented in doc/TODO.txt MINOR-4.
+
     Full condition list (see 00_variables_dictionary.txt for ICD and ATC codes):
       Cardiovascular: MI, stroke/TIA, PAD, IHD, heart failure, AF, hypertension
       Metabolic:      diabetes (any type), dyslipidemia, thyroid, gout
@@ -278,17 +338,36 @@ Medications (any dispensing in lookback window):
 
 Socioeconomic position (SEP):
     [Not in protocol draft 1; added per reviewer comment p and SEPLINE guideline]
-    Measured in the year before surgery. Per Hjorth et al. SEPLINE.
+    Measured in the year before surgery. Per Hjorth CF et al. SEPLINE.
     Clin Epidemiol 2025;17:593–624.
-    - Education: HFAUDD from UDDA
-        Short (10, 15) / Medium (20, 30, 35) / Long (40–80) / Unknown (90)
-    - Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF
-        Quintile-based: Low (Q1) / Medium (Q2–Q4) / High (Q5)
-    - Occupation: SOCIO13 from AKM
+
+    Three separate dimensions are entered as covariates. No composite SEP
+    variable is used; SEPLINE explicitly advises against composites because
+    education, income, and occupation represent distinct causal pathways.
+
+    - Education: HFAUDD from UDDA — highest attained qualification, most recent
+        record up to the year before surgery (event-based register; last record
+        before index year used, not restricted to the index year).
+        Short (HFAUDD 10, 15) / Medium (20, 30, 35) / Long (40–80) / Unknown (90)
+
+    - Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF.
+        3-year average equivalised disposable household income (years −1, −2, −3
+        before surgery) to reduce year-to-year volatility.
+        Quintile assignment uses population-level cutpoints (Q20/Q40/Q60/Q80
+        percentile boundaries) computed from the full Danish population (BEF),
+        stratified by sex and 5-year age group for the reference year (year −1).
+        Statistics Denmark does not publish pre-computed quintile tables at this
+        level of stratification; cutpoints are computed from BEF × FAIK register data.
+        Quintile categories: Low (Q1) / Medium (Q2–Q4) / High (Q5) / Unknown
+
+    - Occupation: SOCIO13 from AKM, year before surgery.
         Working / Unemployed / Outside workforce / Retired / Student / Unknown
 
-    SEP is a known dementia risk factor and potential confounder (education in
-    particular). Its inclusion strengthens causal inference.
+    SEP is a known dementia risk factor (education in particular: lower education
+    is consistently associated with higher dementia incidence) and a potential
+    confounder for the BS–dementia association. Its inclusion strengthens causal
+    inference and is consistent with SEPLINE recommendations for Danish register
+    epidemiology studies.
 
 
 --------------------------------------------------------------------------------
@@ -338,12 +417,56 @@ Each individual followed from index date until the first of:
       follow-up, HRs are reported as weighted averages of time-varying hazard
       rate ratios. Reference: Stensrud MJ, Hernán MA. JAMA 2020;323(14):1401–2.
 
-7d. Competing risk analysis
-    Death is a competing event for dementia.
-    - Cumulative incidence function (CIF) using Aalen-Johansen estimator
-    - Fine-Gray subdistribution hazard model for formal comparison
-    - Report both cause-specific HR (Cox) and subdistribution HR (Fine-Gray)
-      for the primary outcome
+7d. Competing risk analysis — pre-specified framework
+
+    Death is a competing event for dementia: a person who dies before developing
+    dementia can never be observed to do so, but their death is not statistically
+    independent of their dementia risk (frailty, cardiovascular disease, and other
+    factors predict both outcomes). Treating death as independent censoring in a
+    standard Cox model is therefore an assumption that requires scrutiny, especially
+    because BS may substantially reduce competing mortality, which would differentially
+    remove high-risk individuals from the comparator groups faster than from the BS
+    group and distort the observed hazard ratio.
+
+    Two complementary approaches are pre-specified:
+
+    PRIMARY: Cause-specific hazard model (standard Cox, treating death as censoring)
+      This is the primary pre-specified analysis for all Cox regression in section 7c.
+      The cause-specific hazard estimates the instantaneous rate of dementia among
+      persons who are still alive and dementia-free at each moment — the etiologic
+      question: does BS change the biological process leading to dementia?
+      This approach is the standard in the dementia register literature and facilitates
+      direct comparison with prior studies. It is valid even in the presence of
+      competing risks as long as the cause-specific HR is interpreted correctly (as a
+      rate ratio among survivors, not as an effect on absolute risk).
+      Limitation: if BS markedly reduces competing mortality, survivors in the BS
+      group at late time points may be a selected healthy subgroup, so the long-term
+      cause-specific HR may underestimate the true preventive effect.
+
+    SECONDARY: Subdistribution hazard model (Fine-Gray)
+      The subdistribution hazard estimates the effect of BS on the cumulative incidence
+      of dementia in the full at-risk population, keeping deceased persons in the risk
+      set as a permanent influence on the subdistribution hazard. This addresses the
+      public health question: does BS reduce the absolute population burden of dementia,
+      accounting for competing mortality?
+      The Fine-Gray subdistribution HR will diverge from the cause-specific HR when BS
+      materially affects competing mortality. The direction is informative: if BS reduces
+      both mortality and dementia, the Fine-Gray HR will be closer to the null (less
+      protective-appearing) than the cause-specific HR, because the competing risk
+      removal of high-risk decedents is adjusted for.
+      Reference: Fine JP, Gray RJ. J Am Stat Assoc 1999;94:496–509.
+                 Lau B et al. Epidemiology 2009;20:521–525 (interpretation guidance).
+
+    GRAPHICAL SUMMARY: Cumulative incidence functions (CIF) plotted using the
+      Aalen-Johansen estimator for all three comparisons (BS vs GP, BS vs obesity,
+      RYGB vs SG). The Aalen-Johansen CIF is the correct non-parametric curve under
+      competing risks; 1 − Kaplan-Meier overstates cumulative incidence when competing
+      events are present (Gooley TA et al. Stat Med 1999;18:695–706).
+
+    REPORTING: Table 3 presents both cause-specific HR (Cox) and subdistribution HR
+      (Fine-Gray) side-by-side. Large divergence between the two estimates would
+      indicate that competing mortality materially confounds the dementia comparison
+      and would be discussed in the manuscript.
 
 7e. Time-period analyses
     Landmark analyses at 1 year and 5 years post-surgery:

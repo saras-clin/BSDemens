@@ -32,6 +32,7 @@
 library(dstDataPrep)   # load_database() - pre-installed on DST, must be built first
 library(arrow)
 library(dplyr)
+library(tidyr)         # pivot_longer() used in 3-year income window construction
 library(lubridate)
 library(heaven)        # exposureMatch(), edu_code, charlsonIndex(), etc.
 # On DST: update duckplyr if needed - old pre-installed version has limited functionality
@@ -118,42 +119,148 @@ extract_ses <- function(bs_cohort) {
 
   # --------------------------------------------------------------------------
   # 3.2 Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF
-  # Income quintile per SEPLINE Table 9:
-  #   Q1          -> Low
-  #   Q2, Q3, Q4  -> Medium
-  #   Q5          -> High
-  # Note: SEPLINE recommends age/sex standardized quintiles within the general
-  # population. Here we use within-cohort quintiles as a pragmatic simplification.
+  #
+  # SEPLINE (Hjorth et al. 2025) Table 9 specifies:
+  #   (a) 3-year average income: average over year-1, year-2, year-3 before the
+  #       index year to reduce year-to-year volatility in income measurement.
+  #   (b) Population-standardized quintile cutpoints: quintile boundaries computed
+  #       in the GENERAL POPULATION (all BEF persons), stratified by 5-year age
+  #       group AND sex for the reference year (index_year - 1).
+  #       This prevents cohort-level income distribution from distorting the
+  #       quintile thresholds (BS patients are not representative of the full
+  #       age-sex-matched general population income distribution).
+  #   (c) Quintile assignment: Q1 -> Low, Q2-Q4 -> Medium, Q5 -> High.
+  #
+  # Statistics Denmark does NOT publish pre-computed quintile cutpoints by
+  # age-group x sex x year. We compute them from the full BEF x FAIK population.
+  #
+  # IMPLEMENTATION STEPS:
+  #   Step A: Determine the 3 income reference years for each study index year.
+  #   Step B: For COHORT MEMBERS — compute their 3-year average income.
+  #   Step C: For the GENERAL POPULATION — compute 3-year average income per
+  #           person and derive quintile cutpoints by sex x age_group5 x year.
+  #   Step D: Assign each cohort member to a quintile based on the population
+  #           cutpoints for their sex, age group, and index year.
   # --------------------------------------------------------------------------
-  bef  <- load_database("bef")  %>% rename_with(tolower)   # open BEF lazily; needed for familie_id link to FAIK
-  faik <- load_database("faik") %>% rename_with(tolower)   # open FAIK lazily; household income register
 
-  bef_family <- bef %>%
-    dplyr::filter(
-      pnr %in% !!pnrs,           # restrict to cohort members only
-      aar %in% !!unique_years     # only the years matching our index years; BEF is annual
+  bef  <- load_database("bef")  %>% rename_with(tolower)   # population register: pnr, aar, koen, foed_dag, familie_id
+  faik <- load_database("faik") %>% rename_with(tolower)   # household income register: familie_id, aar, famaekvivadisp_13
+
+  # The 3-year average uses years: index_year-1, index_year-2, index_year-3.
+  # The population quintile reference year = index_year - 1 (year before surgery),
+  # consistent with all other SEP measures. Age group for stratification uses
+  # the person's age at year index_year - 1 (the reference year).
+  income_ref_years <- sort(unique(c(unique_years - 1L, unique_years - 2L, unique_years - 3L)))   # all reference years needed across cohort
+
+  # -- Step A: cohort member income for all 3 reference years --
+  # Pull FAIK for cohort members over the 3 reference years (lazy filter on parquet).
+  # BEF needed for familie_id link and age/sex (used later for population quintiles).
+  bef_cohort <- bef %>%
+    dplyr::filter(pnr %in% !!pnrs, aar %in% !!income_ref_years) %>%    # cohort members in reference years
+    dplyr::select(pnr, aar, koen, foed_dag, familie_id) %>%
+    dplyr::collect()                                                      # BEF is large; filter pushed to parquet first
+
+  faik_cohort_ref <- faik %>%
+    dplyr::filter(aar %in% !!income_ref_years) %>%                        # all families in reference years (needed for population step too)
+    dplyr::select(familie_id, aar, famaekvivadisp_13) %>%
+    dplyr::collect()                                                        # collected once; reused for both cohort and population steps
+
+  # Join BEF <-> FAIK for cohort members; then join cohort_years to restrict to each
+  # person's 3 reference years (index_year-1, index_year-2, index_year-3).
+  cohort_ref_lookup <- cohort_years %>%                                    # pnr + index_year
+    dplyr::mutate(                                                          # expand to 3 reference years per person
+      yr1 = index_year - 1L,
+      yr2 = index_year - 2L,
+      yr3 = index_year - 3L
     ) %>%
-    dplyr::select(pnr, aar, familie_id) %>%   # familie_id links person (BEF) to household (FAIK)
-    dplyr::collect()                           # pull into memory; BEF is large, filter pushed to parquet first
+    tidyr::pivot_longer(cols = c(yr1, yr2, yr3),                           # one row per (pnr, reference year)
+                        names_to = NULL, values_to = "ref_year")
 
-  faik_income <- faik %>%
-    dplyr::filter(aar %in% !!unique_years) %>%              # pull FAIK for all families in these years
-    dplyr::select(familie_id, aar, famaekvivadisp_13) %>%  # equivalised disposable household income column
-    dplyr::collect()                                         # pull into memory; join to BEF families after collect
-
-  income <- bef_family %>%
-    dplyr::inner_join(cohort_years, by = c("pnr", "aar" = "index_year")) %>%  # keep only the record matching each person's index year
-    dplyr::left_join(faik_income, by = c("familie_id", "aar")) %>%             # bring in household income; NA if no FAIK record
+  cohort_3yr_income <- bef_cohort %>%
+    dplyr::inner_join(cohort_ref_lookup, by = c("pnr", "aar" = "ref_year")) %>%  # restrict to each person's 3 reference years
+    dplyr::left_join(faik_cohort_ref, by = c("familie_id", "aar")) %>%           # attach household income for that year
+    dplyr::group_by(pnr, index_year) %>%                                          # average across the 3 years per person
+    dplyr::summarise(
+      income_3yr_avg = mean(famaekvivadisp_13, na.rm = TRUE),              # 3-year average equivalised disposable income
+      koen_ref       = dplyr::first(koen),                                  # sex (for quintile stratum lookup)
+      age_ref        = dplyr::first(index_year) - 1L -                      # age at index_year - 1 for stratum lookup
+                       lubridate::year(as.Date(dplyr::first(foed_dag))),
+      .groups = "drop"
+    ) %>%
     dplyr::mutate(
-      income_quintile = dplyr::ntile(famaekvivadisp_13, 5),  # within-cohort quintile (1=lowest, 5=highest); see MINOR-1 for pop-reference alternative
+      income_3yr_avg = dplyr::if_else(is.nan(income_3yr_avg), NA_real_, income_3yr_avg),  # nan -> NA if all 3 years missing
+      age_group5     = floor(age_ref / 5L) * 5L                             # 5-year age group lower bound (e.g. 45 = ages 45-49)
+    )
+
+  # -- Step B: population quintile cutpoints --
+  # Use the FULL BEF population for each reference year (not just cohort members).
+  # We compute the quintile cutpoints (the 20th, 40th, 60th, 80th percentile boundaries)
+  # for each sex x 5-year age group x year stratum, then use these to assign quintiles
+  # to cohort members. Using population cutpoints instead of within-cohort boundaries
+  # ensures quintile assignment is not affected by the cohort's non-representative
+  # income distribution (bariatric surgery patients skew younger and more female
+  # compared to the age-sex-matched general population).
+  #
+  # Performance note: BEF has ~5M rows per year. For ~17 reference years (2006-2022)
+  # this is ~85M rows. Filter to working-age persons (18-90) to reduce memory use.
+  pop_income_years <- sort(unique(unique_years - 1L))   # for quintile reference, only the year immediately before surgery needed per SEPLINE
+
+  bef_pop <- bef %>%
+    dplyr::filter(aar %in% !!pop_income_years) %>%                         # reference years for population quintile computation
+    dplyr::select(pnr, aar, koen, foed_dag, familie_id) %>%
+    dplyr::collect() %>%                                                    # large pull; filters pushed to parquet first
+    dplyr::mutate(
+      age_ref    = aar - lubridate::year(as.Date(foed_dag)),
+      age_group5 = floor(age_ref / 5L) * 5L
+    ) %>%
+    dplyr::filter(age_ref >= 18L, age_ref <= 90L)                          # restrict to working/older adults; reduces memory
+
+  faik_pop_ref <- faik %>%
+    dplyr::filter(aar %in% !!pop_income_years) %>%
+    dplyr::select(familie_id, aar, famaekvivadisp_13) %>%
+    dplyr::collect()
+
+  pop_3yr_income <- bef_pop %>%
+    dplyr::left_join(faik_pop_ref, by = c("familie_id", "aar"))            # attach household income for the reference year
+
+  # Compute quintile cutpoints (Q20/Q40/Q60/Q80 = breaks between quintiles) for each
+  # sex x age_group5 x reference year cell. These four cutpoints define 5 quintile bands.
+  pop_quintile_cutpoints <- pop_3yr_income %>%
+    dplyr::filter(!is.na(famaekvivadisp_13)) %>%                            # exclude persons without income data from reference distribution
+    dplyr::group_by(koen, age_group5, aar) %>%
+    dplyr::summarise(
+      q20 = stats::quantile(famaekvivadisp_13, 0.20, na.rm = TRUE),        # upper bound of Q1 (20th percentile)
+      q40 = stats::quantile(famaekvivadisp_13, 0.40, na.rm = TRUE),        # upper bound of Q2
+      q60 = stats::quantile(famaekvivadisp_13, 0.60, na.rm = TRUE),        # upper bound of Q3
+      q80 = stats::quantile(famaekvivadisp_13, 0.80, na.rm = TRUE),        # upper bound of Q4; above this = Q5
+      .groups = "drop"
+    )
+
+  # -- Step C: assign cohort members to population quintile --
+  income <- cohort_3yr_income %>%
+    dplyr::left_join(
+      pop_quintile_cutpoints,
+      by = c("koen_ref" = "koen", "age_group5", "index_year" = "aar")     # match on sex, age group, reference year
+    ) %>%
+    dplyr::mutate(
+      # Assign quintile by comparing 3-year average income to population cutpoints.
+      # income_3yr_avg NA -> quintile NA -> income_cat "Unknown" via case_when.
+      income_quintile = dplyr::case_when(
+        is.na(income_3yr_avg)         ~ NA_integer_,
+        income_3yr_avg <= q20         ~ 1L,
+        income_3yr_avg <= q40         ~ 2L,
+        income_3yr_avg <= q60         ~ 3L,
+        income_3yr_avg <= q80         ~ 4L,
+        income_3yr_avg >  q80         ~ 5L
+      ),
       income_cat = dplyr::case_when(
         income_quintile == 1          ~ "Low",
-        income_quintile %in% 2:4      ~ "Medium",
-        income_quintile == 5          ~ "High",
-        TRUE                          ~ "Unknown"   # NA income -> Unknown (no FAIK record or zero income)
+        income_quintile %in% 2L:4L   ~ "Medium",
+        income_quintile == 5L         ~ "High",
+        TRUE                          ~ "Unknown"   # NA income or no FAIK record -> Unknown
       )
     ) %>%
-    dplyr::select(pnr, famaekvivadisp_13, income_quintile, income_cat)   # keep raw income and quintile alongside category
+    dplyr::select(pnr, famaekvivadisp_13 = income_3yr_avg, income_quintile, income_cat)   # rename 3yr avg to famaekvivadisp_13 for downstream compatibility
 
   # --------------------------------------------------------------------------
   # 3.3 Occupation: SOCIO13 from AKM
@@ -194,37 +301,23 @@ extract_ses <- function(bs_cohort) {
     dplyr::select(pnr, socio13, occupation_cat)   # keep raw code alongside category
 
   # --------------------------------------------------------------------------
-  # 3.4 Combine and compute composite SEP category
-  # Simple composite: Low if any dimension Low, High if all dimensions High
+  # 3.4 Combine all SEP dimensions — NO composite variable
+  # SEPLINE (Hjorth et al., Clin Epidemiol 2025;17:593-624) explicitly does NOT
+  # recommend a composite SEP variable. Each dimension captures a distinct aspect
+  # of social position and should be entered separately in regression models.
+  # A composite conflates three different pathways (material deprivation, social
+  # capital, labour-market attachment) into a single scale that has no theoretical
+  # justification. The three dimensions are retained as separate columns.
   # --------------------------------------------------------------------------
   cohort_years %>%                                           # start from all cohort members (pnr + index_year)
     dplyr::left_join(education,  by = "pnr") %>%            # left so persons with no UDDA record get NA -> Unknown
     dplyr::left_join(income,     by = "pnr") %>%            # left so persons with no FAIK record get NA -> Unknown
     dplyr::left_join(occupation, by = "pnr") %>%            # left so persons with no AKM record get NA -> Unknown
-    dplyr::mutate(
-      # [FIX] Unknown logic was too strict: previously required ALL THREE dimensions to be
-      # Unknown. A person with Unknown education + Medium income + Working occupation was
-      # classified "Medium" even though their SEP cannot be reliably determined.
-      # New logic (ordered priority):
-      #   1. High:    all three clearly high signals (requires complete data)
-      #   2. Low:     any one clearly low signal — even with missing dimensions, known
-      #               deprivation in one domain is informative
-      #   3. Unknown: any remaining dimension is Unknown (low signal didn't fire, so we
-      #               can't confidently classify)
-      #   4. Medium:  all dimensions known and no High/Low signal
-      sep_category = dplyr::case_when(
-        education_cat == "Long"   & income_cat == "High" & occupation_cat == "Working"    ~ "High",
-        education_cat == "Short"  | income_cat == "Low"  | occupation_cat == "Unemployed" ~ "Low",
-        education_cat == "Unknown" | income_cat == "Unknown" | occupation_cat == "Unknown" ~ "Unknown",
-        TRUE ~ "Medium"
-      )
-    ) %>%
     dplyr::select(
       pnr, index_year,
-      hfaudd, education_cat,              # raw HFAUDD code and derived education category
-      famaekvivadisp_13, income_quintile, income_cat,   # raw income, quintile rank, and category
-      socio13, occupation_cat,            # raw SOCIO13 code and derived occupation category
-      sep_category                        # composite SEP summary (High / Medium / Low / Unknown)
+      hfaudd, education_cat,                               # raw HFAUDD code and derived education category
+      famaekvivadisp_13, income_quintile, income_cat,      # raw income, quintile rank, and category
+      socio13, occupation_cat                              # raw SOCIO13 code and derived occupation category
     )
 }
 

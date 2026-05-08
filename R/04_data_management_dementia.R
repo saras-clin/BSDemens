@@ -87,7 +87,7 @@ load_and_merge <- function() {
   medications   <- load_rds("extract_medications.rds")
   diabetes      <- load_rds("extract_diabetes.rds")
   ses           <- load_rds("ses_data.rds") %>%
-    select(pnr, education_cat, income_cat, occupation_cat, sep_category)
+    select(pnr, education_cat, income_cat, occupation_cat)   # sep_category removed: SEPLINE does not recommend a composite
 
   # demographics contains surgery_date and surgery_type which already exist in full_cohort —
   # drop them before joining to avoid duplicate columns.
@@ -413,10 +413,9 @@ format_variables <- function(df) {
                               levels = c("Working", "Unemployed", "Outside_workforce",
                                          "Retired", "Student", "Unknown")),
 
-      #   sep_category: composite SEP summary from education + income + occupation.
-      #                 Reference level: High SEP.
-      sep_category   = factor(sep_category,
-                              levels = c("High", "Medium", "Low", "Unknown"))
+      # sep_category composite removed: SEPLINE (Hjorth et al. 2025) does not recommend
+      # a composite SEP variable. Use education_cat, income_cat, and occupation_cat
+      # as three separate terms in Cox models.
     )
 }
 

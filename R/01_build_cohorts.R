@@ -250,17 +250,50 @@ build_bs_cohort <- function() {
   bs <- bs %>%
     left_join(deaths, by = "pnr") %>%   # attach death date; NA for living persons (absent from dodsaars)
     filter(
-      is.na(doddato) | doddato >= surgery_date,          # alive at surgery date
+      # Protocol criterion 4: exclude death within 30 days of surgery.
+      # doddato > surgery_date + 30 excludes: (a) death before surgery (days < 0),
+      # (b) death on day of surgery (day 0), (c) death within 30 days (days 1-30).
+      # Patients who die in the perioperative period cannot contribute meaningful
+      # dementia follow-up and represent extreme surgical risk; their exclusion
+      # avoids immortal time and makes the BS cohort comparable to the protocol.
+      is.na(doddato) | doddato > surgery_date + 30,
       surgery_date - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
       surgery_date >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
     )
 
-  n_after_eligibility <- nrow(bs)                        # attrition step 2: after death / age / registry history filters
+  n_after_eligibility <- nrow(bs)                        # attrition step 2: after 30-day death / age / registry filters
 
   # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
   cutoffs       <- bs %>% select(pnr, index_date = surgery_date)   # per-person cutoff: their own surgery date
   dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)        # pnrs with any dementia diagnosis before surgery
   bs <- bs %>% filter(!pnr %in% dementia_pnrs)                     # remove pre-surgery dementia cases
+
+  n_after_dementia <- nrow(bs)                           # attrition step 3: after pre-surgery dementia exclusion
+
+  # Exclusion: antidementia medication (ATC N06D) dispensed before surgery
+  # Protocol criterion 3. N06D at baseline (donepezil, rivastigmine, galantamine,
+  # memantine) is diagnostic of either diagnosed or suspected dementia. Excluding
+  # N06D users removes likely undiagnosed dementia cases that the ICD-code check
+  # above may have missed (e.g. if the prescribing GP never registered a hospital
+  # diagnosis). N06D users are also excluded from the NMI calculation (see TODO MINOR-4).
+  lmdb <- load_database("lmdb") %>% rename_with(tolower)   # prescription register (DNPD/LMDB)
+
+  max_surgery_date <- max(bs$surgery_date)                  # upper bound for lazy parquet filter; per-person cutoff applied after collect
+
+  n06d_pnrs <- lmdb %>%
+    filter(
+      pnr %in% !!bs$pnr,                                    # restrict to current BS candidates only
+      substr(atc, 1, 4) == "N06D",                          # antidementia ATC class (CONFIRM-1: column name atc assumed)
+      eksd <= !!max_surgery_date                             # pull all N06D dispensings up to latest surgery date
+    ) %>%
+    select(pnr, eksd, atc) %>%                              # only needed columns; reduce data before collect
+    collect() %>%                                            # pull filtered records into memory
+    inner_join(bs %>% select(pnr, surgery_date), by = "pnr") %>%  # attach each person's surgery date
+    filter(eksd < surgery_date) %>%                          # dispensing must predate this person's surgery (CONFIRM-1: eksd = dispensing date)
+    distinct(pnr) %>%                                        # one row per person with any pre-surgery N06D
+    pull(pnr)
+
+  bs <- bs %>% filter(!pnr %in% n06d_pnrs)                  # remove persons with pre-surgery antidementia medication
 
   cohort <- bs %>%
     transmute(
@@ -275,8 +308,9 @@ build_bs_cohort <- function() {
   list(
     cohort              = cohort,
     n_dbso_start        = n_dbso_start,        # n before any exclusions
-    n_after_eligibility = n_after_eligibility, # n after death/age/registry filters
-    n_final             = nrow(cohort)         # n after dementia exclusion
+    n_after_eligibility = n_after_eligibility, # n after 30-day death / age / registry filters
+    n_after_dementia    = n_after_dementia,    # n after pre-surgery dementia exclusion
+    n_final             = nrow(cohort)         # n after N06D exclusion
   )
 }
 
@@ -792,13 +826,17 @@ main_build_cohorts <- function() {
       "DBSO: all RYGB/SG 2010-2024",
       bs_result$n_dbso_start, ""))
   cat(sprintf("%-52s %8d %12d\n",
-      "  After: death / age <18 / <5-yr registry",
+      "  After: 30-day death / age <18 / <5-yr registry",
       bs_result$n_after_eligibility,
       bs_result$n_dbso_start - bs_result$n_after_eligibility))
   cat(sprintf("%-52s %8d %12d\n",
-      "  After: pre-surgery dementia",
+      "  After: pre-surgery dementia (ICD)",
+      bs_result$n_after_dementia,
+      bs_result$n_after_eligibility - bs_result$n_after_dementia))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-surgery N06D prescriptions",
       bs_result$n_final,
-      bs_result$n_after_eligibility - bs_result$n_final))
+      bs_result$n_after_dementia - bs_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "BS cohort (final)", bs_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n",
