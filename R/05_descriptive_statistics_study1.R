@@ -8,14 +8,14 @@
 # from the DBSO parquet produced in Step 0 (00_prepare_dbso.R).
 #
 # Input:  datasets/study1_clean.rds
-#         parquet-external/databasesvaerovervaegt/part-0.parquet
+#         parquet-external/dbso/part-0.parquet
 # ============================================================================
 
 library(dplyr)
 library(arrow)
 library(lubridate)
 
-path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
+path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
 path_datasets    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
 
 study1  <- readRDS(file.path(path_datasets, "study1_clean.rds"))   # analysis-ready dataset from Step 4

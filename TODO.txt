@@ -15,7 +15,7 @@ CRITICAL — MISSING DATA / WRONG RESULTS IF NOT FIXED
 [CRITICAL-2] DBSO FILE LOCATION AND FORMAT — RESOLVED (2026-05-05)
   File:     E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
             -> converted to parquet by prepare_dbso.R
-            -> saved as parquet-external/databasesvaerovervaegt/part-0.parquet
+            -> saved as parquet-external/dbso/part-0.parquet
             -> read via arrow::open_dataset(path_dbso) in all downstream scripts
   Confirmed columns (lowercased): cpr (-> pnr), datoper_prim (surgery date),
             gastricbypass_prim, gastricsleeve_prim, redo_prim (surgery type flags),
@@ -32,7 +32,7 @@ CONFIRM — CODE WILL NOT RUN WITHOUT THESE
 [CONFIRM-1] bs_cohort.rds — RESOLVED AND ELIMINATED (2026-05-06)
   Resolution: bs_cohort.rds no longer exists as an intermediate file.
   build_bs_cohort() now reads directly from the DBSO parquet
-  (parquet-external/databasesvaerovervaegt/) via arrow::open_dataset(path_dbso).
+  (parquet-external/dbso/) via arrow::open_dataset(path_dbso).
   Surgery type is derived from DBSO flags (gastricbypass_prim / gastricsleeve_prim /
   redo_prim) set in prepare_dbso.R. Revision surgeries (ReDo) are excluded by
   filter(surgery_type %in% c("RYGB", "SG")) inside build_bs_cohort().

@@ -251,7 +251,7 @@
 #
 # DBSO - Danish Obesity Surgery Registry (Databasen for Behandling af Svær Overvægt)
 #   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by 00_prepare_dbso.R
-#   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/
+#   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/dbso/
 #   Access: arrow::open_dataset(path_dbso) — NOT via load_database()
 #   Format: LONG — one row per clinic visit per patient (PRE=pre-op, PER=surgery, FOL=follow-up)
 #   Note: mandatory reporting since 2010, covers all public and private bariatric procedures

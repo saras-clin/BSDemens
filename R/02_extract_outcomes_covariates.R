@@ -54,7 +54,7 @@ library(heaven)        # exposureMatch(), findCondition(), edu_code, etc.
 path_output        <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
 path_psyk_adm      <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag     <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
-path_dbso          <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
+path_dbso          <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
 # full_cohort.rds is produced by 01_build_cohorts.R (BS + GP + obesity, with index_date)
 path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/full_cohort.rds"
 # OSDC path confirmed in DARTER kickstarter. Covers to 2022; sufficient for baseline

@@ -9,7 +9,7 @@
 #                     before their matched BS patient's surgery date
 #                     Matching: same sex + birth year (±1 year)
 #
-#   Inputs:  parquet-external/databasesvaerovervaegt/part-0.parquet (DBSO, from 00_prepare_dbso.R)
+#   Inputs:  parquet-external/dbso/part-0.parquet (DBSO, from 00_prepare_dbso.R)
 #            load_database("bef")                     — population register
 #            load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
 #            arrow::open_dataset(path_psyk_adm/diag)  — LPR2 psychiatric diagnoses
@@ -62,7 +62,7 @@ path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
 path_psyk_adm  <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
-path_dbso      <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
+path_dbso      <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
 
 # GP match ratio and obesity match ratio
 N_GP_PER_BS      <- 25L

@@ -53,7 +53,7 @@ Converts the DBSO SAS file from SunDK into a Parquet folder that the rest of the
 can read via `arrow::open_dataset()`.
 
 - Input:  `E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat`
-- Output: `E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/part-0.parquet`
+- Output: `E:/workdata/708421/cleaned-data/parquet-external/dbso/part-0.parquet`
 
 Run phases in order:
 1. `inspect_dbso()` — print column names and first rows; verify the file is DFR_population
