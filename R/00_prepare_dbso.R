@@ -11,7 +11,7 @@
 #                        weight, surgery type, dates, complications
 #
 #   Input:   E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
-#   Output:  parquet-external/databasesvaerovervaegt/part-0.parquet
+#   Output:  parquet-external/dbso/part-0.parquet
 #            (read via arrow::open_dataset() in 02_extract_outcomes_covariates.R)
 # ============================================================================
 
@@ -20,9 +20,8 @@ library(arrow)      # write_parquet()
 library(dplyr)
 library(lubridate)
 
-path_sas         <- "E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat"
-path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt"
-path_output      <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"  # own processed datasets
+path_sas    <- "E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat"
+path_output <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"  # own processed datasets
 
 # ----------------------------------------------------------------------------
 # 0.1 EXPLORE — confirm column names and bmi_pre inputs before prepare_dbso()
@@ -31,7 +30,7 @@ path_output      <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datase
 raw <- haven::read_sas(path_sas) %>% rename_with(tolower)   # load DBSO SAS file and lowercase all column names
 
 names(raw)                          # verify expected columns are present (datoper_prim, udgangsvaegtpre_prim, hoejde, gastricbypass_prim, etc.)
-sapply(raw, class)                  # check column types — confirm date columns are Date not numeric; if already Date, as.Date() in 0.2 is harmless but can be removed
+sapply(raw, class)                  # check column types — confirmed: date columns (datoper_prim, datopre, datofol) are character "YYYY-MM-DD"; as.Date() in 0.2 is required
 summary(raw$udgangsvaegtpre_prim)   # pre-surgery weight — check it is populated and plausible
 summary(raw$hoejde)                 # height — check for zeros or implausible values
 
@@ -57,7 +56,7 @@ dbso_clean <- raw %>%
     datopre      = as.Date(datopre),      # pre-op visit date — character to Date class
     datofol      = as.Date(datofol)       # follow-up visit date — character to Date class
   ) 
-  
+
 n_distinct(dbso_clean$pnr)    # number of unique patients
 
-arrow::write_parquet(dbso_clean, "E:/workdata/708421/cleaned-data/parquet-external/databasesvaerovervaegt/part-0.parquet")   # save as parquet; part-0 naming follows Arrow open_dataset() convention
+arrow::write_parquet(dbso_clean, "E:/workdata/708421/cleaned-data/parquet-external/dbso/part-0.parquet")   # save as parquet; part-0 naming follows Arrow open_dataset() convention

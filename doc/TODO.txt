@@ -33,40 +33,45 @@ CRITICAL-3: NMI dementia predictors must be excluded for Study 1
   NOTE: This means the NMI score used in Study 1 is a modified NMI (48 predictors
     instead of 50). This should be noted in the methods section.
 
-CRITICAL-4: Emigration censoring not implemented
-  STATUS: Stub added in R/04_data_management_dementia.R (get_emigration_dates()).
-  LOCATION: R/04_data_management_dementia.R, section 4.0
-  ISSUE: Persons who emigrate from Denmark leave the Danish registers and can
-    no longer be followed for dementia. Treating them as at-risk after emigration
-    overstates person-time and may bias hazard ratios if emigration rates differ
-    between BS and comparator groups.
-  FIX NEEDED: Data manager to confirm register name on DST project 708421.
-    Options: VNDS register, BEF-derived (disappearance from annual snapshot),
-    or CPR Registeret (RVNDS). Once register is confirmed, replace the stub
-    in get_emigration_dates() with the real query.
-    emigration_date is already wired into pmin() for censor_date — no further
-    code changes needed after the stub is replaced.
+CRITICAL-4: Emigration censoring — RESOLVED
+  CONFIRMED: VNDS register (load_database("vnds")).
+    indud_kode == "U" = emigration (udrejse); haend_dato = emigration date (character "YYYY-MM-DD").
+  IMPLEMENTED: get_emigration_dates() in R/04_data_management_dementia.R now queries VNDS,
+    filters to indud_kode == "U", and returns earliest haend_dato per person.
+    pmin() in format_variables() applies emigration censoring automatically.
 
 # ============================================================================
 # CONFIRM — REQUIRES DATA MANAGER OR CLINICIAN INPUT
 # ============================================================================
 
-CONFIRM-1: LMDB column names for prescription extraction
-  LOCATION: R/02_extract_outcomes_covariates.R, extract_medications()
-  ISSUE: Column names assumed: atc, eksd (dispensing date), pnr. Confirm these
-    match the actual parquet column names in load_database("lmdb") on DST.
-  ACTION: Run head(collect(load_database("lmdb") %>% rename_with(tolower)), 1)
-    and compare against assumed names.
+CONFIRM-1: LMDB column names — RESOLVED
+  CONFIRMED: pnr, atc, eksd (dispensing date), indo all present.
+  Full column list (35 columns) added to variables_dictionary.txt.
+  No code changes needed — assumed names were correct.
 
-CONFIRM-2: DODSAARS column name for death date
-  LOCATION: R/01_build_cohorts.R, build_bs_cohort(); R/02_extract_outcomes_covariates.R
-  ISSUE: Column name assumed: doddato. Confirm in dodsaars parquet.
+CONFIRM-2: DODSAARS column name for death date — RESOLVED
+  CONFIRMED: d_dodsdto is the death date column (not doddato).
+  Fixed in: R/01_build_cohorts.R (3 places) and R/02_extract_outcomes_covariates.R (3 places).
+  Full confirmed column list added to variables_dictionary.txt.
 
-CONFIRM-3: LPR_A_KONTAKT and LPR_A_DIAGNOSE exact parquet names
-  LOCATION: R/01_build_cohorts.R, R/02_extract_outcomes_covariates.R
-  ISSUE: load_database("lpr_a_kontakt") and load_database("lpr_a_diagnose")
-    assumed. Alternative names: "lpr3f_kontakter", "lpr3f_diagnoser".
-    Confirm with data manager or by listing available databases.
+CONFIRM-3: LPR_A_KONTAKT column names — PARTIALLY RESOLVED
+  CONFIRMED: load_database("lpr_a_kontakt") correct; "lpr3f_kontakter" does NOT exist.
+  CONFIRMED: load_database("lpr_a_diagnose") correct; "lpr3f_diagnoser" does NOT exist.
+  CONFIRMED: contact date column = kont_starttidspunkt (not dato_start — dato_start does not exist)
+  CONFIRMED: contact type column = kont_type (not kontakttype — kontakttype does not exist)
+  Fixed in: R/01_build_cohorts.R (2 places) and R/02_extract_outcomes_covariates.R (3 places).
+  Full lpr_a_kontakt column list added to variables_dictionary.txt.
+  CONFIRM-3b: lpr_a_diagnose column names — RESOLVED
+    CONFIRMED by user: assumed columns (dw_ek_kontakt, diagnosekode, diagnosetype,
+    senare_afkraeftet) are correct. No code changes needed.
+
+CONFIRM-6: load_database("dbso") — RESOLVED
+  CONFIRMED: load_database("dbso") accesses the parquet prepared by 00_prepare_dbso.R.
+  00_prepare_dbso.R has already been run (one-time only); keep the script for documentation.
+  All DBSO reads switched from arrow::open_dataset(path_dbso) to load_database("dbso").
+  Fixed in: R/01_build_cohorts.R (3 places), R/02_extract_outcomes_covariates.R (3 places),
+            R/05_descriptive_statistics_study1.R (1 place).
+  path_dbso variable removed from 01 and 02.
 
 CONFIRM-4: DBSO underreporting in 2010-2012
   LOCATION: doc/study1_methods_plan.txt, section 3c

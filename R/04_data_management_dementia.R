@@ -67,11 +67,18 @@ load_rds <- function(name) {
 # pmin() in format_variables() will then automatically apply emigration censoring.
 
 get_emigration_dates <- function(pnr_vector) {
-  # STUB: returns NA for all persons — emigration censoring not yet applied.
-  data.frame(                              # return a data frame for left_join compatibility
-    pnr             = pnr_vector,          # same ordering as input pnrs
-    emigration_date = as.Date(NA_character_)  # NA means no censoring until register is wired up
-  )
+  # VNDS register: one row per migration event per person.
+  # indud_kode == "U" = udrejse (emigration); "I" = indrejse (immigration).
+  # haend_dato = event date (character "YYYY-MM-DD"; as.Date() required).
+  # We take the FIRST emigration date per person — censoring at first departure.
+  vnds <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  vnds %>%
+    filter(pnr %in% !!pnr_vector, indud_kode == "U") %>%   # emigration events only
+    select(pnr, haend_dato) %>%                             # haend_dato = emigration date
+    collect() %>%                                           # pull into memory
+    mutate(haend_dato = as.Date(haend_dato)) %>%            # character "YYYY-MM-DD" to Date
+    group_by(pnr) %>%                                       # one row per person
+    summarise(emigration_date = min(haend_dato, na.rm = TRUE), .groups = "drop")   # earliest emigration
 }
 
 # ============================================================================
@@ -455,11 +462,10 @@ main_data_management <- function() {
   df <- load_and_merge()
   cat("  n =", nrow(df), "before exclusions\n")
 
-  # Attach emigration dates — currently a stub returning NA for all persons.
-  # When the register is confirmed, get_emigration_dates() is updated and
-  # pmin() in format_variables() automatically applies emigration censoring.
-  emigration <- get_emigration_dates(df$pnr)        # one row per person with emigration_date
-  df <- df %>% left_join(emigration, by = "pnr")    # join; emigration_date = NA until stub is replaced
+  # Attach emigration dates from VNDS register (indud_kode == "U"; haend_dato = emigration date).
+  # Persons not in VNDS or with no "U" event get emigration_date = NA (never emigrated).
+  emigration <- get_emigration_dates(df$pnr)        # earliest emigration date per person; NA if none
+  df <- df %>% left_join(emigration, by = "pnr")    # non-emigrants get emigration_date = NA
 
   cat("Applying exclusions...\n")
   df <- apply_exclusions(df)

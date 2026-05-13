@@ -1,145 +1,31 @@
 ================================================================================
 TODO — BS & DEMENTIA PROJECT
 ================================================================================
-Last updated: 2026-05-04
+Last updated: 2026-05-13
 
-Items marked [CRITICAL] will produce incorrect results if not resolved before
-running the pipeline. Items marked [CONFIRM] are needed before the code will
-run at all. Items marked [MINOR] are refinements that can wait.
+Items marked [CONFIRM] are needed before the code will run correctly.
+Items marked [MINOR] are refinements and decisions that can wait.
 
-
-================================================================================
-CRITICAL — MISSING DATA / WRONG RESULTS IF NOT FIXED
-================================================================================
-
-[CRITICAL-2] DBSO FILE LOCATION AND FORMAT — RESOLVED (2026-05-05)
-  File:     E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
-            -> converted to parquet by prepare_dbso.R
-            -> saved as parquet-external/dbso/part-0.parquet
-            -> read via arrow::open_dataset(path_dbso) in all downstream scripts
-  Confirmed columns (lowercased): cpr (-> pnr), datoper_prim (surgery date),
-            gastricbypass_prim, gastricsleeve_prim, redo_prim (surgery type flags),
-            datopre, datofol, udgangsvaegtpre_prim, vaegtper_prim, vaegtfol,
-            hoejde, opdatelpr, koen, plus medication columns.
-  FoersteFedmeOpr_Dato: present but all NA — not used in pipeline.
-  Run prepare_dbso.R ONCE before running the main pipeline.
+All CRITICALs have been resolved. Pipeline is ready for first run.
 
 
 ================================================================================
-CONFIRM — CODE WILL NOT RUN WITHOUT THESE
+CONFIRM — VERIFY BEFORE TRUSTING RESULTS
 ================================================================================
 
-[CONFIRM-1] bs_cohort.rds — RESOLVED AND ELIMINATED (2026-05-06)
-  Resolution: bs_cohort.rds no longer exists as an intermediate file.
-  build_bs_cohort() now reads directly from the DBSO parquet
-  (parquet-external/dbso/) via arrow::open_dataset(path_dbso).
-  Surgery type is derived from DBSO flags (gastricbypass_prim / gastricsleeve_prim /
-  redo_prim) set in prepare_dbso.R. Revision surgeries (ReDo) are excluded by
-  filter(surgery_type %in% c("RYGB", "SG")) inside build_bs_cohort().
-  path_bs_cohort variable removed from build_cohorts.R.
-
-[CONFIRM-2] Column names after rename_with(tolower) for each register
-  Confirmed from onboarding doc, Dokumentation-af-LPR2.pdf, and OSDC source (2026-05).
-  dstDataPrep standardises all patient ID columns to "pnr" and all record keys to "recnum"
-  (underlying DST raw names are v_cpr and k_recnum/v_recnum — irrelevant once loaded).
-
-  Confirmed register names (load_database() alias = parquet folder name in
-  E:/workdata/708421/cleaned-data/parquet-registers/):
-    akm, bef, dodsaasg, dodsaars, faik, lmdb, lpr_bes,
-    lpr_a_diagnose, lpr_a_kontakt, lpr_adm, shss, ssnv, sssy, udda
-
-  After load_database("x") %>% rename_with(tolower):
-    bef:            pnr, koen (1=male, 2=female), foed_dag, aar
-    dodsaars:       pnr, doddato — individual death records with exact death date (dødsdato).
-                    Use this for censoring. dodsaasg = cause-of-death classification register,
-                    not for individual death dates. Column name "doddato" UNCONFIRMED — verify.
-    lpr_adm:        pnr, recnum, d_inddto, c_spec, c_pattype, c_indm   (LPR2, up to March 2019)
-    lpr_diag:       recnum, c_diag, c_diagtype, c_tildiag               (LPR2 diagnoses, 1977–2019)
-    lpr_a_kontakt:  pnr, dw_ek_kontakt, dato_start                      (LPR3, March 2019+)
-    lpr_a_diagnose: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet  (LPR3 diagnoses)
-    lpr_a_kontakt:  pnr, dw_ek_kontakt, dato_start, hoofdspeciale_ans  (replaces "kontakter")
-    lmdb:           pnr, atc, eksd, volume, apk, indo
-    udda:           pnr, hfaudd, aar
-    faik:           familie_id, famaekvivadisp_13, aar
-    akm:            pnr, socio13, aar
-
-  Psychiatric (parquet-external, via arrow::open_dataset — NOT load_database):
-    t_psyk_adm:  v_cpr, k_recnum, d_inddto  → renamed to pnr, recnum in code
-    t_psyk_diag: v_recnum, c_diag, c_diagtype → renamed to recnum in code
-
-  Still to confirm:
-    - Exact column name for death date in dodsaars (likely doddato — verify with glimpse())
-    - aar column presence in udda, faik, akm
-  Action:   Run load_database("dodsaars") %>% rename_with(tolower) %>% glimpse() to
-            confirm death date column name.
-
-[CONFIRM-3] OSDC file — column names confirmed, diabetes_type values to verify
+[CONFIRM-3] OSDC file — diabetes_type values not yet verified
   Path: E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds
   Confirmed columns: PNR, diabetes_type, do_dm, sex, date_of_birth, age_at_onset
-  Code uses (after rename_with(tolower)): pnr, diabetes_type → "T1D"/"T2D", do_dm → date_diabetes
-  Action:   Verify diabetes_type values: code assumes 1=T1D, 2=T2D — run table(dm$diabetes_type)
-            to confirm. Check if an updated file (covering 2023–2024) is available.
+  Action:   Run table(dm$diabetes_type) to confirm code values.
+            Code assumes "T1D" / "T2D" string labels — verify this is correct.
+            Also check whether an updated file (covering 2023-2024) is available.
 
-[CONFIRM-4] dstDataPrep package must be built before each session
-  Action:   Build from E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj
-            before running any extraction script.
-
-[CONFIRM-5] EMIGRATION DATE — register identified, implementation pending
-  Problem:  Persons who emigrate from Denmark leave the Danish registers and
-            cannot be followed further. Their at-risk time after emigration is
-            unobservable. Not censoring at emigration overstates person-time and
-            can bias incidence rate estimates.
-  Current:  Persons are only censored at death (dodsaars) or 2025-12-31.
-            Emigration is not a censoring event in any script.
-
-  REGISTER CONFIRMED (from archive/other peoples code/population1986-2021.R,
-  project 708614):
-    Register:  bef_bop  (SAS file: E:/rawdata/708614/grunddata/befbop202112.sas7bdat)
-    Key vars:  pnr, adresse_id, bop_vtil (residence-until date), bop_fra (residence-from)
-    Companion: bef_adr  (SAS: befadr202203.sas7bdat) — vars: adresse_id, kom (municipality)
-    Method:    (1) Filter bef_adr to Danish municipality codes (kom in DK range).
-               (2) Filter bef_bop to adresse_ids in Danish bef_adr.
-               (3) Per person: emigration_date = max(bop_vtil) across Danish addresses.
-               A person whose max(bop_vtil) < study_end and who has not died has emigrated.
-    Note:      LifeLines1986_2021.RData (project 708614) was a pre-computed derivative;
-               no creation script exists. Use bef_bop directly instead.
-
-  ASK DATA MANAGER:
-    "For project 708421, I need bef_bop (residence registration periods) with bop_vtil
-    (residence-until date) to compute emigration dates for survival analysis censoring.
-    (1) Is bef_bop accessible on project 708421? Path: SAS in grunddata, or parquet?
-    (2) Do I also need bef_adr to filter to Danish municipalities?
-    (3) Is there already a pre-computed emigration/residency file on this project?"
-
-  Fallback if bef_bop unavailable:
-    BEF annual snapshot approach: person appears in BEF year Y but not Y+1 and has
-    not died -> proxy emigration_date = as.Date(paste0(Y+1, "-01-01")).
-    Loses up to 12 months precision but captures most emigrants. Last resort only.
-
-  Code (once register path is confirmed):
-    1. Add to extract_demographics() in extract_outcomes_covariates.R:
-         bef_bop  <- read_sas(path_bef_bop) %>% rename_with(tolower)
-         bef_adr  <- read_sas(path_bef_adr) %>% rename_with(tolower) %>%
-                     filter(kom %in% municipalities_DK)
-         emigration <- bef_bop %>%
-           filter(adresse_id %in% unique(bef_adr$adresse_id),
-                  pnr %in% !!pnrs) %>%
-           group_by(pnr) %>%
-           summarise(emigration_date = max(as.Date(bop_vtil)), .groups = "drop")
-         Output: add emigration_date column to extract_demographics.rds
-    2. In format_variables() in data_management_dementia.R, update:
-         censor_date = pmin(follow_up_end, bs_crossover_date,
-                            emigration_date, na.rm = TRUE)
-    3. In build_cohorts.R, add emigration-before-index exclusion to
-       build_bs_cohort(), build_gp_comparator(), and build_obesity_comparator().
-
-[CONFIRM-6] PSYCHIATRIC LPR2 REGISTER — RESOLVED
-  Access:   arrow::open_dataset() with confirmed paths:
-              path_psyk_adm  = E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm
-              path_psyk_diag = E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag
-  Columns:  Raw DST names (v_cpr, k_recnum, d_inddto / v_recnum, c_diag, c_diagtype)
-            — renamed in code to pnr/recnum for consistency with lpr_adm/lpr_a_diagnose.
-  Code:     Updated in build_cohorts.R and extract_outcomes_covariates.R.
+[CONFIRM-8] aar column name in UDDA, FAIK, AKM
+  BEF confirmed to use aar. UDDA, FAIK, AKM all assumed to use aar.
+  Action:   Run colnames() on each register and confirm.
+            load_database("udda") %>% rename_with(tolower) %>% colnames()
+            load_database("faik") %>% rename_with(tolower) %>% colnames()
+            load_database("akm")  %>% rename_with(tolower) %>% colnames()
 
 
 ================================================================================
@@ -154,126 +40,55 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
   Code:     extract_ses.R — ntile() in income section.
 
 [MINOR-2] OSDC covers only to 2022 — patients with surgery 2023-2024
-  Impact:   Minor: patients who developed diabetes after 2022 and had surgery
-            in 2023-2024 will be classified as "No_diabetes".
+  Impact:   Patients who developed diabetes after 2022 and had surgery in
+            2023-2024 will be classified as "No_diabetes".
   Action:   Check whether an updated OSDC file exists (contact SDS or OSDC team).
   Code:     extract_outcomes_covariates.R — extract_diabetes_classification().
 
-[MINOR-3] Matching ratio and method for comparison cohorts
+[MINOR-3] Matching ratios — confirm with supervisor
   Current:  1:25 GP, 1:5 obesity, exact matching on sex + birth year (±1).
-  Decision: Confirm matching ratios with supervisor. Consider whether index date
-            matching (same calendar month) should be added.
-  Note:     If many BS patients cannot find 25 GP matches (unlikely but possible
-            for older age groups), ratios will be unbalanced — check in output.
+  Action:   Confirm ratios with supervisor. Consider whether index date matching
+            (same calendar month) should be added.
   Code:     build_cohorts.R — N_GP_PER_BS, N_OBESITY_PER_BS constants.
 
-[MINOR-4] Cancer as time-varying covariate vs baseline flag
-  Current:  Cancer is a baseline binary flag (any cancer in 5-year lookback).
-  Consider: Post-surgery cancer could confound or mediate — may need time-varying
-            covariate in Cox models depending on analysis question.
-  Code:     data_management_dementia.R (no change needed for now).
-
-[MINOR-5] DBSO weight follow-up windows vs DBSO annual report windows
-  DBSO annual reports define: 1-year = 6–18 months, 2-year = 18–30 months.
-  Our code uses: ±30 days around day 365, ±45 days around day 730.
-  Decision: Keep our tighter research windows, or align with DBSO reporting
-            windows for comparability with annual reports.
-  Code:     extract_weight_outcomes() in extract_outcomes_covariates.R.
-
-[MINOR-6] Allergy condition missing from NMI list
-  The full GMC condition list includes allergy (J30, L23, L50, T78), but this
-  was not added to the NMI extraction because the codes are heterogeneous.
-  Decision: Include or exclude from NMI?
-  Code:     extract_baseline_comorbidities() in extract_outcomes_covariates.R.
-
-[MINOR-7] Education: verify UDDA is annual status register
+[MINOR-7] UDDA — verify whether it is annual status or event-based
   If UDDA is event-based (records only when education was completed), then
-  filter(aar == index_year) in extract_ses.R may miss people whose most
-  recent education event was before the index year.
+  filter(aar == index_year) may miss people whose most recent education event
+  was before the index year.
   Action:   Confirm with data manager or check TIMES documentation for UDDA.
 
-[MINOR-8] Confirm aar column name in UDDA, FAIK, AKM
-  Confirmed: BEF uses aar (per user).
-  Not yet confirmed for UDDA, FAIK, AKM — all assumed to use aar.
-  Action:   Run glimpse() on each register and confirm.
+[MINOR-11] senare_afkraeftet filter — verify NAs before changing
+  Current:  is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"  (keeps NAs — defensive)
+  OSDC:     senare_afkraeftet == "Nej"  (drops NAs — only if NAs never occur)
+  Action:   After first run, check: table(is.na(lpr_a_diagnose$senare_afkraeftet))
+            If no NAs exist, switch to == "Nej" for consistency with OSDC.
+            If NAs exist, current filter is correct (includes unconfirmed retraction status).
+  Code:     get_lpr_diagnoses() in 02; get_prior_dementia_pnrs() and E66 filter in 01.
 
-[MINOR-9] OSDC insight — metformin for PCOS should be excluded from antidiabetic flag
-  Problem:  Women taking metformin (ATC A10BA02) for polycystic ovary syndrome (PCOS)
-            are NOT diabetic. The OSDC algorithm excludes metformin prescriptions where
-            the indication code (lmdb column: indo) is '0000092', '0000276', or '0000781'
-            in women under 40 (koen == 2 AND date < foed_dag + 40 years).
-  Current:  extract_baseline_medications() in extract_outcomes_covariates.R selects
-            only pnr, atc, eksd from lmdb. The indo column is not extracted.
-            All A10 prescriptions are counted as antidiabetic, including PCOS metformin.
-  Impact:   Minor for NMI baseline characterisation in Study 1. More relevant for
-            Study 2 (T1D classification) where diabetes type precision matters more.
-            The OSDC pre-computed file already handles this for primary classification.
-  Action:   Add indo to the lmdb select() in extract_baseline_medications().
-            Exclude PCOS metformin: filter out atc == "A10BA02" AND sex == 2 AND
-            indo %in% c("0000092", "0000276", "0000781") before flagging antidiabetic.
-  Code:     extract_outcomes_covariates.R — extract_baseline_medications()
-
-[MINOR-10] OSDC insight — check if dstDataPrep has prepare_lpr2() and prepare_lpr3f()
-  Problem:  The OSDC source code (and likely dstDataPrep) includes helper functions
-            prepare_lpr2(lpr_adm, lpr_diag) and prepare_lpr3f(lpr3f_kontakter,
-            lpr3f_diagnoser) that standardise LPR variable names across versions.
-            If these are available in dstDataPrep on project 708421, we could replace
-            our manual join-and-rename logic in get_lpr_diagnoses() with these helpers.
-  Action:   In dstDataPrep session, run: ls("package:dstDataPrep") or ?prepare_lpr2
-            If available, consider refactoring get_lpr_diagnoses() to use them.
+[MINOR-10] Check if dstDataPrep has prepare_lpr2() / prepare_lpr3f() helpers
+  If available, could replace manual join-and-rename logic in get_lpr_diagnoses().
+  Action:   Run ls("package:dstDataPrep") or ?prepare_lpr2 in a DST session.
   Code:     extract_outcomes_covariates.R — get_lpr_diagnoses()
             build_cohorts.R — get_prior_dementia_pnrs()
 
-[MINOR-12] DBSO weight columns — verify Udgangsvaegt vs UdgangsvaegtPRE_prim
-  Variable descriptions from DBSO data dictionary (Excel):
-    Udgangsvaegt       — no description; likely referral/program-entry weight (highest, measured
-                         when patient first enters the obesity program)
-    UdgangsvaegtPRE_prim — "Udgangsvaegt fra seneste PREoprskema FØR DatoPER_prim" = weight from
-                         the most recent pre-op form before surgery (measured just before BS)
-  Expected: Udgangsvaegt > UdgangsvaegtPRE_prim (weight loss during pre-op diet program)
-  Action:   Run explore_dbso() and inspect summary(udgangsvaegt) vs summary(udgangsvaegtpre_prim).
-            If medians align with expectation, interpretation is correct.
-  Code:     prepare_dbso.R — prepare_dbso() uses UdgangsvaegtPRE_prim as the pre-surgery
-            weight anchor. Only update if the interpretation turns out wrong.
+[MINOR-14] Learn targets pipeline package before analysis phase
+  The {targets} package tracks dependencies and only reruns outdated steps.
+  Recommended for DST projects by CTP/RDST group.
+  Resources: https://books.ropensci.org/targets/
+             https://github.com/tagteam/registerTargets/tree/main
+  Action:   Learn before starting Cox model scripts.
 
-[MINOR-13] DBSO two datasets — DFR_MWL_population not needed in current pipeline
-  DFR_population     = all bariatric surgery patients; one row per clinic visit (PRE/PER/FOL);
-                       contains weight, surgery type, follow-up dates, complications — this is
-                       what we use.
-  DFR_MWL_population = patients who had Massive Weight Loss (MWL) plastic surgery (body
-                       contouring, skin removal) AFTER bariatric surgery. Procedure codes are
-                       KHAD40, KQBJ30, KQBJ05 etc. This is a DIFFERENT operation from BS.
-                       DFR_MWL_population patients are a subset of DFR_population patients.
-  Status:   Not needed for Study 1 or Study 2 primary outcomes. Complication outcomes
-            (readmission, reoperation) are already pre-computed in DFR_population.
-  Action:   Verify which table is in dfr_2025_10_31.sas7bdat by running inspect_dbso().
-            If only DFR_MWL_population variables are present, a different SAS file is needed
-            for the bariatric clinical data.
+[MINOR-15] GLP-1 exclusion in obesity comparator — confirm with co-authors
+  Persons on GLP-1 agonists (ATC A10BJ) before index date may have altered
+  dementia risk. Tentative plan: include in main analysis with GLP-1 as
+  covariate; add sensitivity analysis excluding.
+  Action:   Confirm analytical decision with co-authors before implementing.
 
-[MINOR-14] LEARN: targets pipeline package
-  What:     The {targets} package manages multi-step R pipelines by tracking
-            dependencies and only re-running outdated steps when upstream
-            code or data changes. Strongly recommended for DST projects by
-            the CTP group (tagteam/RDST guide, R_on_DST.Rmd).
-  Why:      Our pipeline has 5+ sequential scripts. Changing one function
-            currently requires manually tracking what needs to be rerun.
-            targets would handle this automatically.
-  Resources:
-    - User manual: https://books.ropensci.org/targets/
-    - DST-specific exercises: https://github.com/tagteam/registerTargets/tree/main
-    - Intro in R_on_DST.Rmd (tagteam/RDST on GitHub)
-  Priority: Learn before starting the analysis phase (after pipeline is stable).
-
-[MINOR-11] OSDC insight — senare_afkraeftet filter alignment
-  Current:  Our code filters is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
-            (keep if NA or not retracted — defensive against NAs in real data).
-  OSDC:     Filters senare_afkraeftet == "Nej" (keep only explicitly not retracted).
-  Note:     DST variable simulation shows only "Ja"/"Nej" values (no NAs), so the
-            OSDC approach may be fully equivalent in practice. If NAs do exist,
-            our filter is more inclusive (keeps diagnoses with missing retraction info).
-  Action:   After verifying data, consider aligning with OSDC filter (== "Nej").
-  Code:     get_lpr_diagnoses() and get_prior_dementia_pnrs() in both
-            extract_outcomes_covariates.R and build_cohorts.R
+[MINOR-16] DBSO underreporting 2010-2012 — check match rates after first run
+  Reporting may have been incomplete in early years of mandatory registration.
+  Action:   After running main_build_cohorts(), examine match rate warnings.
+            If zero-match rates are high for 2010-2012, add sensitivity analysis
+            restricting to index dates from 2013+.
 
 
 ================================================================================
@@ -282,19 +97,19 @@ DBSO REFERENCE INFORMATION
 Official name: Databasen for Behandling af Svær Overvægt (DBSO)
 Operated by:   SunDK (formerly RKKP)
 Coverage:      All public and private hospitals; mandatory since 2010
-Annual reports: https://www.sundk.dk/kliniske-kvalitetsdatabaser/databasen-for-behandling-af-svaer-overvaegt/
-Researcher access: https://forskningsadgang.sundk.dk/
-Documentation portal: https://www.db-dokumentation-sundk.dk/Public/Databases.aspx?db=34
+Parquet:       Prepared once by 00_prepare_dbso.R; access via load_database("dbso")
 
-Variables confirmed to be in DBSO:
-  - Surgery date, surgery type (SKS codes KJDF10/11/40/41/96/97)
-  - Weight (kg) and height (cm) at: pre-exam, 1-year follow-up, 2-year follow-up
-  - BMI calculated from weight/height
-  - Diabetes medications (insulin, oral agents) at baseline and follow-up
-  - Lipid-lowering, antihypertensive medications
-  - Acute readmissions and reoperations within 30 days
+Column names confirmed (after rename_with(tolower)):
+  pnr, datoper_prim (surgery date), gastricbypass_prim, gastricsleeve_prim,
+  redo_prim, datopre, datofol, udgangsvaegtpre_prim, vaegtper_prim, vaegtfol,
+  hoejde, koen ("M"/"K"), plus medkomplik* and medication columns.
 
-Note: 5-year complication data in DBSO annual reports is derived from LPR,
-not from the DBSO registry module itself.
-
+Register column names confirmed:
+  dodsaars:     pnr, d_dodsdto (death date), fdato, c_sex, v_alder, year, ...
+  lmdb:         pnr, atc, eksd (dispensing date), indo, volume, apk, year, ...
+  lpr_a_kontakt: pnr, dw_ek_kontakt, kont_starttidspunkt (contact datetime),
+                kont_type (contact type; "ALCA00" = inpatient), kont_sluttidspunkt, ...
+  lpr_a_diagnose: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet
+  vnds:         pnr, haend_dato (event date), indud_kode ("U"=emigration, "I"=immigration),
+                indud_land, fdato, year
 ================================================================================

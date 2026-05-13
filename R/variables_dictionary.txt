@@ -156,8 +156,8 @@
 # Variables: date_first_{condition} for each above
 
 ## SECONDARY OUTCOMES - MORTALITY ----
-# Source: DOD register (DST folder: dod)
-#   death_date: doddato in DOD
+# Source: DODSAARS register (DST folder: dodsaars)
+#   death_date: d_dodsdto in dodsaars (confirmed column name)
 #   mortality_90day:  death within 90 days of surgery (binary)
 #   mortality_5year:  death within 5 years of surgery (binary)
 
@@ -200,9 +200,32 @@
 #     familie_id (for income linkage), reg (region), civst (marital status)
 #   Note: does NOT contain death date - use DOD for that
 #
-# DOD - Doedsregisteret (Death register)
-#   DST folder: dod
-#   Key vars: pnr, doddato (date of death)
+# DODSAARS - Doedsaarsagsregisteret (Cause of Death Register)
+#   DST folder: dodsaars  (accessed via load_database("dodsaars"))
+#   One row per deceased person.
+#   Confirmed column names (rename_with(tolower) applied):
+#     pnr          encrypted CPR number (patient identifier)
+#     d_dodsdto    date of death — USE THIS for censoring (confirmed column name)
+#     fdato        date of birth (fødselsdato)
+#     c_sex        sex code
+#     v_alder      age at death
+#     year         year of death
+#     cprtjek      CPR check digit
+#     cprtype      CPR type code
+#     cprtjek_1    CPR check variant
+#     c_bopkom     municipality of residence at death
+#     c_dod1       underlying cause of death (ICD-10 code)
+#     c_dod2       contributing cause 2
+#     c_dod3       contributing cause 3
+#     c_dod4       contributing cause 4
+#     c_dodskom     manner/place-of-death code
+#     c_dodsmaade  manner of death code
+#     c_handsted   place of death code
+#     c_liste_14   cause-of-death list category 14
+#     c_liste_49   cause-of-death list category 49
+#     c_liste_65   cause-of-death list category 65
+#   NOTE: Use d_dodsdto for death date censoring (not dodsaasg — that is the
+#         cause-of-death classification file, not the individual record file)
 #
 # LPR2 - Landspatientregisteret (National Patient Registry, 1977 to March 2019)
 #   DST folders: lpr_adm (contacts) + lpr_diag (diagnoses)
@@ -213,15 +236,74 @@
 #   Keep diagtypes: c("A", "B") -- exclude H (referral) and M (complications)
 #
 # LPR3 - Landspatientregisteret v3 (from March 2019 onwards, unified somatic + psychiatric)
-#   DST folders: kontakter (contacts) + diagnoser (diagnoses)
-#   (confirmed from hospital2021.R reference; "lpr3f_kontakter"/"lpr3f_diagnoser" returned 404)
-#   kontakter:  pnr (raw SAS: cpr - dstDataPrep renames to pnr),
-#               dw_ek_kontakt, dato_start (contact datetime), dato_slut,
-#               hoofdspeciale_ans (specialty), kontakttype
-#   diagnoser:  dw_ek_kontakt, diagnosekode (ICD with D-prefix), diagnosetype (A/B),
-#               senare_afkraeftet ("Ja"/"Nej" - exclude "Ja" = later retracted),
-#               diagnosekode_parent
-#   Join: kontakter LEFT JOIN diagnoser ON dw_ek_kontakt
+#   DST folders: lpr_a_kontakt (contacts) + lpr_a_diagnose (diagnoses)
+#   CONFIRMED: "lpr3f_kontakter" and "lpr3f_diagnoser" do NOT exist on this project.
+#             load_database("lpr_a_kontakt") and load_database("lpr_a_diagnose") are correct.
+#
+#   lpr_a_kontakt confirmed columns (rename_with(tolower) applied):
+#     pnr                    patient identifier
+#     dw_ek_kontakt          contact key — join to lpr_a_diagnose on this
+#     kont_starttidspunkt    contact start datetime — USE THIS as contact date (NOT dato_start)
+#                            convert with as.Date(kont_starttidspunkt) to extract date
+#     kont_sluttidspunkt     contact end datetime
+#     kont_type              contact type code (e.g. "ALCA00" = inpatient) — USE THIS for inpatient filter
+#     kont_type_tekst        contact type label
+#     kont_patient_type      patient type code
+#     kont_patient_type_tekst patient type label
+#     kont_ans_hovedspec     main specialty code
+#     kont_ans_hovedspec_shak SHAK code for main specialty
+#     kont_ans_inst          institution code
+#     kont_ans               responsible clinician ID
+#     kont_ans_geo_reg       geographic region
+#     kont_ans_geo_reg_tekst geographic region label
+#     kont_ans_org_reg       organisational region
+#     kont_ans_org_reg_tekst organisational region label
+#     borger_doedsdato       death date (convenience copy from CPR; Date)
+#     borger_foedselsdato    birth date (convenience copy; Date)
+#     borger_koen            sex (convenience copy)
+#     borger_alder_aar_ind   age at contact start
+#     borger_alder_aar_ud    age at contact end
+#     borger_bo_kom          municipality of residence
+#     borger_bo_kom_tekst    municipality label
+#     borger_bo_reg          region of residence
+#     borger_bo_reg_tekst    region label
+#     dw_sk_sygehusophold    hospital stay key
+#     dw_ek_helbredsforloeb  health episode key
+#     dw_ek_forloeb          episode key
+#     dw_ek_borger           citizen key
+#     adiag                  main diagnosis code (convenience copy)
+#     adiag_tekst            main diagnosis text
+#     beh_starttidspunkt     treatment start datetime
+#     flag_kont_afsluttet    contact completed flag
+#     kont_aarsag            contact reason code
+#     kont_aarsag_tekst      contact reason label
+#     kont_indb_tidspunkt    reporting timestamp
+#     kont_fir_kode          FIR institution code
+#     kont_fir_tekst         FIR institution label
+#     kont_fritvalg          free choice flag
+#     kont_fritvalg_tekst    free choice label
+#     kont_henv_aarsag       referral reason
+#     kont_henv_aarsag_tekst referral reason label
+#     kont_henv_instans      referring institution
+#     kont_henv_maade        referral mode
+#     kont_henv_maade_tekst  referral mode label
+#     kont_henv_tidspunkt    referral datetime
+#     kont_inst_ejertype     institution ownership type
+#     lprindberetningssystem reporting system
+#     prioritet              priority code
+#     prioritet_tekst        priority label
+#     kont_lpr_entity_id     LPR entity ID
+#     cprtjek                CPR check digit
+#     cprtype                CPR type
+#     year                   year
+#
+#   lpr_a_diagnose columns (CONFIRM-3b: not yet checked — assumed from code):
+#     dw_ek_kontakt          join key to lpr_a_kontakt
+#     diagnosekode           ICD-10 code with D-prefix (e.g. "DG30")
+#     diagnosetype           "A" = primary, "B" = secondary, "G" = supplementary
+#     senare_afkraeftet      "Ja" = later retracted (exclude); "Nej" = confirmed
+#     diagnosekode_parent    parent diagnosis code
+#   Join: lpr_a_kontakt LEFT JOIN lpr_a_diagnose ON dw_ek_kontakt
 #
 # Psychiatric LPR contacts
 #   For LPR3: fully unified - psychiatric contacts included in kontakter;
@@ -230,9 +312,45 @@
 #             ** CONFIRM-6: ask data manager if load_database() or SAS file on project 708421 **
 #
 # LMDB - Lagemiddeldatabasen (National Prescription Database)
-#   DST folder: lmdb
-#   Key vars: pnr, atc (ATC code), eksd (dispensing date), indo (indication code)
+#   DST folder: lmdb  (accessed via load_database("lmdb"))
 #   Covers: 1994 onwards, annual files combined in parquet
+#   Confirmed column names (rename_with(tolower) applied):
+#     pnr          patient identifier
+#     eksd         dispensing date — USE THIS as prescription date
+#     ekst         dispensing time / timestamp (separate from eksd)
+#     atc          ATC code (full; e.g. "N06D01")
+#     atc1         ATC level 1 (1 character)
+#     atc2         ATC level 2 (3 characters)
+#     atc3         ATC level 3 (4 characters)
+#     atc4         ATC level 4 (5 characters)
+#     indo         indication code
+#     vnr          drug number (varenummer)
+#     apk          package size / package count
+#     aldr         age at dispensing
+#     bald         birth date at dispensing
+#     eksp         pharmacy ID (ekspederende apotek)
+#     korr         correction flag
+#     rinr         recipe number (receptnummer)
+#     name         drug name
+#     streng       strength string
+#     packtext     package text description
+#     volume       volume dispensed
+#     voltypecode  volume type code
+#     voltypetxt   volume type text
+#     dosform      dosage form code
+#     strnum       strength numeric
+#     strunit      strength unit
+#     packsize     package size numeric
+#     cprtjek      CPR check digit
+#     cprtype      CPR type
+#     year         year of dispensing
+#     etid         expedition ID
+#     ovnr         running number
+#     patt         patient type
+#     doso         dosage
+#     reca         recall/recall flag
+#     abc          ABC classification
+#   Key vars for extraction: pnr, atc, eksd (all confirmed present)
 #
 # UDDA - Uddannelsesregisteret (Education register)
 #   DST folder: udda

@@ -62,7 +62,7 @@ path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
 path_psyk_adm  <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
-path_dbso      <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
+# DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 
 # GP match ratio and obesity match ratio
 N_GP_PER_BS      <- 25L
@@ -139,18 +139,20 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
   # --- Source 3: LPR3 (March 2019 onwards) ---
   # Unified register: somatic and psychiatric contacts in one place.
   # All F00-F03 and G30-G31 contacts captured regardless of department.
-  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # alt name: "lpr3f_kontakter"
-  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # alt name: "lpr3f_diagnoser"
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name; lpr3f_kontakter does not exist
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name; lpr3f_diagnoser does not exist
 
   lpr3_dementia <- kontakter %>%
     filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, dw_ek_kontakt, dato_start) %>%
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%   # confirmed column names; dato_start does not exist
     inner_join(
       diagnoser %>%
         filter(
           diagnosetype %in% c("A", "B"),
-          # senare_afkraeftet == "Ja" means the diagnosis was later retracted — exclude those
-          is.na(senere_afkraeftet) | senare_afkraeftet != "Ja"
+          # senare_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
+          # Current filter keeps NAs (defensive: if NAs exist, we include rather than drop).
+          # OSDC uses == "Nej" (drops NAs). Verify whether NAs occur in real data before changing.
+          is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
         ) %>%
         mutate(icd3 = substr(diagnosekode, 2, 4)) %>%
         filter(icd3 %in% !!DEMENTIA_ICD3) %>%
@@ -158,7 +160,7 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
       by = "dw_ek_kontakt"
     ) %>%
     collect() %>%
-    mutate(date_contact = as.Date(dato_start)) %>%
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date part
     select(pnr, date_contact)
 
   # Combine all three sources, then filter to contacts before each person's cutoff date
@@ -192,7 +194,7 @@ get_bs_surgery_dates <- function(pnr_vector) {
   #       when they later cross over to the exposed group
   # Pool members absent from DBSO receive bs_surgery_date = NA (left_join fills NA).
   # DBSO is the authoritative source for all public and private BS since 2010.
-  arrow::open_dataset(path_dbso) %>%
+  load_database("dbso") %>% rename_with(tolower) %>%            # DBSO prepared by 00_prepare_dbso.R; load_database("dbso") confirmed working
     filter(pnr %in% !!pnr_vector, !is.na(datoper_prim)) %>%   # only rows with a recorded surgery date
     select(pnr, bs_surgery_date = datoper_prim) %>%            # rename for clarity in pool context; datoper_prim = surgery date in DBSO
     collect() %>%                                               # pull into memory for grouping
@@ -236,7 +238,7 @@ get_bef_demographics <- function(pnr_vector) {
 #   index_date:   datoper_prim (DBSO's own clinical record of surgery date)
 
 build_bs_cohort <- function() {
-  dbso <- arrow::open_dataset(path_dbso) %>%           # open DBSO parquet lazily; long format
+  dbso <- load_database("dbso") %>% rename_with(tolower) %>%   # DBSO prepared by 00_prepare_dbso.R; one row per clinic visit
     filter(
       redo_prim != 1,                                   # exclude revision/redo surgeries
       gastricbypass_prim == 1 | gastricsleeve_prim == 1,  # primary RYGB or SG only
@@ -257,19 +259,19 @@ build_bs_cohort <- function() {
   dod <- load_database("dodsaars") %>% rename_with(tolower)   # individual death records register
   deaths <- dod %>%
     filter(pnr %in% !!bs$pnr) %>%   # only DBSO patients' death records before collect
-    select(pnr, doddato) %>%         # doddato = date of death (CONFIRM-2: column name assumed)
+    select(pnr, d_dodsdto) %>%       # d_dodsdto = date of death (confirmed column name)
     collect()                         # pull into memory
 
   bs <- bs %>%
     left_join(deaths, by = "pnr") %>%   # attach death date; NA for living persons (absent from dodsaars)
     filter(
       # Protocol criterion 4: exclude death within 30 days of surgery.
-      # doddato > datoper_prim + 30 excludes: (a) death before surgery (days < 0),
+      # d_dodsdto > datoper_prim + 30 excludes: (a) death before surgery (days < 0),
       # (b) death on day of surgery (day 0), (c) death within 30 days (days 1-30).
       # Patients who die in the perioperative period cannot contribute meaningful
       # dementia follow-up and represent extreme surgical risk; their exclusion
       # avoids immortal time and makes the BS cohort comparable to the protocol.
-      is.na(doddato) | doddato > as.Date(datoper_prim) + 30,
+      is.na(d_dodsdto) | d_dodsdto > as.Date(datoper_prim) + 30,
       as.Date(datoper_prim) - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
       as.Date(datoper_prim) >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
     )
@@ -372,11 +374,11 @@ build_gp_comparator <- function(bs_cohort) {
   dod <- load_database("dodsaars") %>% rename_with(tolower)
   pool_deaths <- dod %>%
     filter(pnr %in% !!bef_pool$pnr) %>%
-    select(pnr, death_date = doddato) %>%
+    select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto = confirmed death date column
     collect()
 
   bef_pool <- bef_pool %>%
-    left_join(pool_deaths, by = "pnr")   # death_date = NA means still alive (living persons absent from dod)
+    left_join(pool_deaths, by = "pnr")   # death_date = NA means still alive (living persons absent from dodsaars)
 
   # Pre-split pool into a named list of data frames, one element per (koen, birth_year) group.
   # Key insight: instead of dplyr::filter(pool, koen==x, birth_year %in% c(y-1,y,y+1)) on
@@ -611,21 +613,21 @@ build_obesity_comparator <- function(bs_cohort) {
     collect()
 
   # LPR3 E66 contacts with date
-  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # alt name: "lpr3f_kontakter"
-  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # alt name: "lpr3f_diagnoser"
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name
 
   obesity_lpr3 <- kontakter %>%
-    select(pnr, dw_ek_kontakt, dato_start) %>%
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%   # confirmed column names; dato_start does not exist
     inner_join(
       diagnoser %>%
         filter(diagnosetype %in% c("A", "B")) %>%   # exclude auxiliary "G" diagnoses
         mutate(icd3 = substr(diagnosekode, 2, 4)) %>%
-        filter(icd3 == "E66", is.na(senare_afkraeftet) | senare_afkraeftet != "Ja") %>%
+        filter(icd3 == "E66", is.na(senare_afkraeftet) | senare_afkraeftet != "Ja") %>%   # exclude retracted; keeps NAs defensively
         select(dw_ek_kontakt),
       by = "dw_ek_kontakt"
     ) %>%
     collect() %>%
-    mutate(date_contact = as.Date(dato_start)) %>%
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date part
     select(pnr, date_contact)
 
   # Earliest E66 date per person — used in the loop to enforce pre-index diagnosis
@@ -649,7 +651,7 @@ build_obesity_comparator <- function(bs_cohort) {
   dod <- load_database("dodsaars") %>% rename_with(tolower)
   pool_deaths <- dod %>%
     filter(pnr %in% !!obesity_pool$pnr) %>%
-    select(pnr, death_date = doddato) %>%
+    select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto = confirmed death date column
     collect()
 
   obesity_pool <- obesity_pool %>%

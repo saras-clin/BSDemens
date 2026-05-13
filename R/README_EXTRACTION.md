@@ -110,11 +110,11 @@ Run after Steps 0 and 1. Can run in parallel with Step 3.
 | Register | Access method | Key columns |
 |---|---|---|
 | bef | `load_database("bef")` | pnr, foed_dag, koen, aar |
-| dodsaars | `load_database("dodsaars")` | pnr, doddato |
+| dodsaars | `load_database("dodsaars")` | pnr, d_dodsdto (death date — confirmed) |
 | lpr_adm | `load_database("lpr_adm")` | pnr, recnum, d_inddto, c_pattype |
 | lpr_diag | `load_database("lpr_diag")` | recnum, c_diag, c_diagtype |
-| lpr_a_kontakt | `load_database("lpr_a_kontakt")` | pnr, dw_ek_kontakt, dato_start, kontakttype |
-| lpr_a_diagnose | `load_database("lpr_a_diagnose")` | dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet |
+| lpr_a_kontakt | `load_database("lpr_a_kontakt")` | pnr, dw_ek_kontakt, kont_starttidspunkt (contact date), kont_type (contact type) |
+| lpr_a_diagnose | `load_database("lpr_a_diagnose")` | dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet (CONFIRM-3b: not yet checked) |
 | lmdb | `load_database("lmdb")` | pnr, atc, eksd |
 | t_psyk_adm | `arrow::open_dataset(path_psyk_adm)` | v_cpr→pnr, k_recnum→recnum, d_inddto |
 | t_psyk_diag | `arrow::open_dataset(path_psyk_diag)` | v_recnum→recnum, c_diag, c_diagtype |
@@ -226,8 +226,7 @@ study1 <- main_data_management()
 
 ## Open issues before first run (see TODO.txt)
 
-- **CONFIRM-2:** Verify `doddato` is the correct column name in dodsaars
-  (`load_database("dodsaars") %>% rename_with(tolower) %>% glimpse()`)
+- **CONFIRM-2:** RESOLVED — death date column is `d_dodsdto` (not doddato). Fixed in all scripts.
 - **CONFIRM-3:** Verify diabetes_type values in OSDC file
   (`table(dm$diabetes_type)` — code assumes "T1D" / "T2D" string labels)
 - **CRITICAL-4:** Emigration date register not yet wired up — confirm with data manager

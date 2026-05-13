@@ -17,16 +17,16 @@
 #                 first-time ACUTE INPATIENT admissions: hyperglycemia, hypoglycemia,
 #                 self-harm, substance abuse, trauma, surgical complications (LPR)
 #     Note: extract_hospital_contacts() uses inpatient_only=TRUE — c_pattype=="0"
-#           in LPR2 and kontakttype=="ALCA00" in LPR3.
+#           in LPR2 and kont_type=="ALCA00" in LPR3.
 #
 #   Registers used (all column names lowercased with rename_with(tolower)):
 #     load_database("bef")                      — BEF population register
-#     load_database("dodsaars")                 — death register (doddato)
+#     load_database("dodsaars")                 — death register (d_dodsdto)
 #     load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
 #     arrow::open_dataset(path_psyk_adm/diag)   — LPR2 psychiatric diagnoses
 #     load_database("lpr_a_kontakt") + "diagnose"— LPR3 unified diagnoses (2019+)
 #     load_database("lmdb")                     — prescription register
-#     arrow::open_dataset(path_dbso)            — DBSO weight/surgery data
+#     load_database("dbso")                     — DBSO weight/surgery data (parquet prepared by 00_prepare_dbso.R)
 #     readRDS(path_dm_pop)                      — OSDC diabetes classification
 #
 #   ICD-10 note: DST codes have a leading "D" (e.g. "DG30", "DF00").
@@ -54,7 +54,7 @@ library(heaven)        # exposureMatch(), findCondition(), edu_code, etc.
 path_output        <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
 path_psyk_adm      <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
 path_psyk_diag     <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
-path_dbso          <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
+# DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 # full_cohort.rds is produced by 01_build_cohorts.R (BS + GP + obesity, with index_date)
 path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/full_cohort.rds"
 # OSDC path confirmed in DARTER kickstarter. Covers to 2022; sufficient for baseline
@@ -84,7 +84,7 @@ path_dm_pop      <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_po
 get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_only = FALSE) {
   # inpatient_only = TRUE: restrict to acute inpatient admissions only.
   #   LPR2: c_pattype == "0"         (somatic inpatient, confirmed from archive hospital2021.R)
-  #   LPR3: kontakttype == "ALCA00"  (inpatient, confirmed from archive hospital2021.R)
+  #   LPR3: kont_type == "ALCA00"    (confirmed column name; "ALCA00" = inpatient contact type)
   # Leave FALSE for baseline comorbidity / outcome lookups that should include outpatient.
   # Set TRUE when calling from extract_hospital_contacts() — the protocol specifies acute admissions.
 
@@ -150,18 +150,18 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   # "lpr3f_diagnoser" returned 404 - not found on this server).
   # Patient ID column is pnr - same as LPR2, no rename needed.
   # LPR3 is a UNIFIED register covering BOTH somatic and psychiatric contacts.
-  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # alt name: "lpr3f_kontakter"
-  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # alt name: "lpr3f_diagnoser"
-  # kontakter columns after tolower: pnr, dw_ek_kontakt, dato_start
-  # diagnoser columns after tolower: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name
+  # confirmed kontakter columns: pnr, dw_ek_kontakt, kont_starttidspunkt (datetime), kont_type
+  # diagnoser columns: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet (CONFIRM-3b: not yet checked)
 
   lpr3_kontakter_filtered <- kontakter %>%
     filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, dw_ek_kontakt, dato_start, kontakttype)
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt, kont_type)   # confirmed column names
 
   if (inpatient_only) {
     lpr3_kontakter_filtered <- lpr3_kontakter_filtered %>%
-      filter(kontakttype == "ALCA00")   # "ALCA00" = inpatient in LPR3 (confirmed from archive)
+      filter(kont_type == "ALCA00")   # kont_type = contact type; "ALCA00" = inpatient in LPR3
   }
 
   lpr3 <- lpr3_kontakter_filtered %>%
@@ -169,7 +169,9 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
       diagnoser %>%
         filter(
           diagnosetype %in% diagtypes,
-          # senare_afkraeftet == "Ja" means the diagnosis was later retracted — exclude those
+          # senare_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
+          # Current filter keeps NAs (defensive: if NAs exist, we include rather than drop).
+          # OSDC uses == "Nej" (drops NAs). Verify whether NAs occur in real data before changing.
           is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
         ) %>%
         mutate(icd3 = substr(diagnosekode, 2, 4),
@@ -178,7 +180,7 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
       by = "dw_ek_kontakt"
     ) %>%
     collect() %>%
-    mutate(date_contact = as.Date(dato_start)) %>%
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date
     select(pnr, date_contact, icd3, icd4)
 
   bind_rows(lpr2, lpr2_psyk, lpr3)
@@ -204,7 +206,7 @@ load_full_cohort <- function() {
 # 2.2 DEMOGRAPHICS (BEF + DODSAARS)
 # ============================================================================
 # bef: pnr, foed_dag, koen, aar
-# dod: pnr, doddato
+# dod: pnr, d_dodsdto (confirmed column name)
 
 extract_demographics <- function(bs_cohort) {
   pnrs <- unique(bs_cohort$pnr)
@@ -227,19 +229,16 @@ extract_demographics <- function(bs_cohort) {
     select(pnr, koen, foed_dag) %>%
     collect()
 
-  # dod: Danish Death Register (Doedsaarsagsregisteret or CPR death file).
-  # One row per deceased person. doddato = date of death.
-  # ** CONFIRM column name: "doddato" assumed — run glimpse() to verify. **
+  # dod: Danish Death Register (Doedsaarsagsregisteret).
+  # One row per deceased person. d_dodsdto = date of death (confirmed column name).
   dod <- load_database("dodsaars") %>% rename_with(tolower)
   dod_person <- dod %>%
     filter(pnr %in% !!pnrs) %>%
-    select(pnr, death_date = doddato) %>%
+    select(pnr, death_date = d_dodsdto) %>%
     collect()
 
-  # TODO (CONFIRM-5): emigration date is not extracted here.
-  # Persons who emigrate should be censored at their emigration date.
-  # Ask data manager for the emigration date register (vnds, flyt, or CPR extract).
-  # Add emigration_date to the output and update censor_date in 04_data_management_dementia.R.
+  # Emigration censoring is handled in 04_data_management_dementia.R via get_emigration_dates().
+  # VNDS register confirmed: indud_kode == "U", haend_dato = emigration date.
 
   bs_cohort %>%
     left_join(bef_person %>% select(pnr, koen, foed_dag), by = "pnr") %>%
@@ -253,7 +252,7 @@ extract_demographics <- function(bs_cohort) {
       # follow_up_end: the later-of-death vs administrative censoring.
       # pmin(..., na.rm = TRUE): for living persons (death_date = NA), returns 2025-12-31.
       # For deceased persons, returns the earlier of death_date and 2025-12-31.
-      # Note: emigration date should also be included here once CONFIRM-5 is resolved.
+      # Emigration censoring applied in 04_data_management_dementia.R via pmin() with emigration_date.
       follow_up_end  = pmin(as.Date("2025-12-31"), death_date, na.rm = TRUE)
     ) %>%
     select(pnr, sex, birth_date, death_date, age_at_surgery, surgery_date, surgery_type, follow_up_end)
@@ -327,37 +326,26 @@ extract_dementia_outcomes <- function(bs_cohort) {
 # DBSO data is delivered SEPARATELY from SunDK (not via DST parquet registries).
 # It is likely saved as a flat file (CSV/SAS/RDS) in the workdata folder.
 #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# TODO (CRITICAL) — CONFIRM DBSO FILE LOCATION AND FORMAT
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Ask data manager for:
-#   1. Exact file path of DBSO extract on project 708421
-#      (NOT a parquet folder — likely a .sas7bdat, .csv, or .rds file)
-#   2. Column names for: patient ID (CPR/pnr), surgery date, surgery type,
-#      exam date, weight (kg), height (cm), BMI
-#   3. Whether load_database() works or if a direct file read is needed
-# Update load_database(dbso_name) and column names below accordingly.
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# DBSO file location and format confirmed (resolved 2026-05):
+#   SAS file: E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
+#   Converted to parquet by 00_prepare_dbso.R (one-time; already done).
+#   Accessed via load_database("dbso"). Column names confirmed from sapply(raw, class).
 
 extract_weight_outcomes <- function(bs_cohort) {
-  # DBSO is a SAS extract from SunDK, saved as part-0.parquet in parquet-external.
-  # Prepared by 00_prepare_dbso.R. Read with open_dataset() (Arrow folder convention).
-  if (!dir.exists(path_dbso)) {
-    stop("DBSO parquet folder not found. Run 00_prepare_dbso.R first.\nExpected: ", path_dbso)
-  }
+  # DBSO prepared once by 00_prepare_dbso.R; accessed via load_database("dbso").
+  dbso <- load_database("dbso") %>% rename_with(tolower) %>% collect()   # collect full DBSO into memory
 
-  dbso <- arrow::open_dataset(path_dbso) %>% collect()
-
-  # DBSO column names (original lowercased SAS names from 00_prepare_dbso.R):
-  #   pnr, surgery_date, surgery_type — derived in step 00
-  #   udgangsvaegtpre_prim            — wgt at last pre-op visit (kg)
-  #   udgangsvaegt                    — wgt at program entry / referral (kg)
-  #   hoejde                          — height (cm)
-  #   datopre                         — last pre-op clinic visit date
-  #   datofol                         — follow-up visit date
-  #   vaegtfol                        — wgt at follow-up visit (kg)
-  # Renaming and BMI variable names are assigned in 04_data_management_dementia.R.
-  # Data is LONG: one row per clinic visit per person.
+  # DBSO column names used below (original lowercased SAS names; types confirmed):
+  #   pnr                  — patient ID (character; renamed from cpr in 00_prepare_dbso.R)
+  #   datopre              — last pre-op clinic visit date (Date; converted in step 00)
+  #   datofol              — follow-up visit date (Date; converted in step 00)
+  #   udgangsvaegtpre_prim — wgt (kg) at last pre-op visit (numeric)
+  #   udgangsvaegt         — wgt (kg) at program entry / referral (numeric)
+  #   hoejde               — height (cm) (numeric)
+  #   vaegtfol             — wgt (kg) at this follow-up visit (numeric; visit-level)
+  # NOTE: surgery_date and surgery_type are NOT DBSO columns — they come from
+  #   full_cohort.rds (derived in 01_build_cohorts.R from DBSO flags and index_date).
+  # Renaming of weight variables is done in 04_data_management_dementia.R.
 
   dbso_cohort <- dbso %>% filter(pnr %in% bs_cohort$pnr)   # keep only cohort members
 
@@ -474,29 +462,31 @@ extract_weight_outcomes <- function(bs_cohort) {
 # Output saved as: datasets/extract_dbso_clinical.rds
 
 extract_dbso_clinical <- function(bs_cohort) {
-  if (!dir.exists(path_dbso)) {
-    stop("DBSO parquet folder not found. Run 00_prepare_dbso.R first.\nExpected: ", path_dbso)
-  }
-
   # Columns to extract — all are patient-level constants in the DBSO long-format table.
   # medkomplik* column names must be confirmed on DST (run inspect_dbso() first).
   clinical_cols <- c(
     "pnr",
-    "akutgenindlaeggelse30d",    # 1 = acute unplanned readmission within 30 days of surgery
-    "reop30d_3",                 # 1 = reoperation within 30 days
-    "reoplaar_3",                # 1 = reoperation within 1 year
-    "reop5aar_2",                # 1 = reoperation within 5 years
-    "eoss",                      # Edmonton Obesity Staging System score at pre-op (0-4)
-    "obstruktivsoevnapnoepre",   # 1 = obstructive sleep apnea present at pre-op assessment
-    "obstruktivsoevnapnoefol",   # 1 = obstructive sleep apnea present at follow-up
-    "b12",                       # vitamin B12 supplement status / compliance at follow-up
-    "jern",                      # iron supplement status / compliance at follow-up
-    "kalk"                       # calcium supplement status / compliance at follow-up
-    # medkomplik* columns not listed — exact names must be confirmed on DST.
-    # After confirmation, add here (e.g., "medkomplik", "medkomplik_dato", etc.)
+    "akutgenindlaeggelse30d",        # 1 = acute unplanned readmission within 30 days
+    "reop30d_3",                     # 1 = reoperation within 30 days
+    "reoplaar_3",                    # 1 = reoperation within 1 year
+    "reop5aar_2",                    # 1 = reoperation within 5 years
+    "eoss",                          # Edmonton Obesity Staging System score at pre-op (0-4)
+    "obstruktivsoevnapnoepre",       # 1 = obstructive sleep apnea at pre-op assessment
+    "obstruktivsoevnapnoefol",       # 1 = obstructive sleep apnea at follow-up
+    "b12",                           # vitamin B12 supplement status
+    "b12compliance",                 # B12 compliance flag
+    "jern",                          # iron supplement status
+    "jerncompliance",                # iron compliance flag
+    "kalk",                          # calcium supplement status
+    "kalkcompliance",                # calcium compliance flag
+    "medkomplikandre",               # 1 = other medical complication (confirmed column name)
+    "medkomplikdiarre",              # 1 = diarrhoea as complication (confirmed)
+    "medkomplikdumpingsymptomer",    # 1 = dumping syndrome (confirmed)
+    "medkomplikhypoglyksymptomer",   # 1 = hypoglycaemic symptoms as complication (confirmed)
+    "medkomplikrefluks"              # 1 = reflux as complication (confirmed)
   )
 
-  dbso_raw <- arrow::open_dataset(path_dbso)   # open DBSO parquet folder lazily; no data in memory yet
+  dbso_raw <- load_database("dbso") %>% rename_with(tolower)   # DBSO lazy tbl; rename_with(tolower) ensures lowercase column names
 
   # Check which expected columns are actually present before pulling data.
   available_cols <- intersect(clinical_cols, names(dbso_raw))   # columns confirmed present in parquet
@@ -590,7 +580,7 @@ extract_hospital_contacts <- function(bs_cohort) {
   # inpatient_only = TRUE: the protocol for study 2 (T1D) specifies "first-time acute admissions per 100
   # person-years". Including outpatient and ER contacts would inflate counts and make the
   # measure inconsistent with the stated endpoint. LPR2 filter: c_pattype == "0".
-  # LPR3 filter: kontakttype == "ALCA00". Both variablenames confirmed from archive hospital2021.R.
+  # LPR3 filter: kont_type == "ALCA00" (confirmed column name from colnames() check).
   all_dx <- get_lpr_diagnoses(unique(bs_cohort$pnr), inpatient_only = TRUE) %>%
     inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%
     filter(date_contact > surgery_date)

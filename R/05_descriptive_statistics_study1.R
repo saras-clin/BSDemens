@@ -15,11 +15,10 @@ library(dplyr)
 library(arrow)
 library(lubridate)
 
-path_dbso_folder <- "E:/workdata/708421/cleaned-data/parquet-external/dbso"
 path_datasets    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
 
-study1  <- readRDS(file.path(path_datasets, "study1_clean.rds"))   # analysis-ready dataset from Step 4
-dbso    <- arrow::open_dataset(path_dbso_folder) %>% collect()     # DBSO long format (one row per visit)
+study1  <- readRDS(file.path(path_datasets, "study1_clean.rds"))                    # analysis-ready dataset from Step 4
+dbso    <- load_database("dbso") %>% rename_with(tolower) %>% collect()             # DBSO long format (one row per visit)
 
 
 # ============================================================================
