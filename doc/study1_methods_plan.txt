@@ -1,7 +1,7 @@
 ================================================================================
 STUDY 1: BARIATRIC SURGERY AND DEMENTIA — METHODS PLAN
 ================================================================================
-Last updated: 2026-05-06
+Last updated: 2026-05-08
 Based on: protocol draft "BS and dementia_SS.txt" (doc/) — reviewed and reconciled
 Journal target: to be decided
 
@@ -31,7 +31,7 @@ Minimum lookback required before index: 5 years
     or coding differences between the clinical database and the national register.
     Planned data quality check: distribution of (DatoPER_prim − OpDateLPR) in days.
     If ≥95% of patients agree within 7 days → use DatoPER_prim, no sensitivity analysis.
-    If systematic discrepancy observed → add sensitivity analysis 7g.8 (see below).
+    If systematic discrepancy observed → add sensitivity analysis 7g.5 (see below).
 
     Reporting completeness note:
     DBSO became mandatory in 2010 but registration completeness likely improved
@@ -110,7 +110,7 @@ Minimum lookback required before index: 5 years
       Patients with incipient cognitive decline are likely excluded from BS
       eligibility at the preoperative assessment. This could artefactually
       lower dementia rates post-surgery and must be addressed in limitations
-      and in the sensitivity analysis (exclusion of early events, criterion 7g.3).
+      and in the sensitivity analysis (exclusion of early events, criterion 7g.2).
 
 3b. Comparison cohort 1 — General population (GP)
     Risk-set matched 1:25 to each BS patient on sex and birth year (± 1 year),
@@ -162,9 +162,11 @@ Minimum lookback required before index: 5 years
       Excluding them entirely would condition on a future event and introduce selection
       bias — the methodologically correct approach is enrolment followed by censoring.
 
-    Exclusion applied after matching:
+    Exclusions applied after matching:
       - Pre-index dementia (F00–F03, G30–G31) from LPR2 somatic, LPR2 psychiatric,
         and LPR3 (same three-source query as BS cohort)
+      - Pre-index N06D dispensing (any antidementia prescription before the assigned
+        index date; same criterion as BS cohort exclusion 3a.3)
 
     Index date = surgery date of their matched BS patient.
 
@@ -327,14 +329,18 @@ Comorbidities — Nordic Multimorbidity Index (NMI):
       Neurological:   Parkinson's, epilepsy, MS, migraine, peripheral neuropathy
       Oncological:    cancer, anemia, HIV
       Sensory:        vision disorders, hearing disorders
-    NMI composite score: sum of binary flags (0 / 1 / 2 / 3+ conditions)
+    NMI count (nmi_count, for Table 1 descriptives): number of conditions present —
+      0 / 1 / 2 / 3+ (simple count across 33 GMC conditions).
+    NMI score (nmi_score, for Cox models): Kristensen 2022 weighted continuous index —
+      sum of component weights across the 48 active predictors (modified for Study 1).
 
 Medications (any dispensing in lookback window):
     - Antihypertensive: ATC C02, C03, C07–C09
     - Lipid-lowering: C10
     - Antidiabetic: A10 (A10A = insulin only)
     - Antidepressant: N06A
-    - Antidementia: N06D (used as exclusion flag and sensitivity analysis)
+    - Antidementia: N06D (pre-surgery dispensing is an exclusion criterion;
+      antidementia flag also extracted for Table 1 baseline characterisation)
 
 Socioeconomic position (SEP):
     [Not in protocol draft 1; added per reviewer comment p and SEPLINE guideline]
@@ -408,7 +414,8 @@ Each individual followed from index date until the first of:
     Adjustment models:
       Model 1: Unadjusted
       Model 2: Age (continuous) + sex
-      Model 3: Model 2 + NMI composite score + SEP (education, income, occupation)
+      Model 3: Model 2 + nmi_score (Kristensen 2022 weighted continuous index,
+               48 predictors) + SEP (education_cat, income_cat, occupation_cat)
                + surgery year period
 
     Proportional hazards (PH) assumption:
@@ -486,29 +493,31 @@ Each individual followed from index date until the first of:
     Forest plot of fully adjusted HRs by subgroup.
 
 7g. Sensitivity analyses
-    1. Exclude patients with antidementia drugs (N06D) at baseline
-       (removes likely undiagnosed dementia cases)
-    2. Restrict dementia ascertainment to primary (A) diagnosis codes only
+    1. Restrict dementia ascertainment to primary (A) diagnosis codes only
        (more specific, less sensitive)
-    3. Exclude dementia events within first 12 months of surgery
+    2. Exclude dementia events within first 12 months of surgery
        (addresses surveillance bias / unmasking of pre-existing dementia)
-    4. Restrict BS cohort to public-hospital procedures only
-    5. Income quintiles from age/sex-matched general population (rather than
-       within-cohort quintiles, per SEPLINE recommendation)
-    6. Censor comparators at time of bariatric surgery (already in main analysis;
+    3. Restrict BS cohort to public-hospital procedures only
+    4. Censor comparators at time of bariatric surgery (already in main analysis;
        report results without this censoring as sensitivity check)
-    8. Index date source: repeat main analysis using OpDateLPR (LPR-recorded surgery
+    5. Index date source: repeat main analysis using OpDateLPR (LPR-recorded surgery
        date) instead of DatoPER_prim (DBSO clinical record) as index date.
        Triggered only if the data quality check (section 2) shows systematic
        discrepancy between the two dates (≥5% of patients differing by >7 days).
        Expected result: near-identical estimates. Large differences would indicate
        that date source affects follow-up classification and warrants reporting.
-
-    7. Negative control outcome [Protocol reviewer comment v]:
+    6. Negative control outcome [Protocol reviewer comment v]:
        Include an outcome unlikely to be causally related to bariatric surgery
        (e.g. bone fracture, cataract) to detect residual confounding or
        surveillance bias. If HR ≈ 1.0 for negative control, this supports
        internal validity of the main analysis.
+
+    Note — removed pre-specified sensitivity analyses:
+    (i)  N06D exclusion at baseline: this is now a main-analysis exclusion criterion
+         (any N06D dispensing before surgery date excludes the patient). A sensitivity
+         analysis on top of an exclusion criterion would have no comparison group.
+    (ii) Population income quintiles: this is now the main analysis (SEPLINE approach
+         implemented in 03_extract_ses.R). No within-cohort quintile version exists.
 
 Implementation note for sensitivity analyses and subgroup analyses:
     Use lapply() + data.table::rbindlist() to loop across outcomes/models rather
@@ -517,7 +526,7 @@ Implementation note for sensitivity analyses and subgroup analyses:
         fit <- coxph(Surv(time, event) ~ exposure + covariates, data = df)
         tidy_result(fit, outcome_label = outcome)
       }))
-    Apply to: all 8 sensitivity analyses, all 3 comparison pairs, secondary outcomes.
+    Apply to: all 6 sensitivity analyses, all 3 comparison pairs, secondary outcomes.
 
 Software: R (≥ 4.3). Key packages: survival, cmprsk, ggplot2, tableone, Publish.
 Significance: α = 0.05 two-sided. No correction for multiple comparisons across
@@ -573,7 +582,7 @@ FIGURE 6 (optional): Competing risk — dementia vs death
 
 SUPPLEMENTARY FIGURES:
     S1: Schoenfeld residuals / log-log plots (PH assumption check)
-    S2: Sensitivity analyses forest plot (all 7 sensitivity analyses combined)
+    S2: Sensitivity analyses forest plot (all 6 sensitivity analyses combined)
     S3: CIF curves for Alzheimer's disease and vascular dementia separately
 
 
@@ -583,8 +592,9 @@ SUPPLEMENTARY FIGURES:
 
 TABLE 1: Baseline characteristics
     Columns: BS total / RYGB / SG / GP comparator / Obesity comparator
-    Rows: n, follow-up time, age, sex, NMI conditions (each), NMI score category,
-          medications (each), education, income, occupation
+    Rows: n, follow-up time, age, sex, NMI conditions (each), nmi_count category
+          (0/1/2/3+), medications (each), education, income, occupation
+    Note: nmi_score (continuous) is used in Cox models (Model 3), not displayed in Table 1.
     Include SMD (BS vs GP and BS vs obesity)
 
 TABLE 2: Person-time and crude incidence rates
@@ -636,24 +646,32 @@ DATA MANAGEMENT:
   - Run date quality check: tabulate distribution of (DatoPER_prim − OpDateLPR)
     in days across all DBSO patients. Check: % exact match, % within 1 day,
     % within 7 days, % discrepant >7 days. Decision rule:
-      ≥95% within 7 days → DatoPER_prim is fine, sensitivity analysis 7g.8 skipped.
-      <95% within 7 days → add sensitivity analysis 7g.8 and report in methods.
+      ≥95% within 7 days → DatoPER_prim is fine, sensitivity analysis 7g.5 skipped.
+      <95% within 7 days → add sensitivity analysis 7g.5 and report in methods.
     Code: add to explore_dbso() in R/prepare_dbso.R.
 
 LIMITATIONS TO DISCUSS IN PAPER:
   - Surveillance bias / healthy user effect: patients with incipient dementia
     are likely screened out at BS assessment, lowering measured dementia risk
-    post-surgery. Partially addressed by sensitivity analysis 7g.3.
+    post-surgery. Partially addressed by sensitivity analysis 7g.2.
   - E66 sensitivity: ICD-10 E66 has low sensitivity for overweight; the obesity
     comparator will skew toward more severely obese patients, making it more
     comparable to the BS cohort (which is actually appropriate).
   - Register-based dementia ascertainment: unknown sensitivity; PPV 86% for
     all-cause, 81% for Alzheimer's; lower for vascular dementia subtypes.
   - No individual-level BMI data available for comparator cohorts.
-  - SES variables (especially income quintiles) are within-cohort estimates, not
-    age/sex-standardised population quintiles per SEPLINE ideal.
+  - Income quintiles are population-standardised (SEPLINE approach): 3-year average
+    compared against general-population cutpoints stratified by sex, 5-year age group,
+    and reference year. This does not remove residual confounding by unmeasured aspects
+    of SES, but the relative position is calibrated to the general population rather
+    than the study cohort.
   - OSDC diabetes file covers to 2022; patients with diabetes onset 2023–2024
     may be misclassified.
+  - Modified NMI (48 predictors): dementia predictors dx_F00_G30 (weight 9) and
+    rx_N06D (weight 11) are excluded from nmi_score in Study 1 to avoid circular
+    adjustment. This modified version has not been externally validated; its
+    predictive accuracy for the adjustment purpose may differ from the published
+    50-predictor score (Kristensen et al. Clin Epidemiol 2022;14:567–79).
 
 REFERENCES TO INCLUDE IN PAPER (CONFIRMED FROM PROTOCOL):
   NMI:      Kristensen KB et al. Clin Epidemiol 2022;14:567–79.

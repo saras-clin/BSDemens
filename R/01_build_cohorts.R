@@ -1,16 +1,13 @@
 # ============================================================================
 # PIPELINE STEP 1 of 5 — 01_build_cohorts.R
 # ============================================================================
-# WHO ARE WE STUDYING?
-#   Defines the three study groups and applies all inclusion/exclusion criteria.
-#   Run FIRST, before any outcome extraction or analysis.
-#
 #   Study groups:
 #     BS cohort     — bariatric surgery patients 2010–2024 (source: DBSO)
 #     GP comparator — 1:25 matched from the general population (BEF)
 #                     Matching: same sex + birth year (±1 year)
 #     Obesity comp. — 1:5 matched from persons with ICD-10 E66 (obesity) in LPR
 #                     before their matched BS patient's surgery date
+#                     Matching: same sex + birth year (±1 year)
 #
 #   Inputs:  parquet-external/databasesvaerovervaegt/part-0.parquet (DBSO, from 00_prepare_dbso.R)
 #            load_database("bef")                     — population register
@@ -37,6 +34,20 @@
 #   Psychiatric LPR2: t_psyk_adm and t_psyk_diag are parquet folders in
 #   parquet-external, accessed via arrow::open_dataset(). Raw DST column names
 #   (v_cpr, k_recnum, v_recnum) are renamed in code after loading.
+#
+# TABLE OF CONTENTS
+# -----------------
+#   Packages / paths / constants              ~line  40
+#   1.0  Helper functions                     ~line  68
+#        get_prior_dementia_pnrs()            ~line  70
+#        get_bs_surgery_dates()              ~line 171
+#        get_bef_demographics()             ~line 194
+#   1.1  build_bs_cohort()                   ~line 212
+#   1.2  build_gp_comparator()              ~line 325
+#        [Alt: exposureMatch version]        ~line 500
+#   1.3  build_obesity_comparator()         ~line 575
+#        [Alt: exposureMatch version]        ~line 768
+#   1.4  main_build_cohorts()               ~line 840
 # ============================================================================
 
 # Packages ----
@@ -182,9 +193,10 @@ get_bs_surgery_dates <- function(pnr_vector) {
   # Pool members absent from DBSO receive bs_surgery_date = NA (left_join fills NA).
   # DBSO is the authoritative source for all public and private BS since 2010.
   arrow::open_dataset(path_dbso) %>%
-    filter(pnr %in% !!pnr_vector, !is.na(surgery_date)) %>%   # only rows with a recorded surgery date
-    select(pnr, bs_surgery_date = surgery_date) %>%            # rename for clarity in pool context
+    filter(pnr %in% !!pnr_vector, !is.na(datoper_prim)) %>%   # only rows with a recorded surgery date
+    select(pnr, bs_surgery_date = datoper_prim) %>%            # rename for clarity in pool context; datoper_prim = surgery date in DBSO
     collect() %>%                                               # pull into memory for grouping
+    mutate(bs_surgery_date = as.Date(bs_surgery_date)) %>%    # ensure Date class for comparisons in matching loops
     group_by(pnr) %>%
     arrange(bs_surgery_date) %>%
     slice(1) %>%                                               # earliest surgery date per person (DBSO has multiple rows per person)
@@ -218,20 +230,21 @@ get_bef_demographics <- function(pnr_vector) {
 #
 # DBSO parquet is long format: one row per clinic visit per patient
 # (PRE = pre-op assessment, PER = surgery, FOL = follow-up visits).
-# surgery_type and surgery_date were derived in 00_prepare_dbso.R from:
-#   surgery_type: gastricbypass_prim == 1 -> "RYGB"; gastricsleeve_prim == 1 -> "SG";
-#                 redo_prim == 1 -> "ReDo"; otherwise "Unknown"
-#   surgery_date: datoper_prim (DBSO's own clinical record of surgery date)
+# surgery_type and index_date are derived here from raw DBSO flags/columns:
+#   surgery_type: gastricbypass_prim == 1 -> "RYGB"; gastricsleeve_prim == 1 -> "SG"
+#                 (redo_prim == 1 cases are excluded by the filter below)
+#   index_date:   datoper_prim (DBSO's own clinical record of surgery date)
 
 build_bs_cohort <- function() {
   dbso <- arrow::open_dataset(path_dbso) %>%           # open DBSO parquet lazily; long format
     filter(
-      surgery_type %in% c("RYGB", "SG"),               # primary procedures only; drops ReDo and Unknown
-      !is.na(surgery_date),                             # must have a valid surgery date (datoper_prim)
-      surgery_date >= as.Date("2010-01-01"),            # DBSO mandatory reporting began 2010; study start
-      surgery_date <= as.Date("2024-12-31")             # study end per protocol
+      redo_prim != 1,                                   # exclude revision/redo surgeries
+      gastricbypass_prim == 1 | gastricsleeve_prim == 1,  # primary RYGB or SG only
+      !is.na(datoper_prim),                             # must have a valid surgery date
+      as.Date(datoper_prim) >= as.Date("2010-01-01"),   # DBSO mandatory reporting began 2010; study start
+      as.Date(datoper_prim) <= as.Date("2024-12-31")    # study end per protocol
     ) %>%
-    select(pnr, surgery_date, surgery_type) %>%         # only the three columns needed downstream
+    select(pnr, datoper_prim, gastricbypass_prim, gastricsleeve_prim) %>%   # only columns needed to derive index_date and surgery_type
     collect() %>%                                       # pull filtered rows into R memory
     distinct(pnr, .keep_all = TRUE)                     # one row per patient; DBSO may have multiple visit rows per person
 
@@ -251,20 +264,20 @@ build_bs_cohort <- function() {
     left_join(deaths, by = "pnr") %>%   # attach death date; NA for living persons (absent from dodsaars)
     filter(
       # Protocol criterion 4: exclude death within 30 days of surgery.
-      # doddato > surgery_date + 30 excludes: (a) death before surgery (days < 0),
+      # doddato > datoper_prim + 30 excludes: (a) death before surgery (days < 0),
       # (b) death on day of surgery (day 0), (c) death within 30 days (days 1-30).
       # Patients who die in the perioperative period cannot contribute meaningful
       # dementia follow-up and represent extreme surgical risk; their exclusion
       # avoids immortal time and makes the BS cohort comparable to the protocol.
-      is.na(doddato) | doddato > surgery_date + 30,
-      surgery_date - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
-      surgery_date >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
+      is.na(doddato) | doddato > as.Date(datoper_prim) + 30,
+      as.Date(datoper_prim) - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
+      as.Date(datoper_prim) >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
     )
 
   n_after_eligibility <- nrow(bs)                        # attrition step 2: after 30-day death / age / registry filters
 
   # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
-  cutoffs       <- bs %>% select(pnr, index_date = surgery_date)   # per-person cutoff: their own surgery date
+  cutoffs       <- bs %>% transmute(pnr, index_date = as.Date(datoper_prim))   # per-person cutoff: their own surgery date
   dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)        # pnrs with any dementia diagnosis before surgery
   bs <- bs %>% filter(!pnr %in% dementia_pnrs)                     # remove pre-surgery dementia cases
 
@@ -278,7 +291,7 @@ build_bs_cohort <- function() {
   # diagnosis). N06D users are also excluded from the NMI calculation (see TODO MINOR-4).
   lmdb <- load_database("lmdb") %>% rename_with(tolower)   # prescription register (DNPD/LMDB)
 
-  max_surgery_date <- max(bs$surgery_date)                  # upper bound for lazy parquet filter; per-person cutoff applied after collect
+  max_surgery_date <- max(as.Date(bs$datoper_prim))         # upper bound for lazy parquet filter; per-person cutoff applied after collect
 
   n06d_pnrs <- lmdb %>%
     filter(
@@ -288,8 +301,8 @@ build_bs_cohort <- function() {
     ) %>%
     select(pnr, eksd, atc) %>%                              # only needed columns; reduce data before collect
     collect() %>%                                            # pull filtered records into memory
-    inner_join(bs %>% select(pnr, surgery_date), by = "pnr") %>%  # attach each person's surgery date
-    filter(eksd < surgery_date) %>%                          # dispensing must predate this person's surgery (CONFIRM-1: eksd = dispensing date)
+    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%  # attach each person's surgery date
+    filter(eksd < surgery_date) %>%    # any N06D dispensing at any time before surgery qualifies; no lower time bound (LMDB begins ~1994; same principle as ICD dementia: any prior record is an exclusion)
     distinct(pnr) %>%                                        # one row per person with any pre-surgery N06D
     pull(pnr)
 
@@ -298,11 +311,11 @@ build_bs_cohort <- function() {
   cohort <- bs %>%
     transmute(
       pnr,
-      index_date        = surgery_date,   # surgery date is the index date for the BS cohort
+      index_date        = as.Date(datoper_prim),                          # surgery date is the index date for the BS cohort
       cohort            = "BS",
-      surgery_type,
-      matched_pnr       = pnr,            # BS patients reference themselves (used when linking to matched comparators)
-      bs_crossover_date = NA_Date_        # not applicable for the exposed group; only comparators can cross over
+      surgery_type      = if_else(gastricbypass_prim == 1, "RYGB", "SG"), # derive surgery type from DBSO flags; redo excluded above so all remaining are RYGB or SG
+      matched_pnr       = pnr,                                            # BS patients reference themselves (used when linking to matched comparators)
+      bs_crossover_date = NA_Date_                                        # not applicable for the exposed group; only comparators can cross over
     )
 
   list(
@@ -457,15 +470,40 @@ build_gp_comparator <- function(bs_cohort) {
 
   n_matched_raw <- nrow(gp_cohort)                        # attrition: GP comparators before dementia exclusion
 
-  # Exclude any GP comparators with pre-index dementia
+  # Exclude any GP comparators with pre-index dementia (ICD: F00-F03, G30-G31)
   cutoffs <- gp_cohort %>% select(pnr, index_date)
   dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)
-  gp_final <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index dementia from GP comparators
+  gp_after_dementia <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index ICD dementia from GP comparators
+
+  n_after_dementia <- nrow(gp_after_dementia)             # attrition after ICD dementia exclusion
+
+  # Exclude GP comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
+  # N06D is a proxy for undiagnosed or pre-clinical dementia not captured by ICD codes alone.
+  # Applied symmetrically to all three cohorts: any dispensing before the person's index date qualifies.
+  lmdb_gp <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for GP comparators
+
+  max_index_gp <- max(gp_after_dementia$index_date)           # upper bound for lazy parquet filter
+
+  n06d_pnrs_gp <- lmdb_gp %>%
+    filter(
+      pnr %in% !!gp_after_dementia$pnr,                       # restrict to matched GP comparators
+      substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
+      eksd <= !!max_index_gp                                   # pull up to latest index date; per-person cutoff applied after collect
+    ) %>%
+    select(pnr, eksd, atc) %>%                                 # only needed columns
+    collect() %>%                                              # pull filtered records into memory
+    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
+    filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
+    distinct(pnr) %>%                                          # one row per person with any pre-index N06D
+    pull(pnr)
+
+  gp_final <- gp_after_dementia %>% filter(!pnr %in% n06d_pnrs_gp)   # remove pre-index antidementia medication users
 
   list(
-    cohort        = gp_final,
-    n_matched_raw = n_matched_raw,  # before dementia exclusion
-    n_final       = nrow(gp_final)  # after dementia exclusion
+    cohort           = gp_final,
+    n_matched_raw    = n_matched_raw,     # before exclusions
+    n_after_dementia = n_after_dementia,  # after ICD dementia exclusion
+    n_final          = nrow(gp_final)     # after N06D exclusion
   )
 }
 
@@ -699,14 +737,38 @@ build_obesity_comparator <- function(bs_cohort) {
 
   n_matched_raw <- nrow(ob_cohort)                        # attrition: obesity comparators before dementia exclusion
 
+  # Exclude any obesity comparators with pre-index dementia (ICD: F00-F03, G30-G31)
   cutoffs <- ob_cohort %>% select(pnr, index_date)
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
-  ob_final <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index dementia from obesity comparators
+  ob_after_dementia <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index ICD dementia from obesity comparators
+
+  n_after_dementia <- nrow(ob_after_dementia)             # attrition after ICD dementia exclusion
+
+  # Exclude obesity comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
+  lmdb_ob <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for obesity comparators
+
+  max_index_ob <- max(ob_after_dementia$index_date)           # upper bound for lazy parquet filter
+
+  n06d_pnrs_ob <- lmdb_ob %>%
+    filter(
+      pnr %in% !!ob_after_dementia$pnr,                       # restrict to matched obesity comparators
+      substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
+      eksd <= !!max_index_ob                                   # pull up to latest index date; per-person cutoff applied after collect
+    ) %>%
+    select(pnr, eksd, atc) %>%                                 # only needed columns
+    collect() %>%                                              # pull filtered records into memory
+    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
+    filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
+    distinct(pnr) %>%                                          # one row per person with any pre-index N06D
+    pull(pnr)
+
+  ob_final <- ob_after_dementia %>% filter(!pnr %in% n06d_pnrs_ob)   # remove pre-index antidementia medication users
 
   list(
-    cohort        = ob_final,
-    n_matched_raw = n_matched_raw,  # before dementia exclusion
-    n_final       = nrow(ob_final)  # after dementia exclusion
+    cohort           = ob_final,
+    n_matched_raw    = n_matched_raw,     # before exclusions
+    n_after_dementia = n_after_dementia,  # after ICD dementia exclusion
+    n_final          = nrow(ob_final)     # after N06D exclusion
   )
 }
 
@@ -843,18 +905,26 @@ main_build_cohorts <- function() {
       "GP comparators matched (before dementia check)",
       gp_result$n_matched_raw, ""))
   cat(sprintf("%-52s %8d %12d\n",
-      "  After: pre-index dementia",
+      "  After: pre-index dementia (ICD)",
+      gp_result$n_after_dementia,
+      gp_result$n_matched_raw - gp_result$n_after_dementia))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-index N06D prescriptions",
       gp_result$n_final,
-      gp_result$n_matched_raw - gp_result$n_final))
+      gp_result$n_after_dementia - gp_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "GP cohort (final)", gp_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n",
       "Obesity comparators matched (before dementia check)",
       ob_result$n_matched_raw, ""))
   cat(sprintf("%-52s %8d %12d\n",
-      "  After: pre-index dementia",
+      "  After: pre-index dementia (ICD)",
+      ob_result$n_after_dementia,
+      ob_result$n_matched_raw - ob_result$n_after_dementia))
+  cat(sprintf("%-52s %8d %12d\n",
+      "  After: pre-index N06D prescriptions",
       ob_result$n_final,
-      ob_result$n_matched_raw - ob_result$n_final))
+      ob_result$n_after_dementia - ob_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "Obesity cohort (final)", ob_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n", "TOTAL full_cohort", nrow(full_cohort), ""))

@@ -269,7 +269,7 @@ extract_demographics <- function(bs_cohort) {
 #   Use get_lpr_diagnoses() with date_contact < surgery_date to flag them if needed.
 
 extract_dementia_outcomes <- function(bs_cohort) {
-  dementia_icd3   <- c("F00", "F01", "F02", "F03", "G30", "G31")
+  dementia_icd3   <- c("F00", "F01", "F02", "F03", "G30", "G31")   # G31 included for comprehensive all-cause dementia capture; consistent with methods plan section 4
   alzheimers_icd3 <- c("G30", "F00")
   vascular_icd3   <- "F01"
 
@@ -348,36 +348,43 @@ extract_weight_outcomes <- function(bs_cohort) {
 
   dbso <- arrow::open_dataset(path_dbso) %>% collect()
 
-  # DBSO column names (from 00_prepare_dbso.R):
-  #   pnr, surgery_date, surgery_type — person-level identifiers
-  #   udgangsvaegtpre_prim            — weight at last pre-op visit before surgery (kg)
+  # DBSO column names (original lowercased SAS names from 00_prepare_dbso.R):
+  #   pnr, surgery_date, surgery_type — derived in step 00
+  #   udgangsvaegtpre_prim            — wgt at last pre-op visit (kg)
+  #   udgangsvaegt                    — wgt at program entry / referral (kg)
   #   hoejde                          — height (cm)
-  #   bmi_pre                         — BMI calculated from pre-op weight + height
-  #   datofol                         — date of this follow-up visit
-  #   vaegtfol                        — weight at this follow-up visit (kg)
+  #   datopre                         — last pre-op clinic visit date
+  #   datofol                         — follow-up visit date
+  #   vaegtfol                        — wgt at follow-up visit (kg)
+  # Renaming and BMI variable names are assigned in 04_data_management_dementia.R.
   # Data is LONG: one row per clinic visit per person.
 
-  dbso_cohort <- dbso %>% filter(pnr %in% bs_cohort$pnr)
+  dbso_cohort <- dbso %>% filter(pnr %in% bs_cohort$pnr)   # keep only cohort members
 
-  # Pre-operative weight: udgangsvaegtpre_prim is the weight from the last pre-op
-  # form before surgery. It is stored in every row for a patient — take one per person.
-  # Pre-operative weight: udgangsvaegtpre_prim is the weight recorded at the LAST pre-op
-  # clinic visit before surgery. It is stored redundantly in every DBSO row for a patient,
-  # but the value at the most recent pre-op visit (datopre) is the definitive baseline.
-  # We group by patient and take the row with the latest datopre rather than using
-  # distinct(pnr, .keep_all = TRUE), which would pick an arbitrary row and could return
-  # the wrong height if hoejde was updated across visits.
+  # Pre-operative weight: udgangsvaegtpre_prim is the weight at the LAST pre-op clinic
+  # visit before surgery. It is stored redundantly in every DBSO row for a patient, but
+  # the value at the most recent datopre is the definitive measurement. Group by patient
+  # and take the row with the latest datopre rather than distinct(pnr, .keep_all = TRUE),
+  # which would pick an arbitrary row and could return the wrong height if hoejde was
+  # updated across visits.
   weight_preop <- dbso_cohort %>%
-    filter(!is.na(udgangsvaegtpre_prim), !is.na(datopre)) %>%  # must have both weight and a datopre to order on
+    filter(!is.na(udgangsvaegtpre_prim), !is.na(datopre)) %>%   # must have both weight and a pre-op date to order on
     group_by(pnr) %>%
-    arrange(desc(datopre)) %>%                                  # most recent pre-op visit first
-    slice(1) %>%                                                # take that row for each patient
+    arrange(desc(datopre)) %>%                                   # most recent pre-op visit first
+    slice(1) %>%                                                 # take that row for each patient
     ungroup() %>%
+    mutate(
+      bmi_preop = dplyr::if_else(                                # BMI at last pre-op visit; computed here from raw columns
+        !is.na(udgangsvaegtpre_prim) & !is.na(hoejde) & hoejde > 0,
+        round(udgangsvaegtpre_prim / (hoejde / 100)^2, 1),
+        NA_real_
+      )
+    ) %>%
     select(
       pnr,
-      weight_preop = udgangsvaegtpre_prim,  # pre-op weight (kg) from last pre-op form
-      height_preop = hoejde,                 # height (cm) from last pre-op form
-      bmi_preop    = bmi_pre                 # BMI calculated in 00_prepare_dbso.R
+      weight_preop = udgangsvaegtpre_prim,   # wgt (kg) at last pre-op visit
+      height_preop = hoejde,                  # height (cm)
+      bmi_preop                               # BMI at last pre-op visit
     )
 
   # Post-operative weights: rows with a measured follow-up weight.
@@ -527,7 +534,7 @@ extract_insulin_outcomes <- function(bs_cohort) {
     mutate(
       days_since_surgery = as.numeric(difftime(eksd, surgery_date, units = "days")),
       period = case_when(
-        days_since_surgery >= -180 & days_since_surgery < -30  ~ "baseline",
+        days_since_surgery >= -180 & days_since_surgery < -30  ~ "baseline",    # upper bound -30: prescriptions in the 30 days immediately before surgery are excluded (perioperative management artefact, not representative of habitual baseline insulin burden)
         days_since_surgery >= 60   & days_since_surgery < 120  ~ "3mo",
         days_since_surgery >= 150  & days_since_surgery < 210  ~ "6mo",
         days_since_surgery >= 330  & days_since_surgery < 390  ~ "12mo",
@@ -766,7 +773,7 @@ extract_nmi <- function(bs_cohort, exclude_dementia_predictors = FALSE) {
   # has dx_F00_G30 = 0 by construction (pre-surgery dementia is an exclusion criterion),
   # and rx_N06D users are also excluded (methods plan criterion 3). Including these
   # components adds 0 to all scores but creates circular logic that reviewers will flag.
-  # The resulting score is called NMI_no_dementia and covers 28 dx + 20 rx predictors.
+  # The resulting modified NMI covers 28 dx + 20 rx = 48 predictors (out of 50 original).
   # Use FALSE (default) for general use / Study 2 (non-dementia outcomes).
 
   # ---- Diagnosis patterns and weights (29 groups, Table 2) ----
@@ -967,7 +974,7 @@ extract_baseline_medications <- function(bs_cohort) {
     collect() %>%                           # bring filtered prescriptions into R memory
     inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%  # attach surgery date for per-person lookback
     filter(
-      eksd >= surgery_date - 365 * 5,   # prescription must be within 5-year lookback window
+      eksd >= surgery_date - 365.25 * 5,   # prescription must be within 5-year lookback window
       eksd <  surgery_date               # and must precede surgery (not post-surgery prescriptions)
     )
 
@@ -1021,7 +1028,8 @@ extract_diabetes_classification <- function(bs_cohort) {
 # ============================================================================
 # SES is extracted in 03_extract_ses.R — run that script separately.
 # Produces: path_output/ses_data.rds
-# Variables: pnr, education_cat, income_cat, occupation_cat, sep_category
+# Variables: pnr, education_cat, income_cat, occupation_cat
+# (no sep_category composite — removed per SEPLINE; see 03_extract_ses.R section 3.4)
 
 load_ses <- function() {
   ses_file <- file.path(path_output, "ses_data.rds")
@@ -1029,7 +1037,7 @@ load_ses <- function() {
     stop("SES data not found. Run 03_extract_ses.R first.")
   }
   readRDS(ses_file) %>%
-    select(pnr, education_cat, income_cat, occupation_cat, sep_category)
+    select(pnr, education_cat, income_cat, occupation_cat)
 }
 
 # ============================================================================

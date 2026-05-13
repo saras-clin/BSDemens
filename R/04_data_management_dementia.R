@@ -91,6 +91,8 @@ load_and_merge <- function() {
 
   # demographics contains surgery_date and surgery_type which already exist in full_cohort —
   # drop them before joining to avoid duplicate columns.
+  weights <- load_rds("extract_weights.rds")   # DBSO weight outcomes from step 02 (BS cohort only)
+
   full_cohort %>%
     left_join(demographics  %>% select(-surgery_date, -surgery_type), by = "pnr") %>%
     left_join(dementia,      by = "pnr") %>%
@@ -98,7 +100,30 @@ load_and_merge <- function() {
     left_join(nmi,           by = "pnr") %>%   # adds nmi_score column
     left_join(medications,   by = "pnr") %>%
     left_join(diabetes,      by = "pnr") %>%
-    left_join(ses,           by = "pnr")
+    left_join(ses,           by = "pnr") %>%
+    left_join(weights %>% select(pnr, weight_preop, height_preop, bmi_preop), by = "pnr")
+}
+
+# ============================================================================
+# 4.2 RENAME AND COMPUTE DBSO WEIGHT VARIABLES
+# ============================================================================
+# weight_preop, height_preop, bmi_preop arrive from extract_weights.rds with
+# provisional names assigned during extraction (step 02). Descriptive analysis
+# names are assigned here. BMI at program entry (baseline_bmi) is also computed
+# here from udgangsvaegt (referral weight); note this requires adding
+# referral_wgt extraction to extract_weight_outcomes() in step 02 if needed.
+#
+#   pre_surgery_wgt — weight (kg) at last pre-op clinic visit (from udgangsvaegtpre_prim)
+#   pre_surgery_bmi — BMI at last pre-op clinic visit (computed in step 02)
+#   height          — height in cm (from hoejde)
+
+rename_weight_vars <- function(df) {
+  df %>%
+    rename(
+      pre_surgery_wgt = weight_preop,   # wgt (kg) at last pre-op visit
+      pre_surgery_bmi = bmi_preop,      # BMI at last pre-op visit
+      height          = height_preop    # height (cm)
+    )
 }
 
 # ============================================================================
@@ -131,7 +156,7 @@ apply_exclusions <- function(df) {
   if (n_before > n_after) {
     message("Excluded ", n_before - n_after,
             " person(s) with pre-surgery dementia caught at data-management stage.",
-            " Likely F-code cases from the LPR2 psychiatric register. See CRITICAL-1 in TODO.txt.")
+            " Likely F-code cases from the LPR2 psychiatric register not caught upstream.")
   }
 
   df
@@ -384,7 +409,7 @@ format_variables <- function(df) {
       # Classified from the Open Source Diabetes Classifier (OSDC), a pre-computed
       # cohort file at E:/workdata/708421/cleaned-data/.../dm_population_1977_2022.rds.
       # Covers diagnoses up to 2022; patients with diabetes onset 2023-2024 will be
-      # classified as No_diabetes (minor limitation, see MINOR-2 in TODO.txt).
+      # classified as No_diabetes (minor limitation, see MINOR-3 in TODO.txt).
       # Reference level: No_diabetes. T1D and T2D are compared against this.
       diabetes_type = factor(diabetes_type, levels = c("No_diabetes", "T1D", "T2D")),
 
@@ -402,8 +427,10 @@ format_variables <- function(df) {
                               levels = c("Short", "Medium", "Long", "Unknown")),
 
       #   income_cat: from FAIK register (famaekvivadisp_13 = equivalised
-      #               disposable household income). Quintile-based within cohort
-      #               (see MINOR-1 in TODO.txt for population-reference alternative).
+      #               disposable household income). Population-standardised quintiles:
+      #               3-year average (surgery_year-1, -2, -3) compared against
+      #               Q20/Q40/Q60/Q80 cutpoints from the full BEF population,
+      #               stratified by sex x 5-year age group x reference year (SEPLINE).
       income_cat     = factor(income_cat,
                               levels = c("Low", "Medium", "High", "Unknown")),
 

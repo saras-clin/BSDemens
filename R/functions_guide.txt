@@ -121,7 +121,7 @@ dplyr — COLUMN SELECTION AND CREATION
     and returns the value for the FIRST condition that is TRUE.
     TRUE ~ default acts as the "else" at the end.
     Used for: education categories, income categories, occupation categories,
-              sep_category, surgery_period, age_cat, diabetes labels.
+              surgery_period, age_cat, diabetes labels.
 
   if_else(condition, true_value, false_value)
     Simple two-way conditional. Stricter than base ifelse() — requires both
@@ -198,7 +198,10 @@ dplyr — GROUPING AND AGGREGATION
 
   ntile(x, n)
     Assigns each row to one of n equal-sized groups (quintile buckets).
-    ntile(income, 5) creates quintiles 1-5. Used in 03_extract_ses.R for income.
+    ntile(income, 5) creates quintiles 1-5. NOT used for income in this pipeline —
+    income quintiles are population-standardised by comparing each person's 3-year
+    average income against population cutpoints (Q20/Q40/Q60/Q80) from the full BEF
+    population stratified by sex × 5-year age group × reference year (SEPLINE).
 
   n()
     Counts rows within a group. Used inside summarise() or mutate().
@@ -444,8 +447,10 @@ CUSTOM PROJECT FUNCTIONS
     (most recent record). Used for matching key and age calculations.
 
   build_bs_cohort()
-    Loads bs_cohort.rds, applies exclusions (death before surgery, age < 18,
-    < 5 year history, pre-surgery dementia), formats output.
+    Loads DBSO parquet, applies all exclusions in order: death within 30 days of
+    surgery, age < 18, < 5 years of registry history, pre-surgery dementia (LPR2
+    somatic + LPR2 psychiatric + LPR3), antidementia medication (N06D) dispensed
+    before surgery date. Returns a named list (cohort + attrition counts).
 
   build_gp_comparator(bs_cohort)
     Builds the 1:25 matched general population cohort. Pre-splits BEF pool by
@@ -499,10 +504,14 @@ CUSTOM PROJECT FUNCTIONS
     diagnosis types). Includes icd4-level refinements for peptic ulcer and liver.
     Output: extract_comorbidities.rds.
 
-  extract_nmi(bs_cohort)
+  extract_nmi(bs_cohort, exclude_dementia_predictors = FALSE)
     Computes the Kristensen 2022 Nordic Multimorbidity Index: 29 ICD groups
     (5-year lookback) + 21 ATC groups (6-month lookback). Returns a single nmi_score
     per person (weighted sum, two negative weights for ARBs and statins).
+    exclude_dementia_predictors = TRUE removes dx_F00_G30 (weight 9) and rx_N06D
+    (weight 11) from the score — required for Study 1 where dementia is the outcome
+    (including these predictors would introduce near-perfect collinearity with the
+    outcome). main_extraction() calls with TRUE; resulting score uses 48 of 50 predictors.
     Output: extract_nmi.rds.
 
   extract_baseline_medications(bs_cohort)
@@ -521,7 +530,10 @@ CUSTOM PROJECT FUNCTIONS
 
   extract_ses(bs_cohort)
     Extracts education (UDDA), income (FAIK via BEF), occupation (AKM) at the
-    year before surgery. Computes sep_category composite. Output: ses_data.rds.
+    year before surgery. Income is population-standardised: 3-year average compared
+    against Q20/Q40/Q60/Q80 cutpoints from the full BEF population stratified by
+    sex × 5-year age group × reference year (SEPLINE). No composite SEP variable
+    is computed (per SEPLINE). Output: ses_data.rds.
 
   main_ses_extraction()
     Wrapper that loads full_cohort and runs extract_ses().

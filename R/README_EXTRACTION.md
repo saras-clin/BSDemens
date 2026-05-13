@@ -1,5 +1,5 @@
 # BS & DEMENTIA / T1D STUDIES — PIPELINE OVERVIEW
-Last updated: 2026-05-06
+Last updated: 2026-05-08
 
 ---
 
@@ -84,7 +84,9 @@ Run this before any extraction.
 - `distinct(pnr)` reduces to one row per patient (all visit rows for a patient
   share the same surgery_date and surgery_type, so no information is lost)
 - Applies exclusions: death before surgery, age < 18, < 5 years registry history,
-  pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
+  pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3),
+  any N06D (antidementia) dispensing before surgery date,
+  death within 30 days after surgery
 
 **GP comparator** (1:25): sampled from BEF, matched on sex + birth year (±1).
 Dead persons and prior-BS persons excluded from pool. Matched alive at each index date.
@@ -138,7 +140,7 @@ Strip with `substr(code, 2, 4)` (3-char) or `substr(code, 2, 5)` (4-char) before
 | extract_demographics.rds | sex, birth_date, death_date, age_at_surgery, follow_up_end |
 | extract_dementia.rds | date_dementia, date_alzheimers, date_vascular |
 | extract_comorbidities.rds | 33 binary NMI condition flags (baseline 5-year window) |
-| extract_nmi.rds | nmi_score (Kristensen 2022 weighted sum across 50 predictors) |
+| extract_nmi.rds | nmi_score (Kristensen 2022 weighted sum; 50 predictors normally, 48 for Study 1 with dementia predictors excluded) |
 | extract_medications.rds | antihypertensive, lipid_lowering, insulin, antidepressant, antidementia (binary) |
 | extract_diabetes.rds | diabetes_type ("T1D"/"T2D"/"No_diabetes") from OSDC |
 | extract_weights.rds | bmi_pre, weight at 3/6/12/24 months, %TWL, %EWL (Study 2 / BS only) |
@@ -159,9 +161,10 @@ Reference year: `year(index_date) - 1` (year before surgery / matched index date
 | Dimension | Register | Variable | Categories |
 |---|---|---|---|
 | Education | UDDA / hfaudd | Most recent record up to index year | Short / Medium / Long / Unknown |
-| Income | FAIK via BEF familie_id | famaekvivadisp_13, within-cohort quintile | Low (Q1) / Medium (Q2–4) / High (Q5) / Unknown |
+| Income | FAIK via BEF familie_id | famaekvivadisp_13, 3-year average; population-standardized quintiles by sex × 5-year age group × year (SEPLINE) | Low (Q1) / Medium (Q2–4) / High (Q5) / Unknown |
 | Occupation | AKM / socio13 | Record at index year | Working / Unemployed / Outside_workforce / Retired / Student / Unknown |
-| Composite SEP | — | High = all three high; Low = any one low | High / Medium / Low / Unknown |
+
+Three separate SEP dimensions are used in models (no composite); per SEPLINE (Hjorth et al. Clin Epidemiol 2025;17:593–624).
 
 Output: `datasets/ses_data.rds`
 
@@ -178,8 +181,12 @@ Merges all extract_*.rds and ses_data.rds into one analysis-ready dataset.
    under-captured by hospital codes alone
 4. NMI count — counts how many of 33 GMC conditions each person has (for Table 1
    descriptives); distinct from nmi_score (the weighted Kristensen 2022 score)
-5. Format variables — factors with reference levels, censor_date, outcome event flags,
-   follow-up time in days, age categories, calendar period
+5. Emigration censoring — get_emigration_dates() is called to add emigration_date;
+   currently a stub returning NA for all persons (register name not yet confirmed with
+   data manager — see CRITICAL-4 in TODO.txt). Wire-in is complete; replace stub once
+   register is confirmed.
+6. Format variables — factors with reference levels, censor_date (includes emigration),
+   outcome event flags, follow-up time in days, age categories, calendar period
 
 Output: `datasets/study1_clean.rds` — one row per person, ready for Cox models and Table 1.
 
@@ -198,7 +205,7 @@ dbso <- prepare_dbso()
 
 # Step 1: build cohorts
 source("R/01_build_cohorts.R")
-full_cohort <- main_cohort_build()
+full_cohort <- main_build_cohorts()
 
 # Steps 2 + 3: run in parallel (separate R sessions on DST recommended)
 source("R/02_extract_outcomes_covariates.R")
@@ -223,8 +230,10 @@ study1 <- main_data_management()
   (`load_database("dodsaars") %>% rename_with(tolower) %>% glimpse()`)
 - **CONFIRM-3:** Verify diabetes_type values in OSDC file
   (`table(dm$diabetes_type)` — code assumes "T1D" / "T2D" string labels)
-- **CONFIRM-5:** Emigration date register — ask data manager about bef_bop availability
-  on project 708421 (see CONFIRM-5 in TODO.txt for full detail and code sketch)
+- **CRITICAL-4:** Emigration date register not yet wired up — confirm with data manager
+  which register to use: VNDS, BEF-derived (gap in annual snapshots), or CPR Registeret
+  (RVNDS). Once confirmed, replace stub in get_emigration_dates() (see CRITICAL-4 in
+  TODO.txt for full detail). No other code changes needed — pmin() is already wired.
 - **MINOR-8:** Confirm `aar` column name in UDDA, FAIK, AKM
 
 ---

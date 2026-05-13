@@ -11,9 +11,10 @@
 #     Education    — highest attained (UDDA/hfaudd), most recent record
 #                    up to the year before surgery
 #     Income       — equivalised household disposable income (FAIK via
-#                    BEF family link), year before surgery
+#                    BEF family link), 3-year average (surgery_year-1, -2, -3);
+#                    population-standardised quintiles by sex x 5-yr age group x year
 #     Occupation   — labour market status (AKM/socio13), year before surgery
-#     SEP category — composite (High / Medium / Low / Unknown)
+#     No composite SEP variable — per SEPLINE (Hjorth et al. 2025)
 #
 #   Reference year: year(surgery_date) - 1  (year before surgery/index date)
 #
@@ -52,13 +53,14 @@ load_full_cohort <- function() {
 # ============================================================================
 # Input:  full_cohort (pnr + surgery_date for all cohort members)
 # Output: one row per person with education_cat, income_cat, occupation_cat,
-#         sep_category, plus raw register codes (hfaudd, famaekvivadisp_13, socio13)
+#         plus raw register codes (hfaudd, famaekvivadisp_13, income_quintile, socio13)
+#         No composite sep_category — per SEPLINE (Hjorth et al. 2025)
 #
 # Internal sections:
 #   3.1 Education (UDDA / HFAUDD)
-#   3.2 Household income (FAIK / FAMAEKVIVADISP_13)
+#   3.2 Household income (FAIK / FAMAEKVIVADISP_13) — population-standardised quintiles
 #   3.3 Occupation (AKM / SOCIO13)
-#   3.4 Composite SEP category
+#   3.4 Combine (no composite)
 
 extract_ses <- function(bs_cohort) {
   # Add baseline year (year before surgery)
@@ -121,11 +123,12 @@ extract_ses <- function(bs_cohort) {
   # 3.2 Household income: FAMAEKVIVADISP_13 from FAIK, linked via FAMILIE_ID in BEF
   #
   # SEPLINE (Hjorth et al. 2025) Table 9 specifies:
-  #   (a) 3-year average income: average over year-1, year-2, year-3 before the
-  #       index year to reduce year-to-year volatility in income measurement.
+  #   (a) 3-year average income: average over surgery_year-1, surgery_year-2,
+  #       surgery_year-3 to reduce year-to-year volatility.
+  #       In code: index_year, index_year-1, index_year-2 (since index_year = surgery_year-1).
   #   (b) Population-standardized quintile cutpoints: quintile boundaries computed
   #       in the GENERAL POPULATION (all BEF persons), stratified by 5-year age
-  #       group AND sex for the reference year (index_year - 1).
+  #       group AND sex for the reference year (= index_year = surgery_year-1).
   #       This prevents cohort-level income distribution from distorting the
   #       quintile thresholds (BS patients are not representative of the full
   #       age-sex-matched general population income distribution).
@@ -135,22 +138,24 @@ extract_ses <- function(bs_cohort) {
   # age-group x sex x year. We compute them from the full BEF x FAIK population.
   #
   # IMPLEMENTATION STEPS:
-  #   Step A: Determine the 3 income reference years for each study index year.
-  #   Step B: For COHORT MEMBERS — compute their 3-year average income.
-  #   Step C: For the GENERAL POPULATION — compute 3-year average income per
-  #           person and derive quintile cutpoints by sex x age_group5 x year.
-  #   Step D: Assign each cohort member to a quintile based on the population
-  #           cutpoints for their sex, age group, and index year.
+  #   Step A: For COHORT MEMBERS — compute their 3-year average income
+  #           (surgery_year-1, -2, -3 per person).
+  #   Step B: For the GENERAL POPULATION — compute population quintile cutpoints
+  #           (Q20/Q40/Q60/Q80) by sex x 5-year age group x reference year.
+  #   Step C: Assign each cohort member to a quintile using population cutpoints
+  #           for their sex, age group, and reference year.
   # --------------------------------------------------------------------------
 
   bef  <- load_database("bef")  %>% rename_with(tolower)   # population register: pnr, aar, koen, foed_dag, familie_id
   faik <- load_database("faik") %>% rename_with(tolower)   # household income register: familie_id, aar, famaekvivadisp_13
 
-  # The 3-year average uses years: index_year-1, index_year-2, index_year-3.
-  # The population quintile reference year = index_year - 1 (year before surgery),
-  # consistent with all other SEP measures. Age group for stratification uses
-  # the person's age at year index_year - 1 (the reference year).
-  income_ref_years <- sort(unique(c(unique_years - 1L, unique_years - 2L, unique_years - 3L)))   # all reference years needed across cohort
+  # index_year = surgery_year - 1 (the SEP reference year, same as education and occupation).
+  # The 3-year average uses years: index_year, index_year-1, index_year-2
+  # (= surgery_year-1, surgery_year-2, surgery_year-3 per the methods plan).
+  # The population quintile reference year = index_year (= surgery_year-1),
+  # consistent with all other SEP measures. Age for population stratification
+  # is computed at index_year.
+  income_ref_years <- sort(unique(c(unique_years, unique_years - 1L, unique_years - 2L)))        # income years: surgery_year-1, -2, -3
 
   # -- Step A: cohort member income for all 3 reference years --
   # Pull FAIK for cohort members over the 3 reference years (lazy filter on parquet).
@@ -161,19 +166,19 @@ extract_ses <- function(bs_cohort) {
     dplyr::collect()                                                      # BEF is large; filter pushed to parquet first
 
   faik_cohort_ref <- faik %>%
-    dplyr::filter(aar %in% !!income_ref_years) %>%                        # all families in reference years (needed for population step too)
+    dplyr::filter(aar %in% !!income_ref_years) %>%                        # families in surgery_year-1, -2, -3 for cohort 3yr average
     dplyr::select(familie_id, aar, famaekvivadisp_13) %>%
-    dplyr::collect()                                                        # collected once; reused for both cohort and population steps
+    dplyr::collect()                                                        # collected once; reused across all cohort members' income calculations
 
   # Join BEF <-> FAIK for cohort members; then join cohort_years to restrict to each
-  # person's 3 reference years (index_year-1, index_year-2, index_year-3).
+  # person's 3 income years (index_year, index_year-1, index_year-2).
   cohort_ref_lookup <- cohort_years %>%                                    # pnr + index_year
-    dplyr::mutate(                                                          # expand to 3 reference years per person
-      yr1 = index_year - 1L,
-      yr2 = index_year - 2L,
-      yr3 = index_year - 3L
+    dplyr::mutate(                                                          # expand to 3 income years per person
+      yr1 = index_year,                                                     # surgery_year - 1 = index_year itself
+      yr2 = index_year - 1L,                                               # surgery_year - 2
+      yr3 = index_year - 2L                                                # surgery_year - 3
     ) %>%
-    tidyr::pivot_longer(cols = c(yr1, yr2, yr3),                           # one row per (pnr, reference year)
+    tidyr::pivot_longer(cols = c(yr1, yr2, yr3),                           # one row per (pnr, income year)
                         names_to = NULL, values_to = "ref_year")
 
   cohort_3yr_income <- bef_cohort %>%
@@ -183,7 +188,7 @@ extract_ses <- function(bs_cohort) {
     dplyr::summarise(
       income_3yr_avg = mean(famaekvivadisp_13, na.rm = TRUE),              # 3-year average equivalised disposable income
       koen_ref       = dplyr::first(koen),                                  # sex (for quintile stratum lookup)
-      age_ref        = dplyr::first(index_year) - 1L -                      # age at index_year - 1 for stratum lookup
+      age_ref        = dplyr::first(index_year) -                            # age at index_year (= surgery_year - 1) for stratum lookup
                        lubridate::year(as.Date(dplyr::first(foed_dag))),
       .groups = "drop"
     ) %>%
@@ -201,9 +206,9 @@ extract_ses <- function(bs_cohort) {
   # income distribution (bariatric surgery patients skew younger and more female
   # compared to the age-sex-matched general population).
   #
-  # Performance note: BEF has ~5M rows per year. For ~17 reference years (2006-2022)
-  # this is ~85M rows. Filter to working-age persons (18-90) to reduce memory use.
-  pop_income_years <- sort(unique(unique_years - 1L))   # for quintile reference, only the year immediately before surgery needed per SEPLINE
+  # Performance note: BEF has ~5M rows per year. For ~15 reference years (2009-2023)
+  # this is ~75M rows. Filter to working-age persons (18-90) to reduce memory use.
+  pop_income_years <- sort(unique(unique_years))         # index_year = surgery_year - 1; this is the SEP reference year per SEPLINE
 
   bef_pop <- bef %>%
     dplyr::filter(aar %in% !!pop_income_years) %>%                         # reference years for population quintile computation
@@ -237,10 +242,13 @@ extract_ses <- function(bs_cohort) {
     )
 
   # -- Step C: assign cohort members to population quintile --
+  # ref_year = index_year because index_year is already the SEP reference year
+  # (= surgery_year - 1) and pop_quintile_cutpoints is keyed on that same year.
   income <- cohort_3yr_income %>%
+    dplyr::mutate(ref_year = index_year) %>%                               # index_year = surgery_year - 1 = SEP reference year
     dplyr::left_join(
       pop_quintile_cutpoints,
-      by = c("koen_ref" = "koen", "age_group5", "index_year" = "aar")     # match on sex, age group, reference year
+      by = c("koen_ref" = "koen", "age_group5", "ref_year" = "aar")       # match on sex, age group, reference year
     ) %>%
     dplyr::mutate(
       # Assign quintile by comparing 3-year average income to population cutpoints.
