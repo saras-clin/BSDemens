@@ -20,7 +20,10 @@
 #                         separate — already in the merged data from extract_nmi.rds
 #                         nmi_count = simple count (for Table 1 descriptives)
 #                         nmi_score = weighted sum of 50 predictors (for Cox models)
-#     4.5 Format vars   — factors, date differences, age categories, calendar period
+#     4.5 Format vars   — factors, date differences, age categories, calendar period,
+#                         death_event and event_type (0/1/2) for Fine-Gray models,
+#                         sensitivity outcomes: dementia_event_primary (7g.1),
+#                         cataract_event (7g.6)
 #
 #   Inputs:  datasets/full_cohort.rds, datasets/extract_*.rds, datasets/ses_data.rds
 #   Output:  datasets/study1_clean.rds  (one row per person; ready for Cox models)
@@ -38,33 +41,13 @@ load_rds <- function(name) {
 }
 
 # ============================================================================
-# 4.0 EMIGRATION DATES [STUB — CRITICAL: NOT YET IMPLEMENTED]
+# 4.0 EMIGRATION DATES
 # ============================================================================
-# Persons who emigrate from Denmark leave Danish registers and can no longer be
-# followed for dementia. Continuing to count their time as at-risk after
-# emigration overstates person-time and biases hazard ratios if emigration rates
-# differ between BS and comparator groups (e.g. if healthy migrants preferentially
-# have surgery abroad, or if obesity affects emigration rates differently).
-#
-# Emigration is a COMPETING RISK for dementia: someone who emigrates can no
-# longer be observed for dementia regardless of whether they later develop it.
-# The correct handling is to CENSOR at the emigration date, exactly as we censor
-# at death or at the end of the study period.
-#
-# This function is a STUB — it returns NA_Date_ for all persons.
-# With emigration_date = NA, pmin(..., na.rm = TRUE) in censor_date below will
-# ignore the NA and fall back to follow_up_end / bs_crossover_date as before.
-# No data are affected until this stub is replaced with a real register query.
-#
-# ACTION REQUIRED from data manager (project 708421):
-#   Confirm which register and column to use:
-#   Option A — VNDS register: load_database("vnds"); check column for departure date.
-#   Option B — BEF-derived: persons who appear in BEF year Y but not in Y+1 are
-#              assumed to have emigrated. Less precise (date unknown within year).
-#   Option C — CPR Registeret (RVNDS): contact DST for direct extract.
-#
-# Once confirmed, replace the body of this function with the register query.
-# pmin() in format_variables() will then automatically apply emigration censoring.
+# Persons who emigrate from Denmark can no longer be followed in Danish registers.
+# get_emigration_dates() queries VNDS (migration register), filters to emigration
+# events (indud_kode == "U"), and returns the earliest emigration date per person.
+# Non-emigrants receive emigration_date = NA; pmin() in format_variables() then
+# ignores the NA and censors at follow_up_end or bs_crossover_date instead.
 
 get_emigration_dates <- function(pnr_vector) {
   # VNDS register: one row per migration event per person.
@@ -98,39 +81,19 @@ load_and_merge <- function() {
 
   # demographics contains surgery_date and surgery_type which already exist in full_cohort —
   # drop them before joining to avoid duplicate columns.
-  weights <- load_rds("extract_weights.rds")   # DBSO weight outcomes from step 02 (BS cohort only)
+  weights           <- load_rds("extract_weights.rds")            # DBSO weight outcomes from step 02 (BS cohort only)
+  negative_controls <- load_rds("extract_negative_controls.rds")  # fracture and cataract dates (sensitivity 7g.6)
 
   full_cohort %>%
     left_join(demographics  %>% select(-surgery_date, -surgery_type), by = "pnr") %>%
-    left_join(dementia,      by = "pnr") %>%
-    left_join(comorbidities, by = "pnr") %>%
-    left_join(nmi,           by = "pnr") %>%   # adds nmi_score column
-    left_join(medications,   by = "pnr") %>%
-    left_join(diabetes,      by = "pnr") %>%
-    left_join(ses,           by = "pnr") %>%
-    left_join(weights %>% select(pnr, weight_preop, height_preop, bmi_preop), by = "pnr")
-}
-
-# ============================================================================
-# 4.2 RENAME AND COMPUTE DBSO WEIGHT VARIABLES
-# ============================================================================
-# weight_preop, height_preop, bmi_preop arrive from extract_weights.rds with
-# provisional names assigned during extraction (step 02). Descriptive analysis
-# names are assigned here. BMI at program entry (baseline_bmi) is also computed
-# here from udgangsvaegt (referral weight); note this requires adding
-# referral_wgt extraction to extract_weight_outcomes() in step 02 if needed.
-#
-#   pre_surgery_wgt — weight (kg) at last pre-op clinic visit (from udgangsvaegtpre_prim)
-#   pre_surgery_bmi — BMI at last pre-op clinic visit (computed in step 02)
-#   height          — height in cm (from hoejde)
-
-rename_weight_vars <- function(df) {
-  df %>%
-    rename(
-      pre_surgery_wgt = weight_preop,   # wgt (kg) at last pre-op visit
-      pre_surgery_bmi = bmi_preop,      # BMI at last pre-op visit
-      height          = height_preop    # height (cm)
-    )
+    left_join(dementia,        by = "pnr") %>%   # includes date_dementia_primary for sensitivity 7g.1
+    left_join(comorbidities,   by = "pnr") %>%
+    left_join(nmi,             by = "pnr") %>%   # adds nmi_score column
+    left_join(medications,     by = "pnr") %>%
+    left_join(diabetes,        by = "pnr") %>%
+    left_join(ses,             by = "pnr") %>%
+    left_join(weights %>% select(pnr, weight_preop, height_preop, bmi_preop), by = "pnr") %>%
+    left_join(negative_controls, by = "pnr")     # date_cataract (sensitivity 7g.6)
 }
 
 # ============================================================================
@@ -342,9 +305,64 @@ format_variables <- function(df) {
         surgery_date, units = "days"
       )),
 
+      # -----------------------------------------------------------------------
+      # 4.5d COMPETING RISK INDICATORS (for Fine-Gray models)
+      # -----------------------------------------------------------------------
+      # death_event: 1 if the person died during follow-up WITHOUT a prior dementia
+      # diagnosis. Death is the competing event for dementia — a person who dies
+      # without dementia can never develop it, so they do not simply "drop out"
+      # as in standard censoring. Fine-Gray subdistribution hazard models require
+      # this distinction. Persons who died AFTER a dementia diagnosis contribute
+      # to dementia_event = 1, not to death_event.
+      death_event = as.integer(!is.na(death_date) & death_date <= censor_date & dementia_event == 0L),
+
+      # event_type: three-level integer for competing risk analysis.
+      #   0 = censored  — no event before censor_date (alive and dementia-free)
+      #   1 = dementia  — primary outcome; dementia diagnosis before/on censor_date
+      #   2 = death     — competing event; died before censor_date without dementia
+      # Use in Surv(follow_up_days, event_type, type = "mstate") or cmprsk::crr().
+      event_type = as.integer(case_when(
+        dementia_event == 1L ~ 1L,   # dementia event takes priority
+        death_event    == 1L ~ 2L,   # death without prior dementia = competing event
+        TRUE                 ~ 0L    # censored: alive and dementia-free at end of follow-up
+      )),
 
       # -----------------------------------------------------------------------
-      # 4.5d ALZHEIMER'S DISEASE OUTCOME (secondary)
+      # 4.5d.1 DIAGTYPE-A-ONLY DEMENTIA — sensitivity 7g.1
+      # -----------------------------------------------------------------------
+      # NOTE on naming: "primary" in date_dementia_primary / dementia_event_primary
+      # refers to DIAGNOSIS TYPE A (primary diagnosis code in LPR), NOT to the
+      # primary outcome. The main analysis uses diagtypes A+B (primary + secondary
+      # hospital diagnoses). This sensitivity restricts to A-code contacts only,
+      # which is more specific (the dementia diagnosis was the main reason for
+      # that hospital contact) at the cost of lower sensitivity (misses dementia
+      # coded as a secondary diagnosis on a contact for another condition).
+      # In LPR: A = primary (hoveddiagnose), B = secondary (bidiagnose),
+      #         G = supplementary underlying condition (grundmorbus).
+      dementia_event_primary = as.integer(!is.na(date_dementia_primary) & date_dementia_primary <= censor_date),   # 1 if first A-diagtype dementia contact before/on censor_date
+      follow_up_days_primary = as.numeric(difftime(
+        if_else(dementia_event_primary == 1L, date_dementia_primary, censor_date),
+        surgery_date, units = "days"
+      )),   # time to first A-diagtype dementia or censor
+
+      # -----------------------------------------------------------------------
+      # 4.5d.2 NEGATIVE CONTROL OUTCOME — CATARACT (sensitivity 7g.6)
+      # -----------------------------------------------------------------------
+      # Cataract (H25, H26) has no plausible causal pathway from bariatric
+      # surgery. HR ≈ 1.0 supports that the main dementia result is not driven
+      # by residual confounding or differential surveillance. Fracture was
+      # considered and rejected as a negative control: RYGB causes calcium
+      # malabsorption and increased fracture risk, making a non-null HR
+      # uninterpretable as a bias indicator. See study1_methods_plan.txt 7g.6.
+      cataract_event = as.integer(!is.na(date_cataract) & date_cataract <= censor_date),
+      follow_up_days_cataract = as.numeric(difftime(
+        if_else(cataract_event == 1L, date_cataract, censor_date),
+        surgery_date, units = "days"
+      )),
+
+
+      # -----------------------------------------------------------------------
+      # 4.5e ALZHEIMER'S DISEASE OUTCOME (secondary)
       # -----------------------------------------------------------------------
       # date_alzheimers: first G30 (Alzheimer's disease, neurological) or F00
       # (Alzheimer's, psychiatric coding) contact after the index date.
@@ -359,7 +377,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5e VASCULAR DEMENTIA OUTCOME (secondary)
+      # 4.5f VASCULAR DEMENTIA OUTCOME (secondary)
       # -----------------------------------------------------------------------
       # date_vascular: first F01 (vascular dementia) contact after the index date.
       # Same independent extraction logic as Alzheimer's.
@@ -371,7 +389,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5f SEX
+      # 4.5g SEX
       # -----------------------------------------------------------------------
       # In DST registers, sex is stored as KOEN (Danish: "køn" = gender/sex).
       # KOEN = 1 → Male, KOEN = 2 → Female (DST coding convention for BEF register).
@@ -382,7 +400,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5g AGE AT INDEX DATE
+      # 4.5h AGE AT INDEX DATE
       # -----------------------------------------------------------------------
       # age_at_surgery: continuous age in years, computed from FOED_DAG (birth date
       # in BEF) and surgery_date in extract_demographics(). Here we create clinical
@@ -397,7 +415,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5h CALENDAR PERIOD
+      # 4.5i CALENDAR PERIOD
       # -----------------------------------------------------------------------
       # Captures secular trends in BS technique (RYGB vs SG mix changed over time)
       # and in dementia diagnostic practice (increased awareness, new criteria).
@@ -411,7 +429,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5i DIABETES TYPE
+      # 4.5j DIABETES TYPE
       # -----------------------------------------------------------------------
       # Classified from the Open Source Diabetes Classifier (OSDC), a pre-computed
       # cohort file at E:/workdata/708421/cleaned-data/.../dm_population_1977_2022.rds.
@@ -422,7 +440,7 @@ format_variables <- function(df) {
 
 
       # -----------------------------------------------------------------------
-      # 4.5j SOCIOECONOMIC POSITION (SEP)
+      # 4.5k SOCIOECONOMIC POSITION (SEP)
       # -----------------------------------------------------------------------
       # All SEP variables derived in 03_extract_ses.R following the SEPLINE
       # algorithm (Hjorth et al., Clin Epidemiol 2025;17:593–624).

@@ -306,12 +306,68 @@ extract_dementia_outcomes <- function(bs_cohort) {
     ungroup() %>%
     select(pnr, date_vascular = date_contact)
 
+  # Sensitivity 7g.1: diagtype-A-only version of all-cause dementia.
+  # In LPR: diagtype A = primary (hoveddiagnose) — dementia was the main reason
+  # for that hospital contact. The main analysis uses A+B; restricting to A only
+  # is more specific but less sensitive (misses dementia coded as a bidiagnose).
+  # Variable name: date_dementia_primary — "primary" = diagtype A, NOT primary outcome.
+  # A separate LPR query is needed because get_lpr_diagnoses() applies the diagtype
+  # filter internally and does not return the diagtype column in its output.
+  all_dx_primary <- get_lpr_diagnoses(unique(bs_cohort$pnr), diagtypes = c("A")) %>%   # diagtype A (primary diagnosis) contacts only
+    filter(icd3 %in% dementia_icd3) %>%                                                 # dementia ICD codes
+    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%               # attach each person's index date
+    filter(date_contact > surgery_date)                                                 # post-index contacts only
+
+  date_allcause_primary <- all_dx_primary %>%
+    group_by(pnr) %>%
+    arrange(date_contact) %>%
+    slice(1) %>%                                                                        # earliest diagtype-A dementia contact per person
+    ungroup() %>%
+    select(pnr, date_dementia_primary = date_contact)   # "primary" = diagtype A (LPR A-code), NOT primary outcome
+
   # One row per cohort member; NAs for those without each specific outcome
   bs_cohort %>%
     select(pnr) %>%
-    left_join(date_allcause, by = "pnr") %>%
-    left_join(date_alz,      by = "pnr") %>%
-    left_join(date_vasc,     by = "pnr")
+    left_join(date_allcause,      by = "pnr") %>%
+    left_join(date_alz,           by = "pnr") %>%
+    left_join(date_vasc,          by = "pnr") %>%
+    left_join(date_allcause_primary, by = "pnr")   # sensitivity 7g.1: primary-code-only dementia date
+}
+
+# ============================================================================
+# 2.3b NEGATIVE CONTROL OUTCOMES — STUDY 1 SENSITIVITY 7g.6
+# ============================================================================
+# Cataract was selected as the negative control because it has no plausible
+# causal pathway from bariatric surgery: lens opacification is determined by
+# age, UV exposure, smoking, and genetics — none altered by BS.
+# Fracture was considered and explicitly rejected: RYGB causes calcium and
+# Vitamin D malabsorption leading to secondary hyperparathyroidism and
+# increased fracture risk. A non-null HR for fracture would be uninterpretable
+# as a bias indicator because it could reflect a true biological effect of RYGB.
+# See Section 7g.6 in study1_methods_plan.txt for full rationale.
+#
+# ICD-10 codes (3-char, D prefix stripped):
+#   H25: age-related cataract
+#   H26: other cataract
+
+extract_negative_controls <- function(bs_cohort) {
+  cataract_icd3 <- c("H25", "H26")   # age-related and other cataract (H27/H28 excluded: linked to metabolic disease)
+
+  all_dx <- get_lpr_diagnoses(unique(bs_cohort$pnr), diagtypes = c("A", "B")) %>%   # A+B consistent with main outcomes
+    filter(icd3 %in% cataract_icd3) %>%                                              # cataract contacts only
+    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%             # attach index date per person
+    filter(date_contact > surgery_date)                                               # post-index contacts only
+
+  date_cataract <- all_dx %>%
+    group_by(pnr) %>%
+    arrange(date_contact) %>%
+    slice(1) %>%                                   # earliest cataract contact per person
+    ungroup() %>%
+    select(pnr, date_cataract = date_contact)
+
+  bs_cohort %>%
+    select(pnr) %>%
+    left_join(date_cataract, by = "pnr")   # NA for persons with no post-index cataract
 }
 
 # ============================================================================
@@ -1049,8 +1105,12 @@ main_extraction <- function() {
   saveRDS(demographics, file.path(path_output, "extract_demographics.rds"))
 
   cat("Extracting dementia outcomes (all cohort members)...\n")
-  dementia <- extract_dementia_outcomes(full_cohort)
+  dementia <- extract_dementia_outcomes(full_cohort)   # includes date_dementia_primary for sensitivity 7g.1
   saveRDS(dementia, file.path(path_output, "extract_dementia.rds"))
+
+  cat("Extracting negative control outcome — cataract (sensitivity 7g.6)...\n")
+  negative_controls <- extract_negative_controls(full_cohort)
+  saveRDS(negative_controls, file.path(path_output, "extract_negative_controls.rds"))
 
   cat("Extracting weight outcomes (BS patients only -- DBSO)...\n")
   weights <- extract_weight_outcomes(bs_only)

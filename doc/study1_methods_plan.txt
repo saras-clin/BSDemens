@@ -494,30 +494,87 @@ Each individual followed from index date until the first of:
 
 7g. Sensitivity analyses
     1. Restrict dementia ascertainment to primary (A) diagnosis codes only
-       (more specific, less sensitive)
+       (more specific, less sensitive).
+       IMPLEMENTED: date_dementia_primary extracted in 02 (A-code-only LPR query);
+       dementia_event_primary and follow_up_days_primary computed in 04.
+       Analysis-time: re-run Cox models substituting dementia_event_primary and
+       follow_up_days_primary for the main outcome variables.
+
     2. Exclude dementia events within first 12 months of surgery
-       (addresses surveillance bias / unmasking of pre-existing dementia)
-    3. Restrict BS cohort to public-hospital procedures only
+       (addresses surveillance bias / unmasking of pre-existing dementia).
+       Analysis-time: filter(follow_up_days > 365 | dementia_event == 0) before
+       running Cox. No new data extraction needed.
+
+    3. [NOT FEASIBLE — moved to limitations] Restrict BS cohort to
+       public-hospital procedures only.
+       The DBSO data delivered by SunDK does not include a hospital sector
+       indicator that distinguishes public from private procedures. No such
+       variable is available in the extracted data. This sensitivity analysis
+       cannot be performed. The inability to stratify by hospital sector is
+       noted as a limitation in section 10 below.
+
     4. Censor comparators at time of bariatric surgery (already in main analysis;
-       report results without this censoring as sensitivity check)
-    5. Index date source: repeat main analysis using OpDateLPR (LPR-recorded surgery
-       date) instead of DatoPER_prim (DBSO clinical record) as index date.
-       Triggered only if the data quality check (section 2) shows systematic
-       discrepancy between the two dates (≥5% of patients differing by >7 days).
-       Expected result: near-identical estimates. Large differences would indicate
-       that date source affects follow-up classification and warrants reporting.
-    6. Negative control outcome [Protocol reviewer comment v]:
-       Include an outcome unlikely to be causally related to bariatric surgery
-       (e.g. bone fracture, cataract) to detect residual confounding or
-       surveillance bias. If HR ≈ 1.0 for negative control, this supports
-       internal validity of the main analysis.
+       report results without this censoring as sensitivity check).
+       Analysis-time: recompute censor_date as pmin(follow_up_end, emigration_date,
+       na.rm = TRUE), omitting bs_crossover_date. No new data extraction needed.
+
+    5. [NOT TRIGGERED] Index date source: DatoPER_prim vs OpDateLPR.
+       Date quality check performed: distribution of (DatoPER_prim − OpDateLPR)
+       showed no systematic discrepancy (≥95% of patients within 7 days).
+       Decision: DatoPER_prim is used as index date; sensitivity analysis 7g.5
+       is not needed and is removed from the pre-specified analysis plan.
+
+    6. Negative control outcome — cataract [Protocol reviewer comment v].
+       IMPLEMENTED: date_cataract extracted in 02 (extract_negative_controls());
+       cataract_event and follow_up_days_cataract computed in 04.
+
+       Outcome: incident cataract (ICD-10 H25: age-related cataract;
+         H26: other cataract). Diagnosed in hospital register (LPR2 + LPR3),
+         diagtypes A+B, first contact after index date per person.
+         H27 (other lens disorders) and H28 (cataract in diseases classified
+         elsewhere, typically diabetic cataract) excluded: H28 lies on a
+         metabolic pathway shared with obesity and could be affected by BS.
+
+       Rationale for cataract: lens opacification has no biologically plausible
+         pathway from bariatric surgery. The established risk factors for
+         cataract — age, cumulative UV exposure, smoking history, and genetic
+         predisposition — are not materially altered by bariatric surgery or
+         the weight loss it produces. Bariatric surgery does not affect intraocular
+         pressure, lens metabolism, or oxidative stress in the lens in ways that
+         would be expected to change cataract incidence. If the study population
+         shares unmeasured confounders between BS exposure and dementia risk
+         (e.g. unmeasured SES, healthcare-seeking behaviour, or surveillance
+         intensity), these same confounders would also be expected to produce a
+         non-null HR for cataract. An HR near 1.0 for cataract therefore supports
+         that the main dementia estimate is not substantially driven by such bias.
+
+       Why fracture was considered and rejected:
+         Bone fracture was an obvious candidate because it is common, ascertained
+         in LPR, and not on the causal pathway to dementia. However, RYGB
+         specifically and substantially increases fracture risk through calcium
+         and Vitamin D malabsorption, secondary hyperparathyroidism, and
+         accelerated bone loss following rapid weight loss. This effect is
+         well-documented in the bariatric surgery literature (e.g. Nakamura KM
+         et al. Obes Surg 2014; Rousseau C et al. Obes Surg 2016) and is
+         considered a recognised complication of RYGB in clinical guidelines.
+         SG has lower malabsorption but is not free of this effect. Because
+         bariatric surgery has a true biological effect on fracture risk, a
+         non-null HR for fracture in the BS vs GP comparison cannot be
+         interpreted as evidence of bias — it would be uninterpretable as a
+         negative control result. Fracture was therefore excluded.
+
+       Interpretation: HR ≈ 1.0 for cataract supports internal validity of the
+         main dementia analysis. HR ≠ 1.0 would prompt investigation of
+         confounding or surveillance differential.
 
     Note — removed pre-specified sensitivity analyses:
-    (i)  N06D exclusion at baseline: this is now a main-analysis exclusion criterion
-         (any N06D dispensing before surgery date excludes the patient). A sensitivity
-         analysis on top of an exclusion criterion would have no comparison group.
-    (ii) Population income quintiles: this is now the main analysis (SEPLINE approach
-         implemented in 03_extract_ses.R). No within-cohort quintile version exists.
+    (i)   N06D exclusion at baseline: this is now a main-analysis exclusion
+          criterion. A sensitivity analysis on top of an exclusion criterion
+          would have no comparison group.
+    (ii)  Population income quintiles: this is now the main analysis (SEPLINE
+          approach in 03_extract_ses.R). No within-cohort quintile version exists.
+    (iii) 7g.5 (OpDateLPR index date): not triggered — date quality check showed
+          no systematic discrepancy (see item 5 above).
 
 Implementation note for sensitivity analyses and subgroup analyses:
     Use lapply() + data.table::rbindlist() to loop across outcomes/models rather
@@ -651,6 +708,15 @@ DATA MANAGEMENT:
     Code: add to explore_dbso() in R/prepare_dbso.R.
 
 LIMITATIONS TO DISCUSS IN PAPER:
+  - No hospital sector stratification: approximately 50% of Danish bariatric
+    surgery is performed in private hospitals. Private patients tend to differ
+    from public patients in socioeconomic position. A pre-specified sensitivity
+    analysis restricting to public-hospital procedures (7g.3) was planned but
+    could not be performed because the DBSO data delivered by SunDK does not
+    include a hospital sector indicator. The impact of this is likely limited,
+    as all Cox models adjust for three dimensions of SES (education, income,
+    and occupation per SEPLINE), which accounts for much of the systematic
+    difference between private and public patients.
   - Surveillance bias / healthy user effect: patients with incipient dementia
     are likely screened out at BS assessment, lowering measured dementia risk
     post-surgery. Partially addressed by sensitivity analysis 7g.2.

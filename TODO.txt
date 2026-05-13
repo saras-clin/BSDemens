@@ -29,6 +29,34 @@ CONFIRM — VERIFY BEFORE TRUSTING RESULTS
 
 
 ================================================================================
+SUPERVISOR DISCUSSION — DECISIONS NEEDED
+================================================================================
+
+[DISCUSS-1] Public vs private hospital — sensitivity analysis not feasible
+  Background: ~50% of Danish BS is private. Private patients differ
+              systematically in SES, which is a potential residual confounder
+              for dementia risk. A sensitivity analysis restricting to
+              public-hospital procedures (pre-specified as 7g.3) was intended
+              to test robustness to this heterogeneity.
+  Problem:    DBSO data from SunDK does not include a hospital sector
+              indicator. We cannot distinguish public from private procedures
+              in the current dataset.
+  Options to discuss with supervisors:
+    A) Accept as a limitation (current approach — documented in methods plan
+       section 10 and TODO). No further action needed.
+    B) Contact SunDK to request a hospital sector variable or institution
+       code for the delivered DBSO file (dfr_2025_10_31.sas7bdat). If
+       available, add to 00_prepare_dbso.R and re-run sensitivity analysis.
+    C) Use LPR as a proxy: if a patient's surgery date (datoper_prim) matches
+       an LPR procedure record, they were likely in an LPR-reporting hospital
+       (predominantly public). Imperfect — private clinics are required to
+       report to LPR3 but compliance varies.
+  Current status: treated as a limitation. Sensitivity analysis 7g.3 removed
+                  from analysis plan. Discuss whether option B or C is
+                  worth pursuing before manuscript submission.
+
+
+================================================================================
 MINOR — REFINEMENTS AND DECISIONS TO MAKE
 ================================================================================
 

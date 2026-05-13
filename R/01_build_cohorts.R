@@ -285,6 +285,24 @@ build_bs_cohort <- function() {
 
   n_after_dementia <- nrow(bs)                           # attrition step 3: after pre-surgery dementia exclusion
 
+  # Exclusion: emigrated before surgery date (protocol criterion 3)
+  # Persons who left Denmark before their surgery date are not valid cohort members —
+  # they cannot contribute Danish register follow-up time for dementia outcomes.
+  # VNDS register: indud_kode == "U" = emigration (udrejse); haend_dato = departure date.
+  vnds_bs <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  emigrated_bs_pnrs <- vnds_bs %>%
+    filter(pnr %in% !!bs$pnr, indud_kode == "U") %>%          # emigration events only
+    select(pnr, haend_dato) %>%                                # haend_dato = emigration date
+    collect() %>%                                              # pull into memory for join
+    mutate(haend_dato = as.Date(haend_dato)) %>%               # character "YYYY-MM-DD" to Date
+    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%
+    filter(haend_dato < surgery_date) %>%                      # emigration strictly before surgery
+    distinct(pnr) %>%                                          # one row per person
+    pull(pnr)
+  bs <- bs %>% filter(!pnr %in% emigrated_bs_pnrs)            # remove pre-surgery emigrants
+
+  n_after_emigration <- nrow(bs)                              # attrition step 4: after emigration exclusion
+
   # Exclusion: antidementia medication (ATC N06D) dispensed before surgery
   # Protocol criterion 3. N06D at baseline (donepezil, rivastigmine, galantamine,
   # memantine) is diagnostic of either diagnosed or suspected dementia. Excluding
@@ -325,6 +343,7 @@ build_bs_cohort <- function() {
     n_dbso_start        = n_dbso_start,        # n before any exclusions
     n_after_eligibility = n_after_eligibility, # n after 30-day death / age / registry filters
     n_after_dementia    = n_after_dementia,    # n after pre-surgery dementia exclusion
+    n_after_emigration  = n_after_emigration,  # n after emigration-before-surgery exclusion
     n_final             = nrow(cohort)         # n after N06D exclusion
   )
 }
@@ -479,33 +498,52 @@ build_gp_comparator <- function(bs_cohort) {
 
   n_after_dementia <- nrow(gp_after_dementia)             # attrition after ICD dementia exclusion
 
+  # Exclusion: emigrated before index date (protocol criterion 3)
+  # GP comparators who emigrated from Denmark before their assigned index date
+  # cannot contribute Danish register follow-up time and must be excluded.
+  # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
+  vnds_gp <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  emigrated_gp_pnrs <- vnds_gp %>%
+    filter(pnr %in% !!gp_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only
+    select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
+    collect() %>%                                                      # pull into memory for join
+    mutate(haend_dato = as.Date(haend_dato)) %>%                       # character to Date
+    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%
+    filter(haend_dato < index_date) %>%                                # emigration before index date
+    distinct(pnr) %>%                                                  # one row per person
+    pull(pnr)
+  gp_after_emigration <- gp_after_dementia %>% filter(!pnr %in% emigrated_gp_pnrs)   # remove pre-index emigrants
+
+  n_after_emigration <- nrow(gp_after_emigration)         # attrition after emigration exclusion
+
   # Exclude GP comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
   # N06D is a proxy for undiagnosed or pre-clinical dementia not captured by ICD codes alone.
   # Applied symmetrically to all three cohorts: any dispensing before the person's index date qualifies.
   lmdb_gp <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for GP comparators
 
-  max_index_gp <- max(gp_after_dementia$index_date)           # upper bound for lazy parquet filter
+  max_index_gp <- max(gp_after_emigration$index_date)          # upper bound for lazy parquet filter
 
   n06d_pnrs_gp <- lmdb_gp %>%
     filter(
-      pnr %in% !!gp_after_dementia$pnr,                       # restrict to matched GP comparators
+      pnr %in% !!gp_after_emigration$pnr,                      # restrict to matched GP comparators
       substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
       eksd <= !!max_index_gp                                   # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
     select(pnr, eksd, atc) %>%                                 # only needed columns
     collect() %>%                                              # pull filtered records into memory
-    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
+    inner_join(gp_after_emigration %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
     filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
     distinct(pnr) %>%                                          # one row per person with any pre-index N06D
     pull(pnr)
 
-  gp_final <- gp_after_dementia %>% filter(!pnr %in% n06d_pnrs_gp)   # remove pre-index antidementia medication users
+  gp_final <- gp_after_emigration %>% filter(!pnr %in% n06d_pnrs_gp)   # remove pre-index antidementia medication users
 
   list(
-    cohort           = gp_final,
-    n_matched_raw    = n_matched_raw,     # before exclusions
-    n_after_dementia = n_after_dementia,  # after ICD dementia exclusion
-    n_final          = nrow(gp_final)     # after N06D exclusion
+    cohort              = gp_final,
+    n_matched_raw       = n_matched_raw,       # before exclusions
+    n_after_dementia    = n_after_dementia,    # after ICD dementia exclusion
+    n_after_emigration  = n_after_emigration,  # after emigration-before-index exclusion
+    n_final             = nrow(gp_final)       # after N06D exclusion
   )
 }
 
@@ -746,31 +784,50 @@ build_obesity_comparator <- function(bs_cohort) {
 
   n_after_dementia <- nrow(ob_after_dementia)             # attrition after ICD dementia exclusion
 
+  # Exclusion: emigrated before index date (protocol criterion 3)
+  # Obesity comparators who emigrated from Denmark before their assigned index date
+  # cannot contribute Danish register follow-up time and must be excluded.
+  # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
+  vnds_ob <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  emigrated_ob_pnrs <- vnds_ob %>%
+    filter(pnr %in% !!ob_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only
+    select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
+    collect() %>%                                                      # pull into memory for join
+    mutate(haend_dato = as.Date(haend_dato)) %>%                       # character to Date
+    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%
+    filter(haend_dato < index_date) %>%                                # emigration before index date
+    distinct(pnr) %>%                                                  # one row per person
+    pull(pnr)
+  ob_after_emigration <- ob_after_dementia %>% filter(!pnr %in% emigrated_ob_pnrs)   # remove pre-index emigrants
+
+  n_after_emigration <- nrow(ob_after_emigration)         # attrition after emigration exclusion
+
   # Exclude obesity comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
   lmdb_ob <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for obesity comparators
 
-  max_index_ob <- max(ob_after_dementia$index_date)           # upper bound for lazy parquet filter
+  max_index_ob <- max(ob_after_emigration$index_date)          # upper bound for lazy parquet filter
 
   n06d_pnrs_ob <- lmdb_ob %>%
     filter(
-      pnr %in% !!ob_after_dementia$pnr,                       # restrict to matched obesity comparators
+      pnr %in% !!ob_after_emigration$pnr,                      # restrict to matched obesity comparators
       substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
       eksd <= !!max_index_ob                                   # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
     select(pnr, eksd, atc) %>%                                 # only needed columns
     collect() %>%                                              # pull filtered records into memory
-    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
+    inner_join(ob_after_emigration %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
     filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
     distinct(pnr) %>%                                          # one row per person with any pre-index N06D
     pull(pnr)
 
-  ob_final <- ob_after_dementia %>% filter(!pnr %in% n06d_pnrs_ob)   # remove pre-index antidementia medication users
+  ob_final <- ob_after_emigration %>% filter(!pnr %in% n06d_pnrs_ob)   # remove pre-index antidementia medication users
 
   list(
-    cohort           = ob_final,
-    n_matched_raw    = n_matched_raw,     # before exclusions
-    n_after_dementia = n_after_dementia,  # after ICD dementia exclusion
-    n_final          = nrow(ob_final)     # after N06D exclusion
+    cohort              = ob_final,
+    n_matched_raw       = n_matched_raw,       # before exclusions
+    n_after_dementia    = n_after_dementia,    # after ICD dementia exclusion
+    n_after_emigration  = n_after_emigration,  # after emigration-before-index exclusion
+    n_final             = nrow(ob_final)       # after N06D exclusion
   )
 }
 
@@ -898,9 +955,13 @@ main_build_cohorts <- function() {
       bs_result$n_after_dementia,
       bs_result$n_after_eligibility - bs_result$n_after_dementia))
   cat(sprintf("%-52s %8d %12d\n",
+      "  After: emigration before surgery date",
+      bs_result$n_after_emigration,
+      bs_result$n_after_dementia - bs_result$n_after_emigration))
+  cat(sprintf("%-52s %8d %12d\n",
       "  After: pre-surgery N06D prescriptions",
       bs_result$n_final,
-      bs_result$n_after_dementia - bs_result$n_final))
+      bs_result$n_after_emigration - bs_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "BS cohort (final)", bs_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n",
@@ -911,9 +972,13 @@ main_build_cohorts <- function() {
       gp_result$n_after_dementia,
       gp_result$n_matched_raw - gp_result$n_after_dementia))
   cat(sprintf("%-52s %8d %12d\n",
+      "  After: emigration before index date",
+      gp_result$n_after_emigration,
+      gp_result$n_after_dementia - gp_result$n_after_emigration))
+  cat(sprintf("%-52s %8d %12d\n",
       "  After: pre-index N06D prescriptions",
       gp_result$n_final,
-      gp_result$n_after_dementia - gp_result$n_final))
+      gp_result$n_after_emigration - gp_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "GP cohort (final)", gp_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n",
@@ -924,9 +989,13 @@ main_build_cohorts <- function() {
       ob_result$n_after_dementia,
       ob_result$n_matched_raw - ob_result$n_after_dementia))
   cat(sprintf("%-52s %8d %12d\n",
+      "  After: emigration before index date",
+      ob_result$n_after_emigration,
+      ob_result$n_after_dementia - ob_result$n_after_emigration))
+  cat(sprintf("%-52s %8d %12d\n",
       "  After: pre-index N06D prescriptions",
       ob_result$n_final,
-      ob_result$n_after_dementia - ob_result$n_final))
+      ob_result$n_after_emigration - ob_result$n_final))
   cat(sprintf("%-52s %8d %12s\n", "Obesity cohort (final)", ob_result$n_final, ""))
   cat(strrep("-", 74), "\n")
   cat(sprintf("%-52s %8d %12s\n", "TOTAL full_cohort", nrow(full_cohort), ""))
