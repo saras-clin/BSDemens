@@ -106,15 +106,11 @@ Individuals identified by ICD-10 **E66** (obesity) in DNPR (LPR2 or LPR3) at any
 
 > **Note:** E66 has low sensitivity for overweight; it captures primarily the more severely obese end of the weight spectrum. This is acceptable because BS eligibility itself requires severe obesity (BMI ≥ 40 or ≥ 35 with comorbidity).
 
-#### Open Question — GLP-1 Receptor Agonist Use in the Obesity Comparator
+#### GLP-1 Receptor Agonist Use in the Obesity Comparator — DECISION MADE
 
-Should obesity comparators who initiate a GLP-1 receptor agonist (ATC A10BJ) for weight loss be excluded at baseline or censored at treatment initiation?
+GLP-1 receptor agonist (ATC A10BJ) use by obesity comparators is **not** an exclusion criterion and is **not** used as a censoring event in the main analysis. GLP-1 RAs were rare as obesity treatment before approximately 2021; excluding or censoring users in the main analysis would create calendar-period imbalance and disproportionately reduce the comparator pool in recent years.
 
-*Arguments for exclusion or censoring:* GLP-1 RAs at obesity doses achieve 10–15% body weight reduction, introducing a competing weight-loss intervention. If GLP-1 RAs themselves affect dementia risk (emerging evidence from SELECT trial and observational studies), an uncontrolled GLP-1 signal in the obesity comparator could bias the BS–dementia estimate.
-
-*Arguments against:* GLP-1 RAs were rare as obesity treatment before ~2021; excluding on GLP-1 would create calendar-period imbalance and disproportionately shrink the pool in recent years. GLP-1s are also used for T2D at lower doses, making indication difficult to separate without dose data.
-
-**Tentative position:** Do not exclude or censor in the main analysis. Address as a sensitivity analysis: repeat the BS vs obesity comparison after excluding comparators who ever fill a GLP-1 prescription at obesity-range dose (liraglutide ≥ 2.4 mg, semaglutide ≥ 1 mg) before or during follow-up. *DECISION NEEDED before analysis begins — see Section 11, item [B5].*
+**Pre-specified sensitivity analysis (SA5):** The BS versus obesity comparison is repeated after censoring obesity comparators at the date of first dispensing of a GLP-1 RA at obesity-indicated dose (liraglutide ≥ 2.4 mg or semaglutide ≥ 1 mg) during follow-up. This quantifies the potential influence of GLP-1 RA use on the main estimate.
 
 ---
 
@@ -392,7 +388,7 @@ Apply to: all 6 sensitivity analyses, all 3 comparison pairs, secondary outcomes
 
 ### Protocol Decisions
 
-- **GLP-1 receptor agonist use in the obesity comparator** *(DECISION NEEDED)*: Main analysis: include GLP-1 users (no exclusion/censoring). Sensitivity analysis: repeat BS vs obesity comparison after excluding comparators with any GLP-1 fill at obesity-range dose (liraglutide ≥ 2.4 mg, semaglutide ≥ 1 mg). See full discussion in section 3c.
+- **GLP-1 receptor agonist use in the obesity comparator** *(DECIDED)*: Main analysis: include GLP-1 users without exclusion or censoring. Pre-specified sensitivity analysis (SA5): repeat BS vs obesity comparison after censoring obesity comparators at first dispensing of a GLP-1 RA at obesity-indicated dose (liraglutide ≥ 2.4 mg or semaglutide ≥ 1 mg) during follow-up. See section 3c.
 - Confirm whether NMI individual conditions or only the composite score is reported in Table 1 and used as covariate.
 - SEP not in original protocol draft — confirm with co-authors that including education, income, and occupation in Model 3 is agreed.
 - Censoring of comparators at time of BS: confirmed as main analysis. Implemented via `bs_crossover_date`. Pre-index BS → excluded from pool; post-index BS → enrolled then censored.
@@ -489,11 +485,25 @@ Both comparisons are pre-specified and will be reported. The question is which s
 
 *Recommendation:* Keep current approach. Address as a limitation. Sensitivity analysis option: restrict GP comparator to persons with at least one E66 code recorded before index date. Discuss feasibility.
 
+#### [A4] Matching Ratios and Matching Variables — Confirm Before Running Cohort Build
+
+**Current plan:** GP comparator matched 1:25; obesity comparator matched 1:5. Matching variables: sex (exact) and birth year (±1 year). Index date is assigned as the BS patient's surgery date.
+
+*Questions for supervisors:*
+
+- **Matching ratios:** Are 1:25 (GP) and 1:5 (obesity) the agreed ratios? Higher ratios increase power but also computational load and pool depletion risk (especially for the obesity comparator, where the eligible pool is smaller). If pool depletion is severe for rare birth-year/sex strata, fewer controls than the target ratio will be available; the code logs a warning for affected patients.
+
+- **Calendar month matching:** Should the matching include calendar month of index date in addition to birth year? Arguments for: reduces confounding by secular trends in dementia ascertainment and BS practice within a year. Arguments against: tightens the pool further, increases the risk of zero matches for 2010–2012 when DBSO registration was less complete. Currently not implemented; would require code changes in `build_cohorts.R` (N\_GP\_PER\_BS and N\_OBESITY\_PER\_BS constants and matching loop).
+
+- **Birth year window:** ±1 year is the current tolerance. A narrower window (exact birth year) would improve matching balance on age but further deplete the pool; a wider window (±2 years) would ease matching at the cost of greater age imbalance. Confirm ±1 year is acceptable.
+
+*Note:* DBSO underreporting in 2010–2012 (MINOR-16 in TODO.txt) may cause zero-match warnings for early-index-date BS patients in the obesity comparator. If ≥5% of 2010–2012 patients receive zero obesity comparator matches, a sensitivity analysis restricting to index dates from 2013 onwards will be added. This is linked to the study period decision in [A1].
+
 ---
 
 ### B. Analysis Methods
 
-#### [B1] Clustering in Cox Models — Robust SE vs Stratified Cox
+#### [B1] Clustering in Cox Models — Robust SE vs Stratified Cox — TBD
 
 Matched cohort designs require accounting for within-cluster correlation (BS patient and their matched comparators share the same index date and matching variables).
 
@@ -502,7 +512,7 @@ Matched cohort designs require accounting for within-cluster correlation (BS pat
 
 Implication: this must be pre-specified. The two approaches can give different point estimates in addition to different standard errors.
 
-*Question for supervisors:* Which approach is standard in the group and consistent with prior published analyses from this data environment?
+**STATUS: TBD.** Must be agreed with co-authors and pre-specified before analysis begins. Confirm which approach is standard in the group and consistent with prior published analyses from this data environment.
 
 #### [B2] Landmark Analysis Method — Landmark Restriction vs Time-Split Approach
 
@@ -524,7 +534,7 @@ The two approaches answer different questions and are not interchangeable.
 - Clinical rationale for <50: this defines the group where BS is being used for metabolic rather than primarily weight-loss reasons, and where a dementia-preventive effect over a lifetime horizon would be most meaningful.
 - Alternative thresholds: <55/≥55 gives more events in the younger group but reduces the contrast; <60/≥60 captures the clinically important late-onset dementia age range but the older group becomes the majority.
 
-*Question for supervisors:* Is <50/≥50 the pre-registered or conceptually preferred cutpoint? If <50 yields fewer than 20–30 events, results will be reported as exploratory.
+**STATUS: TBD.** <50/≥50 is the current pre-specified threshold. Will be reviewed once observed event counts are available from the first cohort build. If fewer than 20–30 dementia events are observed in the <50 stratum, an alternative threshold will be considered and documented as a protocol amendment.
 
 #### [B4] Multiple Testing — No Correction Across Pre-Specified Analyses
 
@@ -536,13 +546,9 @@ The two approaches answer different questions and are not interchangeable.
 
 *Question for supervisors:* Is the no-correction approach accepted by all co-authors? Should we pre-register the analysis plan (e.g., OSF) to strengthen this argument?
 
-#### [B5] GLP-1 Receptor Agonists — Main Analysis and Sensitivity *(Protocol item MINOR-15)*
+#### [B5] GLP-1 Receptor Agonists — DECIDED
 
-**Current plan:** Include GLP-1 users in the main analysis with GLP-1 use as a covariate (binary: any dispensing of ATC A10BJ at obesity-range dose before index date); add a sensitivity analysis excluding GLP-1 users from the obesity comparator.
-
-*Complication:* GLP-1 agonists have become a major obesity treatment from ~2021 onwards. Their use in the obesity comparator may be a proxy for medically treated severe obesity, and they may independently affect dementia risk. This creates both confounding and effect modification concerns.
-
-*Question for co-authors:* Is the current inclusion-with-covariate approach agreed? Should the sensitivity analysis exclude GLP-1 users from both the BS cohort and the obesity comparator, or only from the comparator?
+**Decision:** GLP-1 RA use is not an exclusion criterion and is not used as a censoring event in the main analysis. A pre-specified sensitivity analysis (SA5) repeats the BS vs obesity comparison after censoring obesity comparators at first dispensing of a GLP-1 RA at obesity-indicated dose (liraglutide ≥ 2.4 mg or semaglutide ≥ 1 mg, ATC A10BJ) during follow-up. The BS cohort is not modified in this sensitivity analysis, as GLP-1 use after bariatric surgery is rare and would in any case represent post-index exposure. See section 3c for full rationale.
 
 #### [B6] Calendar Period Confounding in RYGB vs SG Comparison
 
@@ -579,3 +585,28 @@ Model 3 includes education, income, and occupation as confounders per SEPLINE. T
 SEP is a well-established dementia risk factor. Including it in Model 3 reduces residual confounding by SES — particularly relevant for the BS vs GP comparison.
 
 *Question for co-authors:* Is there agreement on the SEPLINE approach? Should it be included in the pre-specified plan and noted in any pre-registration?
+
+
+
+DISCUSS-1] Public vs private hospital — sensitivity analysis not feasible
+  Background: ~50% of Danish BS is private. Private patients differ
+              systematically in SES, which is a potential residual confounder
+              for dementia risk. A sensitivity analysis restricting to
+              public-hospital procedures (pre-specified as 7g.3) was intended
+              to test robustness to this heterogeneity.
+  Problem:    DBSO data from SunDK does not include a hospital sector
+              indicator. We cannot distinguish public from private procedures
+              in the current dataset.
+  Options to discuss with supervisors:
+    A) Accept as a limitation (current approach — documented in methods plan
+       section 10 and TODO). No further action needed.
+    B) Contact SunDK to request a hospital sector variable or institution
+       code for the delivered DBSO file (dfr_2025_10_31.sas7bdat). If
+       available, add to 00_prepare_dbso.R and re-run sensitivity analysis.
+    C) Use LPR as a proxy: if a patient's surgery date (datoper_prim) matches
+       an LPR procedure record, they were likely in an LPR-reporting hospital
+       (predominantly public). Imperfect — private clinics are required to
+       report to LPR3 but compliance varies.
+  Current status: treated as a limitation. Sensitivity analysis 7g.3 removed
+                  from analysis plan. Discuss whether option B or C is
+                  worth pursuing before manuscript submission.

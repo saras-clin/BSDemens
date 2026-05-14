@@ -29,34 +29,6 @@ CONFIRM — VERIFY BEFORE TRUSTING RESULTS
 
 
 ================================================================================
-SUPERVISOR DISCUSSION — DECISIONS NEEDED
-================================================================================
-
-[DISCUSS-1] Public vs private hospital — sensitivity analysis not feasible
-  Background: ~50% of Danish BS is private. Private patients differ
-              systematically in SES, which is a potential residual confounder
-              for dementia risk. A sensitivity analysis restricting to
-              public-hospital procedures (pre-specified as 7g.3) was intended
-              to test robustness to this heterogeneity.
-  Problem:    DBSO data from SunDK does not include a hospital sector
-              indicator. We cannot distinguish public from private procedures
-              in the current dataset.
-  Options to discuss with supervisors:
-    A) Accept as a limitation (current approach — documented in methods plan
-       section 10 and TODO). No further action needed.
-    B) Contact SunDK to request a hospital sector variable or institution
-       code for the delivered DBSO file (dfr_2025_10_31.sas7bdat). If
-       available, add to 00_prepare_dbso.R and re-run sensitivity analysis.
-    C) Use LPR as a proxy: if a patient's surgery date (datoper_prim) matches
-       an LPR procedure record, they were likely in an LPR-reporting hospital
-       (predominantly public). Imperfect — private clinics are required to
-       report to LPR3 but compliance varies.
-  Current status: treated as a limitation. Sensitivity analysis 7g.3 removed
-                  from analysis plan. Discuss whether option B or C is
-                  worth pursuing before manuscript submission.
-
-
-================================================================================
 MINOR — REFINEMENTS AND DECISIONS TO MAKE
 ================================================================================
 
@@ -74,9 +46,9 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
   Code:     extract_outcomes_covariates.R — extract_diabetes_classification().
 
 [MINOR-3] Matching ratios — confirm with supervisor
+  → Moved to study1_methods_plan.md section 11 [A4].
   Current:  1:25 GP, 1:5 obesity, exact matching on sex + birth year (±1).
-  Action:   Confirm ratios with supervisor. Consider whether index date matching
-            (same calendar month) should be added.
+  Questions: confirm ratios; calendar month matching; birth year window ±1.
   Code:     build_cohorts.R — N_GP_PER_BS, N_OBESITY_PER_BS constants.
 
 [MINOR-7] UDDA — verify whether it is annual status or event-based
@@ -107,9 +79,9 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
   Action:   Learn before starting Cox model scripts.
 
 [MINOR-15] GLP-1 exclusion in obesity comparator — confirm with co-authors
-  Persons on GLP-1 agonists (ATC A10BJ) before index date may have altered
-  dementia risk. Tentative plan: include in main analysis with GLP-1 as
-  covariate; add sensitivity analysis excluding.
+  → Moved to study1_methods_plan.md section 11 [B5].
+  Tentative plan: include in main analysis with GLP-1 as covariate;
+  add sensitivity analysis excluding GLP-1 users from obesity comparator.
   Action:   Confirm analytical decision with co-authors before implementing.
 
 [MINOR-16] DBSO underreporting 2010-2012 — check match rates after first run
@@ -117,6 +89,8 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
   Action:   After running main_build_cohorts(), examine match rate warnings.
             If zero-match rates are high for 2010-2012, add sensitivity analysis
             restricting to index dates from 2013+.
+  → If triggered, discuss study period restriction with supervisors.
+    See study1_methods_plan.md section 11 [A1] and [A4].
 
 
 ================================================================================

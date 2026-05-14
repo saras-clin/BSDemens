@@ -1,134 +1,79 @@
-# ============================================================================
-# TODO.txt — Open Issues for BS & Dementia Pipeline
-# ============================================================================
-# Priority levels:
-#   CRITICAL — must fix before analysis can be trusted; potential for biased results
-#   CONFIRM  — requires input from data manager or clinician before coding
-#   MINOR    — known limitation or refinement; current approach is defensible
+================================================================================
+TODO — BS & DEMENTIA PROJECT (doc/)
+================================================================================
+Last updated: 2026-05-14
 
-# ============================================================================
-# CRITICAL ISSUES
-# ============================================================================
+Items removed when resolved. See git log for history.
+All CRITICALs and most CONFIRMs are resolved — pipeline is ready for first run.
 
-CRITICAL-1: Pre-surgery N06D exclusion — IMPLEMENTED
-  STATUS: Implemented in R/01_build_cohorts.R, build_bs_cohort().
-  All persons with any N06D dispensing (lmdb) before their surgery date are
-  excluded. lmdb column names assumed: atc, eksd (CONFIRM-1: verify on DST).
 
-CRITICAL-2: Death within 30 days after surgery — IMPLEMENTED
-  STATUS: Implemented in R/01_build_cohorts.R, build_bs_cohort().
-  Filter changed from doddato >= surgery_date to doddato > surgery_date + 30,
-  which excludes deaths from day 0 (surgery day) through day 30 inclusive.
+================================================================================
+CONFIRM — VERIFY BEFORE TRUSTING RESULTS
+================================================================================
 
-CRITICAL-3: NMI dementia predictors must be excluded for Study 1
-  STATUS: IMPLEMENTED (exclude_dementia_predictors = TRUE in extract_nmi).
-  LOCATION: R/02_extract_outcomes_covariates.R, extract_nmi()
-  CONTEXT: The NMI (Kristensen et al., Clin Epidemiol 2022) includes:
-    dx_F00_G30 (F00-F03 / G30 dementia diagnoses, weight = 9) and
-    rx_N06D (antidementia medications, weight = 11) as predictors.
-    In Study 1 where dementia is the OUTCOME, adjusting for these predictors
-    in Cox models would introduce circular confounding (near-perfect collinearity
-    with the outcome for incident dementia cases). The exclude_dementia_predictors
-    parameter was added and main_extraction() now calls extract_nmi with TRUE.
-  NOTE: This means the NMI score used in Study 1 is a modified NMI (48 predictors
-    instead of 50). This should be noted in the methods section.
+[CONFIRM-4] DBSO underreporting 2010–2012 — check after first run
+  DBSO became mandatory in 2010; registration completeness may have been lower
+  in 2010–2012, affecting the E66 obesity comparator pool.
+  Action:   After running main_build_cohorts(), examine match rate warnings.
+            If zero-match rates are high for 2010–2012, add sensitivity analysis
+            restricting to index dates from 2013 onwards.
+            Contact DBSO registry managers for documentation on completeness
+            before citing specific years in the manuscript.
+  See:      study1_methods_plan.md section 11 [A1] and [A4].
 
-CRITICAL-4: Emigration censoring — RESOLVED
-  CONFIRMED: VNDS register (load_database("vnds")).
-    indud_kode == "U" = emigration (udrejse); haend_dato = emigration date (character "YYYY-MM-DD").
-  IMPLEMENTED: get_emigration_dates() in R/04_data_management_dementia.R now queries VNDS,
-    filters to indud_kode == "U", and returns earliest haend_dato per person.
-    pmin() in format_variables() applies emigration censoring automatically.
+[CONFIRM-5] GLP-1 exclusion in obesity comparator — confirm with co-authors
+  Tentative plan: include GLP-1 users in main analysis with GLP-1 as covariate;
+  add sensitivity analysis excluding GLP-1 users at obesity-range dose
+  (liraglutide ≥ 2.4 mg, semaglutide ≥ 1 mg; ATC A10BJ).
+  Action:   Confirm analytical decision with co-authors before implementing.
+  See:      study1_methods_plan.md section 11 [B5].
 
-# ============================================================================
-# CONFIRM — REQUIRES DATA MANAGER OR CLINICIAN INPUT
-# ============================================================================
 
-CONFIRM-1: LMDB column names — RESOLVED
-  CONFIRMED: pnr, atc, eksd (dispensing date), indo all present.
-  Full column list (35 columns) added to variables_dictionary.txt.
-  No code changes needed — assumed names were correct.
+================================================================================
+MINOR — REFINEMENTS AND DECISIONS TO MAKE
+================================================================================
 
-CONFIRM-2: DODSAARS column name for death date — RESOLVED
-  CONFIRMED: d_dodsdto is the death date column (not doddato).
-  Fixed in: R/01_build_cohorts.R (3 places) and R/02_extract_outcomes_covariates.R (3 places).
-  Full confirmed column list added to variables_dictionary.txt.
+[MINOR-1] Income quintiles — verify cell counts after first run
+  Implementation: 3-year average income from FAIK, population quintile cutpoints
+  stratified by sex × 5-year age group × year (SEPLINE approach). Implemented in
+  R/03_extract_ses.R section 3.2.
+  Action:   After running pipeline, verify that pop_quintile_cutpoints contains
+            reasonable cell counts. If any strata have n < 100, consider widening
+            to 10-year age groups for those cells.
+  Reference: Hjorth et al. Clin Epidemiol 2025;17:593–624, Table 9.
 
-CONFIRM-3: LPR_A_KONTAKT column names — PARTIALLY RESOLVED
-  CONFIRMED: load_database("lpr_a_kontakt") correct; "lpr3f_kontakter" does NOT exist.
-  CONFIRMED: load_database("lpr_a_diagnose") correct; "lpr3f_diagnoser" does NOT exist.
-  CONFIRMED: contact date column = kont_starttidspunkt (not dato_start — dato_start does not exist)
-  CONFIRMED: contact type column = kont_type (not kontakttype — kontakttype does not exist)
-  Fixed in: R/01_build_cohorts.R (2 places) and R/02_extract_outcomes_covariates.R (3 places).
-  Full lpr_a_kontakt column list added to variables_dictionary.txt.
-  CONFIRM-3b: lpr_a_diagnose column names — RESOLVED
-    CONFIRMED by user: assumed columns (dw_ek_kontakt, diagnosekode, diagnosetype,
-    senare_afkraeftet) are correct. No code changes needed.
+[MINOR-3] OSDC diabetes file covers up to 2022 only
+  Patients with diabetes onset in 2023–2024 will be classified as No_diabetes.
+  Impact is minimal (very recent onset relative to surgery date).
+  Action:   Check whether an updated OSDC file exists (contact SDS or OSDC team).
+  Code:     R/02_extract_outcomes_covariates.R — extract_diabetes_classification().
+  See:      study1_methods_plan.md section 10 (limitations).
 
-CONFIRM-6: load_database("dbso") — RESOLVED
-  CONFIRMED: load_database("dbso") accesses the parquet prepared by 00_prepare_dbso.R.
-  00_prepare_dbso.R has already been run (one-time only); keep the script for documentation.
-  All DBSO reads switched from arrow::open_dataset(path_dbso) to load_database("dbso").
-  Fixed in: R/01_build_cohorts.R (3 places), R/02_extract_outcomes_covariates.R (3 places),
-            R/05_descriptive_statistics_study1.R (1 place).
-  path_dbso variable removed from 01 and 02.
+[MINOR-4] Modified NMI — document in manuscript methods
+  For Study 1, nmi_score excludes dx_F00_G30 (weight 9) and rx_N06D (weight 11)
+  to avoid circular confounding with the dementia outcome. The resulting score
+  uses 48 of 50 NMI predictors and has not been externally validated.
+  Action:   Ensure this is clearly described in the statistical methods section
+            of the manuscript. Already documented in study1_methods_plan.md
+            section 5 (Covariates) and section 10 (Limitations).
+  Code:     R/02_extract_outcomes_covariates.R — extract_nmi(exclude_dementia_predictors = TRUE).
 
-CONFIRM-4: DBSO underreporting in 2010-2012
-  LOCATION: doc/study1_methods_plan.txt, section 3c
-  ISSUE: DBSO mandatory reporting began 2010. It is plausible that reporting
-    was incomplete in early years (2010-2012), which could affect the E66
-    pool for the obesity comparator (fewer persons coded during this period).
-    The match rate audit in main_build_cohorts() will flag zero-match BS patients.
-    Consider adding a sensitivity analysis restricting to index dates from 2013+
-    if zero-match rates are high for early years.
-  ACTION: Examine match rate warnings after running main_build_cohorts().
-    Contact DBSO registry managers for documentation on reporting completeness
-    by year before citing specific years in the manuscript.
 
-CONFIRM-5: GLP-1 exclusion in obesity comparator
-  LOCATION: doc/study1_methods_plan.txt, section 3c; R/01_build_cohorts.R
-  ISSUE: Persons on GLP-1 receptor agonists (ATC A10BJ) before the index date
-    have already received a pharmacological intervention for obesity/T2D that
-    may affect dementia risk. Including them in the obesity comparator group
-    mixes treated and untreated obesity. Discussion added to methods plan
-    (section 3c, Open Issues section 10). Tentative position: include in main
-    analysis with GLP-1 use as a covariate; add sensitivity analysis excluding.
-  ACTION: Confirm analytical decision with co-authors before implementing.
+================================================================================
+RESOLVED — REMOVED FROM ACTIVE LIST
+================================================================================
 
-# ============================================================================
-# MINOR — KNOWN LIMITATIONS; CURRENT APPROACH IS DEFENSIBLE
-# ============================================================================
+The following were resolved and removed. See git log for implementation details.
 
-MINOR-1: Income quintiles — IMPLEMENTED (population-standardized per SEPLINE)
-  STATUS: Implemented in R/03_extract_ses.R section 3.2.
-  IMPLEMENTATION: 3-year average income (index_year-1, -2, -3) from FAIK,
-    population quintile cutpoints computed from full BEF x FAIK population
-    stratified by sex x 5-year age group x year. Statistics Denmark does not
-    publish pre-computed quintile tables at this stratification level.
-  CONFIRM: Run the pipeline and verify that pop_quintile_cutpoints contains
-    reasonable cell counts (very small cells in rare sex x age x year strata
-    may produce unstable cutpoints). If any strata have n < 100, consider
-    widening to 10-year age groups for those cells.
-  REFERENCE: Hjorth et al., Clin Epidemiol 2025;17:593-624, Table 9.
+  CRITICAL-1  Pre-surgery N06D exclusion          → implemented in 01_build_cohorts.R
+  CRITICAL-2  Death within 30 days of surgery     → implemented in 01_build_cohorts.R
+  CRITICAL-3  NMI dementia predictors excluded     → implemented in 02_extract_outcomes_covariates.R
+  CRITICAL-4  Emigration censoring                 → implemented in 04_data_management_dementia.R
+  CONFIRM-1   LMDB column names                    → confirmed (pnr, atc, eksd, indo)
+  CONFIRM-2   DODSAARS death date column           → confirmed (d_dodsdto)
+  CONFIRM-3   LPR_A_KONTAKT/DIAGNOSE columns       → confirmed (kont_starttidspunkt, kont_type,
+                                                       dw_ek_kontakt, diagnosekode, diagnosetype)
+  CONFIRM-6   load_database("dbso")                → confirmed and implemented
+  MINOR-2     sep_category composite               → removed per SEPLINE (use 3 separate dimensions)
 
-MINOR-2: sep_category composite — REMOVED (per SEPLINE)
-  STATUS: sep_category removed from 03_extract_ses.R section 3.4 and from
-    04_data_management_dementia.R load_and_merge() and format_variables().
-    Cox models and Table 1 should use education_cat, income_cat, and
-    occupation_cat as three separate terms.
-
-MINOR-3: OSDC diabetes file covers up to 2022 only
-  LOCATION: R/02_extract_outcomes_covariates.R; R/04_data_management_dementia.R
-  ISSUE: Persons with diabetes onset in 2023-2024 will be classified as
-    No_diabetes in the OSDC file. Affects a small fraction of later surgery dates.
-  IMPACT: Minimal — diabetes onset 2023-2024 would be very recent relative to
-    surgery date, so few would be misclassified for baseline comorbidity assessment.
-
-MINOR-4: NMI score is a modified NMI for Study 1 (excludes dementia predictors)
-  LOCATION: R/02_extract_outcomes_covariates.R, extract_nmi()
-  NOTE: For Study 1, exclude_dementia_predictors = TRUE removes dx_F00_G30
-    and rx_N06D from the NMI computation (see CRITICAL-3 above). The resulting
-    nmi_score is based on 48 predictors, not the original 50. This should be
-    described explicitly in the statistical methods section. The modified score
-    has not been externally validated — its predictive accuracy for mortality/
-    hospitalization may differ slightly from the published NMI.
+================================================================================
