@@ -51,38 +51,38 @@
 # ============================================================================
 
 # Packages ----
-library(dstDataPrep)
-library(arrow)
-library(dplyr)
-library(lubridate)
+library(dstDataPrep)   # load_database() and rename helpers for DST parquet registers
+library(arrow)         # open_dataset() for parquet-external registers not covered by load_database
+library(dplyr)         # data manipulation throughout
+library(lubridate)     # year(), as.Date(), date arithmetic
 library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_code, etc.
 
 # Paths ----
-path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
-path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
-path_psyk_adm  <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
-path_psyk_diag <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
+path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"   # where .rds outputs are written
+path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
+# t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 
 # GP match ratio and obesity match ratio
-N_GP_PER_BS      <- 25L
-N_OBESITY_PER_BS <- 5L
+N_GP_PER_BS      <- 25L   # target number of GP comparators per BS patient (1:25 matching ratio)
+N_OBESITY_PER_BS <- 5L    # target number of obesity comparators per BS patient (1:5 matching ratio)
 
 # ICD codes for dementia (3-char, no D prefix)
-DEMENTIA_ICD3 <- c("F00", "F01", "F02", "F03", "G30", "G31")
+DEMENTIA_ICD3 <- c("F00", "F01", "F02", "F03", "G30", "G31")   # F00-F03: dementia subtypes; G30-G31: Alzheimer's and other degenerative brain diseases
 
 # SKS/NOMESCO procedure codes for bariatric surgery — reference only; not used in code.
 # Cohort is defined via DBSO flags (gastricbypass_prim / gastricsleeve_prim), not SKS codes.
 # RYGB: KJDF10, KJDF11 | SG: KJDF40, KJDF41, KJDF96, KJDF97
-BS_PROC_CODES <- c("KJDF10", "KJDF11", "KJDF40", "KJDF41", "KJDF96", "KJDF97")
+BS_PROC_CODES <- c("KJDF10", "KJDF11", "KJDF40", "KJDF41", "KJDF96", "KJDF97")   # kept for reference and manual auditing only
 
 # ============================================================================
 # 1.0 HELPER FUNCTIONS
 # ============================================================================
 
-get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
+get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {          # Here we state which pnrs (named pnr_vector) and which cutoff dates (named before_dates) (defined when calling the function) 
   # Returns pnrs that have ANY dementia diagnosis (F00-F03, G30-G31) before their
-  # respective cutoff date. Covers three data sources:
+  # respective cutoff date. The function is called three times: for BS, gp-cohort and obesity-cohort.
+  # Covers three data sources:
   #
   #   1. LPR2 somatic     (lpr_adm + lpr_diag):         somatic contacts up to March 2019
   #   2. LPR2 psychiatric (t_psyk_adm + t_psyk_diag):   psychiatric contacts 1995-March 2019
@@ -92,22 +92,22 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
   #      LPR3 covers BOTH somatic and psychiatric in one register — no separate psych table needed.
 
   # --- Source 1: LPR2 somatic ---
-  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
-  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)   # somatic LPR2 admission contacts (one row per hospital contact up to March 2019)
+  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)   # somatic LPR2 diagnoses (one row per diagnosis code per contact; joined to lpr_adm via recnum)
 
-  lpr2_dementia <- lpr_adm %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum, date_contact = d_inddto) %>%
-    inner_join(
-      lpr_diag %>%
-        filter(c_diagtype %in% c("A", "B")) %>%
-        mutate(icd3 = substr(c_diag, 2, 4)) %>%
-        filter(icd3 %in% !!DEMENTIA_ICD3) %>%
-        select(recnum, icd3),
-      by = "recnum"
+  lpr2_dementia <- lpr_adm %>%                                          # start from LPR2 admission table (contacts, one row per hospital contact)
+    filter(pnr %in% !!pnr_vector) %>%                                   # keep only rows belonging to persons in our cohort; !! unquotes the local vector for arrow/dbplyr
+    select(pnr, recnum, date_contact = d_inddto) %>%                    # keep person ID, contact key (recnum links admissions to diagnoses), and admission date
+    inner_join(                                                         # inner join: keep only admissions that have a matching dementia diagnosis
+      lpr_diag %>%                                                      # LPR2 diagnosis table (one row per diagnosis code per contact)
+        filter(c_diagtype %in% c("A", "B")) %>%                         # restrict to primary (A) and secondary (B) diagnoses; exclude supplementary (G)
+        mutate(icd3 = substr(c_diag, 2, 4)) %>%                         # strip the leading "D" prefix and take 3-character ICD-10 code (e.g. "DF00" -> "F00")
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%                           # keep only rows where the 3-char code is in the dementia code list (see defined constant above)
+        select(recnum, icd3),                                           # keep only the contact key and the matched code (pnr not needed after join)
+      by = "recnum"                                                     # join key: recnum links each admission in lpr_adm to its diagnoses in lpr_diag
     ) %>%
-    select(pnr, date_contact) %>%
-    collect()
+    select(pnr, date_contact) %>%                                       # drop icd3 and recnum; only need person ID and date for earliest-event logic
+    collect()                                                           # pull filtered result from parquet into R memory
 
   # --- Source 2: LPR2 psychiatric (1995-March 2019) ---
   # Geropsychiatric departments record F00-F03 dementia in their own separate register.
@@ -115,70 +115,70 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {
   # memory clinics would be silently missed — prevalent cases would stay in the cohort
   # and be misclassified as incident post-surgery dementia.
   #
-  # Confirmed path: parquet-external folder (not via load_database).
+  # Confirmed 2026-05-15: t_psyk_adm and t_psyk_diag accessible via load_database().
   # Raw DST column names — rename v_cpr->pnr, k_recnum->recnum, v_recnum->recnum.
-  psyk_adm  <- arrow::open_dataset(path_psyk_adm)  %>% rename_with(tolower) %>%
-    rename(pnr = v_cpr, recnum = k_recnum)
-  psyk_diag <- arrow::open_dataset(path_psyk_diag) %>% rename_with(tolower) %>%
-    rename(recnum = v_recnum)
+  psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%          # psychiatric LPR2 admissions; accessible via load_database (confirmed 2026-05-15)
+    rename(pnr = v_cpr, recnum = k_recnum)                                         # v_cpr -> pnr, k_recnum -> recnum to align with somatic LPR naming
+  psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%          # psychiatric LPR2 diagnoses; accessible via load_database (confirmed 2026-05-15)
+    rename(recnum = v_recnum)                                                       # v_recnum -> recnum to match join key used in psyk_adm
 
-  lpr2_psyk_dementia <- psyk_adm %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum, date_contact = d_inddto) %>%
+  lpr2_psyk_dementia <- psyk_adm %>%                                               # start from psychiatric LPR2 admission table
+    filter(pnr %in% !!pnr_vector) %>%                                              # restrict to cohort members before loading into memory
+    select(pnr, recnum, date_contact = d_inddto) %>%                               # keep person ID, contact key, and admission date
     inner_join(
-      psyk_diag %>%
-        filter(c_diagtype %in% c("A", "B")) %>%
-        mutate(icd3 = substr(c_diag, 2, 4)) %>%
-        filter(icd3 %in% !!DEMENTIA_ICD3) %>%
-        select(recnum, icd3),
-      by = "recnum"
+      psyk_diag %>%                                                                 # psychiatric diagnosis table
+        filter(c_diagtype %in% c("A", "B")) %>%                                    # primary and secondary diagnoses only; same rule as somatic LPR2
+        mutate(icd3 = substr(c_diag, 2, 4)) %>%                                    # strip leading "D" prefix to get 3-character ICD-10 code
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%                                      # keep only dementia codes
+        select(recnum, icd3),                                                       # only the join key and matched code needed
+      by = "recnum"                                                                 # recnum links each psychiatric admission to its diagnoses
     ) %>%
-    select(pnr, date_contact) %>%
-    collect()
+    select(pnr, date_contact) %>%                                                   # drop icd3; only person and date needed for cutoff comparison
+    collect()                                                                       # pull result from parquet into R memory
 
   # --- Source 3: LPR3 (March 2019 onwards) ---
   # Unified register: somatic and psychiatric contacts in one place.
   # All F00-F03 and G30-G31 contacts captured regardless of department.
-  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name; lpr3f_kontakter does not exist
-  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name; lpr3f_diagnoser does not exist
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)   # LPR3 unified contact table (somatic + psychiatric from March 2019); confirmed name
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # LPR3 diagnosis table; joined to kontakter via dw_ek_kontakt; confirmed name
 
-  lpr3_dementia <- kontakter %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%   # confirmed column names; dato_start does not exist
+  lpr3_dementia <- kontakter %>%                                           # start from LPR3 contact table covering all departments from March 2019 onward
+    filter(pnr %in% !!pnr_vector) %>%                                     # restrict to cohort members before loading into memory
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%                   # keep person ID, LPR3 contact key, and contact start timestamp; dato_start does not exist
     inner_join(
       diagnoser %>%
         filter(
-          diagnosetype %in% c("A", "B"),
-          # senare_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
+          diag_kode_type %in% c("A", "B"),                                  # primary and secondary diagnoses only; LPR3 uses diag_kode_type instead of c_diagtype
+          # senere_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
           # Current filter keeps NAs (defensive: if NAs exist, we include rather than drop).
           # OSDC uses == "Nej" (drops NAs). Verify whether NAs occur in real data before changing.
-          is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
+          is.na(senere_afkraeftet) | senere_afkraeftet != "Ja"           # exclude retracted diagnoses; NAs kept defensively
         ) %>%
-        mutate(icd3 = substr(diagnosekode, 2, 4)) %>%
-        filter(icd3 %in% !!DEMENTIA_ICD3) %>%
-        select(dw_ek_kontakt, icd3),
-      by = "dw_ek_kontakt"
+        mutate(icd3 = substr(diag_kode, 2, 4)) %>%                     # diag_kode is the LPR3 equivalent of c_diag; strip "D" prefix for 3-char code
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%                             # keep only dementia codes
+        select(dw_ek_kontakt, icd3),                                      # only the LPR3 contact key and matched code needed
+      by = "dw_ek_kontakt"                                                # dw_ek_kontakt is the LPR3 contact key (replaces recnum from LPR2)
     ) %>%
-    collect() %>%
-    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date part
-    select(pnr, date_contact)
+    collect() %>%                                                          # pull result from parquet into R memory
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%               # kont_starttidspunkt is a datetime column; extract date part for cutoff comparison
+    select(pnr, date_contact)                                              # drop timestamp and contact key; only person and date needed
 
   # Combine all three sources, then filter to contacts before each person's cutoff date
-  all_dementia <- bind_rows(lpr2_dementia, lpr2_psyk_dementia, lpr3_dementia)
+  all_dementia <- bind_rows(lpr2_dementia, lpr2_psyk_dementia, lpr3_dementia)   # stack all three sources into one long table of dementia contacts
 
   if (is.data.frame(before_dates)) {
     # before_dates must have columns pnr + index_date (one cutoff per person)
     all_dementia %>%
-      inner_join(before_dates, by = "pnr") %>%
-      filter(date_contact < index_date) %>%
-      distinct(pnr) %>%
-      pull(pnr)
+      inner_join(before_dates, by = "pnr") %>%   # attach each person's cutoff date
+      filter(date_contact < index_date) %>%       # keep contacts that occurred before this person's index date
+      distinct(pnr) %>%                           # one row per person (earliest contact is enough to qualify for exclusion)
+      pull(pnr)                                   # return a plain vector of pnrs to exclude
   } else {
     # before_dates is a single scalar date applied uniformly to all pnrs
     all_dementia %>%
-      filter(date_contact < before_dates) %>%
-      distinct(pnr) %>%
-      pull(pnr)
+      filter(date_contact < before_dates) %>%     # keep contacts before the common cutoff date
+      distinct(pnr) %>%                           # deduplicate to one row per person
+      pull(pnr)                                   # return a plain vector of pnrs to exclude
   }
 }
 
@@ -195,13 +195,13 @@ get_bs_surgery_dates <- function(pnr_vector) {
   # Pool members absent from DBSO receive bs_surgery_date = NA (left_join fills NA).
   # DBSO is the authoritative source for all public and private BS since 2010.
   load_database("dbso") %>% rename_with(tolower) %>%            # DBSO prepared by 00_prepare_dbso.R; load_database("dbso") confirmed working
-    filter(pnr %in% !!pnr_vector, !is.na(datoper_prim)) %>%   # only rows with a recorded surgery date
-    select(pnr, bs_surgery_date = datoper_prim) %>%            # rename for clarity in pool context; datoper_prim = surgery date in DBSO
+    filter(pnr %in% !!pnr_vector, !is.na(datoper_prim)) %>%     # only rows with a recorded surgery date
+    select(pnr, bs_surgery_date = datoper_prim) %>%             # rename for clarity in pool context; datoper_prim = surgery date in DBSO
     collect() %>%                                               # pull into memory for grouping
-    mutate(bs_surgery_date = as.Date(bs_surgery_date)) %>%    # ensure Date class for comparisons in matching loops
+    mutate(bs_surgery_date = as.Date(bs_surgery_date)) %>%      # ensure Date class for comparisons in matching loops
     group_by(pnr) %>%
     arrange(bs_surgery_date) %>%
-    slice(1) %>%                                               # earliest surgery date per person (DBSO has multiple rows per person)
+    slice(1) %>%                                                # earliest surgery date per person (DBSO has multiple rows per person)
     ungroup()
 }
 
@@ -210,7 +210,7 @@ get_bef_demographics <- function(pnr_vector) {
   # Returns one row per pnr: koen (sex), foed_dag (birth date), most recent record
   bef <- load_database("bef") %>% rename_with(tolower)   # open BEF (population register) lazily; lowercase column names
   bef %>%
-    filter(pnr %in% !!pnr_vector) %>%    # push cohort filter to parquet before pulling data into memory
+    filter(pnr %in% !!pnr_vector) %>%     # push cohort filter to parquet before pulling data into memory
     select(pnr, koen, foed_dag, aar) %>%  # only the columns we need; reduces data transferred to R
     group_by(pnr) %>%                     # group by person to pick one record per person
     arrange(desc(aar)) %>%                # most recent BEF year first so slice(1) picks the newest record
@@ -252,18 +252,18 @@ build_bs_cohort <- function() {
 
   n_dbso_start <- nrow(dbso)                            # attrition step 1: all DBSO RYGB/SG with valid date 2010-2024
 
-  demo <- get_bef_demographics(unique(dbso$pnr))        # sex and birth date from BEF (for age and lookback checks)
-  bs   <- dbso %>% left_join(demo, by = "pnr")          # attach demographics
+  demo <- get_bef_demographics(unique(dbso$pnr))        # fetch sex and birth date from BEF for each DBSO patient
+  bs   <- dbso %>% left_join(demo, by = "pnr")          # attach sex and birth date to DBSO records
 
   # Exclusion: died before surgery, age < 18 at surgery, < 5 years of registry history
-  dod <- load_database("dodsaars") %>% rename_with(tolower)   # individual death records register
+  dod <- load_database("dodsaars") %>% rename_with(tolower)   # individual death records register (one row per death)
   deaths <- dod %>%
-    filter(pnr %in% !!bs$pnr) %>%   # only DBSO patients' death records before collect
-    select(pnr, d_dodsdto) %>%       # d_dodsdto = date of death (confirmed column name)
-    collect()                         # pull into memory
+    filter(pnr %in% !!bs$pnr) %>%                       # restrict to DBSO patients before pulling into memory
+    select(pnr, d_dodsdto) %>%                           # d_dodsdto = confirmed death date column name
+    collect()                                             # pull death records into R memory
 
   bs <- bs %>%
-    left_join(deaths, by = "pnr") %>%   # attach death date; NA for living persons (absent from dodsaars)
+    left_join(deaths, by = "pnr") %>%                   # attach death date; persons absent from dodsaars (alive) get d_dodsdto = NA
     filter(
       # Protocol criterion 4: exclude death within 30 days of surgery.
       # d_dodsdto > datoper_prim + 30 excludes: (a) death before surgery (days < 0),
@@ -271,17 +271,17 @@ build_bs_cohort <- function() {
       # Patients who die in the perioperative period cannot contribute meaningful
       # dementia follow-up and represent extreme surgical risk; their exclusion
       # avoids immortal time and makes the BS cohort comparable to the protocol.
-      is.na(d_dodsdto) | d_dodsdto > as.Date(datoper_prim) + 30,
-      as.Date(datoper_prim) - as.Date(foed_dag) >= 365.25 * 18,  # age >= 18 at surgery
-      as.Date(datoper_prim) >= as.Date(foed_dag) + 365.25 * 5    # >= 5 years of registry history before surgery
+      is.na(d_dodsdto) | d_dodsdto > as.Date(datoper_prim) + 30,   # alive OR survived > 30 days post-surgery
+      as.Date(datoper_prim) - as.Date(foed_dag) >= 365.25 * 18,    # age >= 18 at surgery
+      as.Date(datoper_prim) >= as.Date(foed_dag) + 365.25 * 5      # >= 5 years of registry history before surgery (needed for reliable lookback)
     )
 
   n_after_eligibility <- nrow(bs)                        # attrition step 2: after 30-day death / age / registry filters
 
   # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
-  cutoffs       <- bs %>% transmute(pnr, index_date = as.Date(datoper_prim))   # per-person cutoff: their own surgery date
-  dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)        # pnrs with any dementia diagnosis before surgery
-  bs <- bs %>% filter(!pnr %in% dementia_pnrs)                     # remove pre-surgery dementia cases
+  cutoffs       <- bs %>% transmute(pnr, index_date = as.Date(datoper_prim))   # build per-person cutoff table: each patient's own surgery date
+  dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)                    # returns pnrs with any dementia diagnosis before their surgery date
+  bs <- bs %>% filter(!pnr %in% dementia_pnrs)                                 # remove patients with pre-surgery dementia
 
   n_after_dementia <- nrow(bs)                           # attrition step 3: after pre-surgery dementia exclusion
 
@@ -289,19 +289,19 @@ build_bs_cohort <- function() {
   # Persons who left Denmark before their surgery date are not valid cohort members —
   # they cannot contribute Danish register follow-up time for dementia outcomes.
   # VNDS register: indud_kode == "U" = emigration (udrejse); haend_dato = departure date.
-  vnds_bs <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  vnds_bs <- load_database("vnds") %>% rename_with(tolower)   # VNDS: migration register tracking arrivals and departures
   emigrated_bs_pnrs <- vnds_bs %>%
-    filter(pnr %in% !!bs$pnr, indud_kode == "U") %>%          # emigration events only
-    select(pnr, haend_dato) %>%                                # haend_dato = emigration date
-    collect() %>%                                              # pull into memory for join
-    mutate(haend_dato = as.Date(haend_dato)) %>%               # character "YYYY-MM-DD" to Date
-    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%
-    filter(haend_dato < surgery_date) %>%                      # emigration strictly before surgery
-    distinct(pnr) %>%                                          # one row per person
-    pull(pnr)
-  bs <- bs %>% filter(!pnr %in% emigrated_bs_pnrs)            # remove pre-surgery emigrants
+    filter(pnr %in% !!bs$pnr, indud_kode == "U") %>%          # "U" = udrejse (emigration); filters to departure events only
+    select(pnr, haend_dato) %>%                                # haend_dato = date of the emigration event
+    collect() %>%                                              # pull into memory before date conversion
+    mutate(haend_dato = as.Date(haend_dato)) %>%               # convert character date to Date class
+    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%   # attach each patient's surgery date
+    filter(haend_dato < surgery_date) %>%                      # keep only persons who emigrated before their surgery date
+    distinct(pnr) %>%                                          # one row per person (multiple emigration events possible)
+    pull(pnr)                                                  # return plain vector of pnrs to exclude
+  bs <- bs %>% filter(!pnr %in% emigrated_bs_pnrs)            # remove pre-surgery emigrants from BS cohort
 
-  n_after_emigration <- nrow(bs)                              # attrition step 4: after emigration exclusion
+  n_after_emigration <- nrow(bs)                              # attrition step 4: after emigration-before-surgery exclusion
 
   # Exclusion: antidementia medication (ATC N06D) dispensed before surgery
   # Protocol criterion 3. N06D at baseline (donepezil, rivastigmine, galantamine,
@@ -309,42 +309,42 @@ build_bs_cohort <- function() {
   # N06D users removes likely undiagnosed dementia cases that the ICD-code check
   # above may have missed (e.g. if the prescribing GP never registered a hospital
   # diagnosis). N06D users are also excluded from the NMI calculation (see TODO MINOR-4).
-  lmdb <- load_database("lmdb") %>% rename_with(tolower)   # prescription register (DNPD/LMDB)
+  lmdb <- load_database("lmdb") %>% rename_with(tolower)   # LMDB: national prescription register; one row per dispensed prescription
 
-  max_surgery_date <- max(as.Date(bs$datoper_prim))         # upper bound for lazy parquet filter; per-person cutoff applied after collect
+  max_surgery_date <- max(as.Date(bs$datoper_prim))         # upper date bound for lazy parquet filter; avoids pulling all LMDB years into memory
 
   n06d_pnrs <- lmdb %>%
     filter(
-      pnr %in% !!bs$pnr,                                    # restrict to current BS candidates only
-      substr(atc, 1, 4) == "N06D",                          # antidementia ATC class (CONFIRM-1: column name atc assumed)
-      eksd <= !!max_surgery_date                             # pull all N06D dispensings up to latest surgery date
+      pnr %in% !!bs$pnr,                                    # restrict to current BS candidates before collecting
+      substr(atc, 1, 4) == "N06D",                          # N06D = antidementia drugs (donepezil, rivastigmine, galantamine, memantine)
+      eksd <= !!max_surgery_date                             # pull dispensings up to latest surgery date; per-person cutoff applied after collect
     ) %>%
-    select(pnr, eksd, atc) %>%                              # only needed columns; reduce data before collect
-    collect() %>%                                            # pull filtered records into memory
-    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%  # attach each person's surgery date
-    filter(eksd < surgery_date) %>%    # any N06D dispensing at any time before surgery qualifies; no lower time bound (LMDB begins ~1994; same principle as ICD dementia: any prior record is an exclusion)
-    distinct(pnr) %>%                                        # one row per person with any pre-surgery N06D
-    pull(pnr)
+    select(pnr, eksd, atc) %>%                              # only needed columns; reduces data crossing the parquet->R boundary
+    collect() %>%                                            # pull filtered records into R memory
+    inner_join(bs %>% transmute(pnr, surgery_date = as.Date(datoper_prim)), by = "pnr") %>%   # attach each person's own surgery date
+    filter(eksd < surgery_date) %>%                          # any N06D dispensing before surgery qualifies; no lower bound (LMDB begins ~1994)
+    distinct(pnr) %>%                                        # one row per person; multiple N06D dispensings still count as one exclusion
+    pull(pnr)                                                # return plain vector of pnrs to exclude
 
   bs <- bs %>% filter(!pnr %in% n06d_pnrs)                  # remove persons with pre-surgery antidementia medication
 
   cohort <- bs %>%
     transmute(
       pnr,
-      index_date        = as.Date(datoper_prim),                          # surgery date is the index date for the BS cohort
-      cohort            = "BS",
-      surgery_type      = if_else(gastricbypass_prim == 1, "RYGB", "SG"), # derive surgery type from DBSO flags; redo excluded above so all remaining are RYGB or SG
-      matched_pnr       = pnr,                                            # BS patients reference themselves (used when linking to matched comparators)
-      bs_crossover_date = NA_Date_                                        # not applicable for the exposed group; only comparators can cross over
+      index_date        = as.Date(datoper_prim),                           # surgery date becomes the index date for the BS cohort
+      cohort            = "BS",                                             # cohort label used downstream in all analyses
+      surgery_type      = if_else(gastricbypass_prim == 1, "RYGB", "SG"), # RYGB if bypass flag = 1; otherwise SG (redo already excluded above)
+      matched_pnr       = pnr,                                             # BS patients reference themselves; comparators will carry the BS patient's pnr here
+      bs_crossover_date = NA_Date_                                         # not applicable for the exposed group; only comparators can cross over to BS
     )
 
   list(
-    cohort              = cohort,
-    n_dbso_start        = n_dbso_start,        # n before any exclusions
-    n_after_eligibility = n_after_eligibility, # n after 30-day death / age / registry filters
-    n_after_dementia    = n_after_dementia,    # n after pre-surgery dementia exclusion
-    n_after_emigration  = n_after_emigration,  # n after emigration-before-surgery exclusion
-    n_final             = nrow(cohort)         # n after N06D exclusion
+    cohort              = cohort,                # final BS cohort data frame
+    n_dbso_start        = n_dbso_start,          # n before any exclusions
+    n_after_eligibility = n_after_eligibility,   # n after 30-day death / age / registry filters
+    n_after_dementia    = n_after_dementia,      # n after pre-surgery dementia exclusion
+    n_after_emigration  = n_after_emigration,    # n after emigration-before-surgery exclusion
+    n_final             = nrow(cohort)           # n after N06D exclusion; this is the final BS cohort size
   )
 }
 
@@ -356,25 +356,25 @@ build_bs_cohort <- function() {
 # people from the matching group who are alive at the index date and dementia-free.
 
 build_gp_comparator <- function(bs_cohort) {
-  bef <- load_database("bef") %>% rename_with(tolower)
+  bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population register; one row per person per year
 
   # Pull only the years when surgeries occurred — people in BEF those years were alive then.
-  surgery_years <- unique(year(bs_cohort$index_date))
+  surgery_years <- unique(year(bs_cohort$index_date))   # calendar years covered by our BS cohort index dates
 
   # One record per person (most recent year). Deduplicate BEFORE pulling into memory
   # by doing group_by + slice inside the lazy DuckDB query, so only one row per person
   # crosses the parquet → R boundary. On a full BEF table this is the main cost saving.
   bef_pool <- bef %>%
-    filter(aar %in% !!surgery_years) %>%
-    select(pnr, koen, foed_dag, aar) %>%
-    group_by(pnr) %>%
-    arrange(desc(aar)) %>%
-    slice(1) %>%        # keep most recent record per person — done lazily before collect()
-    ungroup() %>%
-    collect() %>%       # bring deduplicated records into memory
-    mutate(birth_year = year(as.Date(foed_dag))) %>%
-    select(pnr, koen, birth_year) %>%
-    filter(!pnr %in% bs_cohort$pnr)   # remove BS patients from pool
+    filter(aar %in% !!surgery_years) %>%                  # keep only years with at least one surgery; reduces BEF rows fetched
+    select(pnr, koen, foed_dag, aar) %>%                  # only columns needed for matching and age check
+    group_by(pnr) %>%                                     # group to deduplicate within person
+    arrange(desc(aar)) %>%                                 # most recent year first so slice(1) picks the newest record
+    slice(1) %>%                                          # keep one row per person; done lazily inside parquet before collect
+    ungroup() %>%                                         # release grouping
+    collect() %>%                                         # pull deduplicated records into R memory
+    mutate(birth_year = year(as.Date(foed_dag))) %>%      # derive birth year for matching key and age check
+    select(pnr, koen, birth_year) %>%                     # drop foed_dag and aar; birth_year is all we need
+    filter(!pnr %in% bs_cohort$pnr)                       # remove BS patients from the pool; they cannot serve as their own controls
 
   # Attach BS surgery dates for pool members who appear in DBSO.
   # We do NOT exclude all DBSO members here — only those with BS before a specific
@@ -382,22 +382,22 @@ build_gp_comparator <- function(bs_cohort) {
   # runs inside the matching loop so each BS patient applies its own index date as
   # the cutoff. Pool members with post-index BS remain eligible and are assigned
   # bs_crossover_date when sampled (censored in analysis, not excluded).
-  bs_dates_in_pool <- get_bs_surgery_dates(bef_pool$pnr)        # pnr + earliest bs_surgery_date for DBSO members
+  bs_dates_in_pool <- get_bs_surgery_dates(bef_pool$pnr)   # fetch earliest DBSO surgery date for each pool member; NA if not in DBSO
   bef_pool <- bef_pool %>%
-    left_join(bs_dates_in_pool, by = "pnr")                      # bs_surgery_date = NA for persons never in DBSO
+    left_join(bs_dates_in_pool, by = "pnr")                # attach surgery date; pool members never in DBSO get bs_surgery_date = NA
 
   # Verify alive at each index date: load death dates for pool members.
   # BEF is an annual January 1 snapshot — appearing in BEF 2012 means alive 2012-01-01,
   # not necessarily alive on Sept 15 2012. Without this step, persons who died mid-year
   # could be drawn as comparators for surgeries occurring later that same year.
-  dod <- load_database("dodsaars") %>% rename_with(tolower)
+  dod <- load_database("dodsaars") %>% rename_with(tolower)   # death register
   pool_deaths <- dod %>%
-    filter(pnr %in% !!bef_pool$pnr) %>%
-    select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto = confirmed death date column
-    collect()
+    filter(pnr %in% !!bef_pool$pnr) %>%                   # restrict to pool members before collecting
+    select(pnr, death_date = d_dodsdto) %>%                # d_dodsdto = confirmed death date column
+    collect()                                               # pull death dates into R memory
 
   bef_pool <- bef_pool %>%
-    left_join(pool_deaths, by = "pnr")   # death_date = NA means still alive (living persons absent from dodsaars)
+    left_join(pool_deaths, by = "pnr")                     # attach death date; living persons absent from dodsaars get death_date = NA
 
   # Pre-split pool into a named list of data frames, one element per (koen, birth_year) group.
   # Key insight: instead of dplyr::filter(pool, koen==x, birth_year %in% c(y-1,y,y+1)) on
@@ -408,27 +408,27 @@ build_gp_comparator <- function(bs_cohort) {
   # This guards against the edge case where a comparator born 1 year later than an
   # 18-year-old BS patient would be 17 at the index date.
   pool_list <- split(bef_pool[, c("pnr", "birth_year", "death_date", "bs_surgery_date")],
-                     paste(bef_pool$koen, bef_pool$birth_year, sep = "_"))
+                     paste(bef_pool$koen, bef_pool$birth_year, sep = "_"))   # named list: key = "sex_birthyear" (e.g. "1_1975")
 
   # Fetch sex + birth_year for the BS cohort (needed for matching key)
   bs_key <- bs_cohort %>%
     left_join(
-      get_bef_demographics(bs_cohort$pnr) %>% select(pnr, koen, birth_year),
+      get_bef_demographics(bs_cohort$pnr) %>% select(pnr, koen, birth_year),   # fetch sex and birth year for BS patients
       by = "pnr"
     )
 
-  set.seed(42)
-  matched_rows <- vector("list", nrow(bs_key))   # pre-allocate for speed
+  set.seed(42)                                              # fix random seed for reproducibility of matching draws
+  matched_rows <- vector("list", nrow(bs_key))              # pre-allocate list; one element per BS patient; faster than growing a list in the loop
 
   for (i in seq_len(nrow(bs_key))) {
-    bs_pnr   <- bs_key$pnr[i]
-    idx_date <- bs_key$index_date[i]
-    sex      <- bs_key$koen[i]
-    by       <- bs_key$birth_year[i]
+    bs_pnr   <- bs_key$pnr[i]           # pnr of the BS patient being matched in this iteration
+    idx_date <- bs_key$index_date[i]    # index date of this BS patient (= surgery date)
+    sex      <- bs_key$koen[i]          # sex of this BS patient (matching variable)
+    by       <- bs_key$birth_year[i]    # birth year of this BS patient (matching variable)
 
     # Collect candidates from the three adjacent birth-year groups (same sex, year ±1)
-    group_keys <- paste(sex, by + (-1L:1L), sep = "_")
-    cand_df    <- dplyr::bind_rows(pool_list[group_keys])
+    group_keys <- paste(sex, by + (-1L:1L), sep = "_")     # keys for this patient's birth year and the two adjacent years
+    cand_df    <- dplyr::bind_rows(pool_list[group_keys])  # combine rows from the three birth-year groups into one candidate pool
 
     # Keep candidates who are:
     #   (1) alive at the index date (death_date is NA or after idx_date)
@@ -438,112 +438,112 @@ build_gp_comparator <- function(bs_cohort) {
     #       case a comparator born 1 year later (within the ±1 year matching window) would be
     #       17 at the index date. Rare but worth enforcing for consistency.
     cand_df <- cand_df[
-      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &
-      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]
-    candidates <- cand_df$pnr
+      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &   # alive at index date
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &   # no prior BS at index date
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]                  # at least 18 years old
+    candidates <- cand_df$pnr                               # vector of eligible pnrs for this draw
 
-    if (length(candidates) == 0) next   # no eligible match available for this BS patient
+    if (length(candidates) == 0) next                       # no eligible match for this BS patient; skip (flagged in audit below)
 
-    n_sample     <- min(N_GP_PER_BS, length(candidates))
-    sampled_pnrs <- sample(candidates, n_sample)   # random draw without replacement
+    n_sample     <- min(N_GP_PER_BS, length(candidates))    # draw up to 25; fewer if pool is exhausted
+    sampled_pnrs <- sample(candidates, n_sample)            # random draw without replacement
 
-    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]  # future BS date for each sampled control; NA if never in DBSO
+    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]   # look up future BS date for each sampled control; NA if never in DBSO
     matched_rows[[i]] <- tibble(
-      pnr               = sampled_pnrs,
-      index_date        = idx_date,
-      cohort            = "GP",
-      surgery_type      = NA_character_,
-      matched_pnr       = bs_pnr,
-      bs_crossover_date = if_else(                                   # date this control later undergoes BS; NA if they never do
+      pnr               = sampled_pnrs,                     # pnrs of the sampled GP controls
+      index_date        = idx_date,                         # controls receive the same index date as their matched BS patient
+      cohort            = "GP",                             # cohort label
+      surgery_type      = NA_character_,                    # GP controls have no surgery type
+      matched_pnr       = bs_pnr,                          # records which BS patient this control is matched to
+      bs_crossover_date = if_else(                          # date this control later undergoes BS; NA if they never do or already did before index
         !is.na(sampled_bs_dates) & sampled_bs_dates > idx_date,
         sampled_bs_dates, NA_Date_
       )
     )
 
-    # Remove sampled pnrs from the pool: filter rows rather than setdiff on vectors.
+    # Remove sampled pnrs from the pool so they cannot be re-used for another BS patient.
     for (k in group_keys) {
       if (!is.null(pool_list[[k]])) {
-        pool_list[[k]] <- pool_list[[k]][!pool_list[[k]]$pnr %in% sampled_pnrs, ]
+        pool_list[[k]] <- pool_list[[k]][!pool_list[[k]]$pnr %in% sampled_pnrs, ]   # filter out just-sampled pnrs from each relevant group
       }
     }
   }
 
-  gp_cohort <- bind_rows(matched_rows)
+  gp_cohort <- bind_rows(matched_rows)   # stack all matched tibbles into one data frame
 
   # --------------------------------------------------------------------------
   # Match rate audit: check how many BS patients received fewer than the target
   # number of GP comparators. Zero-match patients have no controls and will be
   # invisible in all analyses — flag them explicitly so they are not silently lost.
   # --------------------------------------------------------------------------
-  match_counts <- gp_cohort %>%                           # count GP comparators per BS patient
-    dplyr::count(matched_pnr, name = "n_gp")
-  n_zero   <- sum(!bs_cohort$pnr %in% match_counts$matched_pnr)  # BS patients with zero matches
-  n_fewer  <- sum(match_counts$n_gp < N_GP_PER_BS)               # BS patients below the target ratio
+  match_counts <- gp_cohort %>%
+    dplyr::count(matched_pnr, name = "n_gp")                          # count how many GP controls each BS patient received
+  n_zero   <- sum(!bs_cohort$pnr %in% match_counts$matched_pnr)       # BS patients with zero GP matches (completely unmatched)
+  n_fewer  <- sum(match_counts$n_gp < N_GP_PER_BS)                    # BS patients matched to fewer than 25 controls (pool exhaustion)
   if (n_zero > 0) {
     warning("GP comparator: ", n_zero, " BS patient(s) received ZERO matches. ",
-            "Consider widening birth-year window to ±2 years.")
+            "Consider widening birth-year window to ±2 years.")        # zero-match BS patients are silently dropped from all GP analyses
   }
   if (n_fewer > 0) {
     message("GP comparator: ", n_fewer, " BS patient(s) matched to fewer than ",
             N_GP_PER_BS, " controls (pool exhaustion for rare birth years).")
   }
 
-  n_matched_raw <- nrow(gp_cohort)                        # attrition: GP comparators before dementia exclusion
+  n_matched_raw <- nrow(gp_cohort)                                     # total GP comparators before exclusions (attrition denominator)
 
   # Exclude any GP comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs <- gp_cohort %>% select(pnr, index_date)
-  dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)
-  gp_after_dementia <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index ICD dementia from GP comparators
+  cutoffs <- gp_cohort %>% select(pnr, index_date)                     # per-person cutoff: each control's assigned index date
+  dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)     # returns pnrs with any dementia diagnosis before their index date
+  gp_after_dementia <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove GP controls with pre-index dementia
 
-  n_after_dementia <- nrow(gp_after_dementia)             # attrition after ICD dementia exclusion
+  n_after_dementia <- nrow(gp_after_dementia)                          # attrition after ICD dementia exclusion
 
   # Exclusion: emigrated before index date (protocol criterion 3)
   # GP comparators who emigrated from Denmark before their assigned index date
   # cannot contribute Danish register follow-up time and must be excluded.
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
-  vnds_gp <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  vnds_gp <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_gp_pnrs <- vnds_gp %>%
-    filter(pnr %in% !!gp_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only
+    filter(pnr %in% !!gp_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only ("U" = udrejse)
     select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
-    collect() %>%                                                      # pull into memory for join
-    mutate(haend_dato = as.Date(haend_dato)) %>%                       # character to Date
-    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%
-    filter(haend_dato < index_date) %>%                                # emigration before index date
+    collect() %>%                                                      # pull into R memory
+    mutate(haend_dato = as.Date(haend_dato)) %>%                       # convert character to Date class
+    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's index date
+    filter(haend_dato < index_date) %>%                                # emigration must be strictly before index date
     distinct(pnr) %>%                                                  # one row per person
-    pull(pnr)
+    pull(pnr)                                                          # plain vector of pnrs to exclude
   gp_after_emigration <- gp_after_dementia %>% filter(!pnr %in% emigrated_gp_pnrs)   # remove pre-index emigrants
 
-  n_after_emigration <- nrow(gp_after_emigration)         # attrition after emigration exclusion
+  n_after_emigration <- nrow(gp_after_emigration)                      # attrition after emigration-before-index exclusion
 
   # Exclude GP comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
   # N06D is a proxy for undiagnosed or pre-clinical dementia not captured by ICD codes alone.
   # Applied symmetrically to all three cohorts: any dispensing before the person's index date qualifies.
-  lmdb_gp <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for GP comparators
+  lmdb_gp <- load_database("lmdb") %>% rename_with(tolower)           # LMDB prescription register
 
-  max_index_gp <- max(gp_after_emigration$index_date)          # upper bound for lazy parquet filter
+  max_index_gp <- max(gp_after_emigration$index_date)                  # upper date bound for lazy parquet filter
 
   n06d_pnrs_gp <- lmdb_gp %>%
     filter(
-      pnr %in% !!gp_after_emigration$pnr,                      # restrict to matched GP comparators
-      substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
-      eksd <= !!max_index_gp                                   # pull up to latest index date; per-person cutoff applied after collect
+      pnr %in% !!gp_after_emigration$pnr,                             # restrict to remaining GP controls
+      substr(atc, 1, 4) == "N06D",                                    # N06D = antidementia drug class
+      eksd <= !!max_index_gp                                          # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
-    select(pnr, eksd, atc) %>%                                 # only needed columns
-    collect() %>%                                              # pull filtered records into memory
-    inner_join(gp_after_emigration %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
-    filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
-    distinct(pnr) %>%                                          # one row per person with any pre-index N06D
-    pull(pnr)
+    select(pnr, eksd, atc) %>%                                        # only needed columns
+    collect() %>%                                                      # pull into R memory
+    inner_join(gp_after_emigration %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's own index date
+    filter(eksd < index_date) %>%                                      # dispensing must predate this person's index date
+    distinct(pnr) %>%                                                  # one row per person with any pre-index N06D
+    pull(pnr)                                                          # plain vector of pnrs to exclude
 
-  gp_final <- gp_after_emigration %>% filter(!pnr %in% n06d_pnrs_gp)   # remove pre-index antidementia medication users
+  gp_final <- gp_after_emigration %>% filter(!pnr %in% n06d_pnrs_gp)  # remove GP controls with pre-index antidementia medication
 
   list(
-    cohort              = gp_final,
-    n_matched_raw       = n_matched_raw,       # before exclusions
-    n_after_dementia    = n_after_dementia,    # after ICD dementia exclusion
-    n_after_emigration  = n_after_emigration,  # after emigration-before-index exclusion
-    n_final             = nrow(gp_final)       # after N06D exclusion
+    cohort              = gp_final,              # final GP comparator data frame
+    n_matched_raw       = n_matched_raw,         # GP n before exclusions
+    n_after_dementia    = n_after_dementia,      # GP n after ICD dementia exclusion
+    n_after_emigration  = n_after_emigration,    # GP n after emigration-before-index exclusion
+    n_final             = nrow(gp_final)         # GP n after N06D exclusion; final GP cohort size
   )
 }
 
@@ -633,115 +633,115 @@ build_obesity_comparator <- function(bs_cohort) {
   # We need the date to enforce: E66 diagnosis must predate the BS patient's index date.
   # [FIX] Without this, a person who received an E66 diagnosis in 2020 could be matched
   # to a BS patient with surgery in 2012, violating the study design.
-  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
-  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)   # LPR2 somatic admissions
+  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)   # LPR2 somatic diagnoses
 
   # LPR2 E66 contacts with date
   obesity_lpr2 <- lpr_adm %>%
-    select(pnr, recnum, date_contact = d_inddto) %>%
+    select(pnr, recnum, date_contact = d_inddto) %>%                # keep person ID, contact key, and admission date
     inner_join(
       lpr_diag %>%
-        filter(c_diagtype %in% c("A", "B")) %>%   # exclude auxiliary "G" diagnoses
-        mutate(icd3 = substr(c_diag, 2, 4)) %>%
-        filter(icd3 == "E66") %>%
-        select(recnum),
+        filter(c_diagtype %in% c("A", "B")) %>%                     # exclude auxiliary "G" diagnoses
+        mutate(icd3 = substr(c_diag, 2, 4)) %>%                     # strip "D" prefix for 3-char code
+        filter(icd3 == "E66") %>%                                   # obesity diagnosis code only
+        select(recnum),                                              # only the contact key needed for the join
       by = "recnum"
     ) %>%
-    select(pnr, date_contact) %>%
-    collect()
+    select(pnr, date_contact) %>%                                   # drop recnum; only person and date needed
+    collect()                                                        # pull into R memory
 
   # LPR3 E66 contacts with date
-  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name
-  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)   # LPR3 contact table; confirmed name
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # LPR3 diagnosis table; confirmed name
 
   obesity_lpr3 <- kontakter %>%
-    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%   # confirmed column names; dato_start does not exist
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%            # LPR3 contact key and start timestamp; dato_start does not exist
     inner_join(
       diagnoser %>%
-        filter(diagnosetype %in% c("A", "B")) %>%   # exclude auxiliary "G" diagnoses
-        mutate(icd3 = substr(diagnosekode, 2, 4)) %>%
-        filter(icd3 == "E66", is.na(senare_afkraeftet) | senare_afkraeftet != "Ja") %>%   # exclude retracted; keeps NAs defensively
-        select(dw_ek_kontakt),
+        filter(diag_kode_type %in% c("A", "B")) %>%                  # primary and secondary diagnoses only
+        mutate(icd3 = substr(diag_kode, 2, 4)) %>%              # strip "D" prefix for 3-char code
+        filter(icd3 == "E66", is.na(senere_afkraeftet) | senere_afkraeftet != "Ja") %>%   # E66 only; exclude retracted; NAs kept defensively
+        select(dw_ek_kontakt),                                      # only the LPR3 contact key needed
       by = "dw_ek_kontakt"
     ) %>%
-    collect() %>%
-    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date part
-    select(pnr, date_contact)
+    collect() %>%                                                   # pull into R memory
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%        # extract date from datetime
+    select(pnr, date_contact)                                       # drop contact key; only person and date needed
 
   # Earliest E66 date per person — used in the loop to enforce pre-index diagnosis
-  obesity_dates <- dplyr::bind_rows(obesity_lpr2, obesity_lpr3) %>%
+  obesity_dates <- dplyr::bind_rows(obesity_lpr2, obesity_lpr3) %>%   # combine LPR2 and LPR3 E66 contacts
     dplyr::group_by(pnr) %>%
-    dplyr::summarise(earliest_e66 = min(date_contact, na.rm = TRUE), .groups = "drop")
+    dplyr::summarise(earliest_e66 = min(date_contact, na.rm = TRUE), .groups = "drop")   # one row per person with their first E66 date
 
   # Get demographics for obesity pool
-  obesity_pool <- get_bef_demographics(obesity_dates$pnr) %>%
-    filter(!pnr %in% bs_cohort$pnr) %>%
-    inner_join(obesity_dates, by = "pnr")   # attach earliest_e66
+  obesity_pool <- get_bef_demographics(obesity_dates$pnr) %>%      # fetch sex and birth year for all E66 persons
+    filter(!pnr %in% bs_cohort$pnr) %>%                            # remove BS patients from pool
+    inner_join(obesity_dates, by = "pnr")                          # attach earliest E66 date to each person
 
   # Attach BS surgery dates — same approach as GP comparator.
   # Date-specific check inside the loop prevents pre-index BS from entering the pool
   # while allowing post-index BS candidates to be enrolled and later censored.
-  bs_dates_in_pool <- get_bs_surgery_dates(obesity_pool$pnr)        # pnr + earliest bs_surgery_date for DBSO members
+  bs_dates_in_pool <- get_bs_surgery_dates(obesity_pool$pnr)       # fetch earliest DBSO surgery date for pool members; NA if not in DBSO
   obesity_pool <- obesity_pool %>%
-    left_join(bs_dates_in_pool, by = "pnr")                          # bs_surgery_date = NA for persons never in DBSO
+    left_join(bs_dates_in_pool, by = "pnr")                        # attach surgery date; non-DBSO persons get bs_surgery_date = NA
 
   # Verify alive at each index date: load death dates for pool members.
-  dod <- load_database("dodsaars") %>% rename_with(tolower)
+  dod <- load_database("dodsaars") %>% rename_with(tolower)        # death register
   pool_deaths <- dod %>%
-    filter(pnr %in% !!obesity_pool$pnr) %>%
-    select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto = confirmed death date column
-    collect()
+    filter(pnr %in% !!obesity_pool$pnr) %>%                        # restrict to pool members before collecting
+    select(pnr, death_date = d_dodsdto) %>%                        # d_dodsdto = confirmed death date column
+    collect()                                                       # pull death dates into R memory
 
   obesity_pool <- obesity_pool %>%
-    left_join(pool_deaths, by = "pnr")   # death_date = NA means still alive
+    left_join(pool_deaths, by = "pnr")                             # attach death date; living persons get death_date = NA
 
   # Match to BS cohort (1:N_OBESITY_PER_BS) — same pre-split approach as GP comparator.
   # Splits into per-(koen, birth_year) data frames so we can filter on earliest_e66,
   # death_date, and bs_surgery_date inside the loop without scanning the full pool.
   bs_key <- bs_cohort %>%
     left_join(
-      get_bef_demographics(bs_cohort$pnr) %>% select(pnr, koen, birth_year),
+      get_bef_demographics(bs_cohort$pnr) %>% select(pnr, koen, birth_year),   # fetch sex and birth year for BS patients
       by = "pnr"
     )
 
   # birth_year kept for the age >= 18 check inside the loop (same edge case as GP comparator).
   pool_list <- split(obesity_pool[, c("pnr", "birth_year", "earliest_e66", "death_date", "bs_surgery_date")],
-                     paste(obesity_pool$koen, obesity_pool$birth_year, sep = "_"))
+                     paste(obesity_pool$koen, obesity_pool$birth_year, sep = "_"))   # named list keyed by "sex_birthyear"
 
-  set.seed(42)
-  matched_rows <- vector("list", nrow(bs_key))
+  set.seed(42)                                                      # fix random seed for reproducibility of matching draws
+  matched_rows <- vector("list", nrow(bs_key))                      # pre-allocate; one element per BS patient
 
   for (i in seq_len(nrow(bs_key))) {
-    bs_pnr   <- bs_key$pnr[i]
-    idx_date <- bs_key$index_date[i]
-    sex      <- bs_key$koen[i]
-    by       <- bs_key$birth_year[i]
+    bs_pnr   <- bs_key$pnr[i]           # pnr of the BS patient being matched
+    idx_date <- bs_key$index_date[i]    # index date of this BS patient
+    sex      <- bs_key$koen[i]          # sex for matching
+    by       <- bs_key$birth_year[i]    # birth year for matching
 
-    group_keys <- paste(sex, by + (-1L:1L), sep = "_")
-    cand_df    <- dplyr::bind_rows(pool_list[group_keys])
+    group_keys <- paste(sex, by + (-1L:1L), sep = "_")             # matching keys for birth year ±1
+    cand_df    <- dplyr::bind_rows(pool_list[group_keys])          # combine candidates from three birth-year groups
 
     # Keep candidates whose E66 predates the index date, alive, without pre-index BS,
     # and at least 18 years old at the index date (same edge-case check as GP comparator).
     cand_df <- cand_df[
-      cand_df$earliest_e66 < idx_date &
-      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &
-      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]
-    candidates <- cand_df$pnr
+      cand_df$earliest_e66 < idx_date &                            # E66 must predate the BS patient's surgery
+      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &   # alive at index date
+      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &   # no prior BS at index date
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]    # at least 18 years old
+    candidates <- cand_df$pnr                                      # eligible pnrs for this draw
 
-    if (length(candidates) == 0) next
+    if (length(candidates) == 0) next                              # no eligible obesity comparator for this BS patient; skip
 
-    n_sample     <- min(N_OBESITY_PER_BS, length(candidates))
-    sampled_pnrs <- sample(candidates, n_sample)
+    n_sample     <- min(N_OBESITY_PER_BS, length(candidates))      # draw up to 5; fewer if pool exhausted
+    sampled_pnrs <- sample(candidates, n_sample)                   # random draw without replacement
 
-    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]  # future BS date for each sampled control; NA if never in DBSO
+    sampled_bs_dates <- cand_df$bs_surgery_date[match(sampled_pnrs, cand_df$pnr)]   # future BS date per sampled control; NA if never in DBSO
     matched_rows[[i]] <- tibble(
-      pnr               = sampled_pnrs,
-      index_date        = idx_date,
-      cohort            = "Obesity",
-      surgery_type      = NA_character_,
-      matched_pnr       = bs_pnr,
-      bs_crossover_date = if_else(                                   # date this control later undergoes BS; NA if they never do
+      pnr               = sampled_pnrs,                            # pnrs of the sampled obesity controls
+      index_date        = idx_date,                                # controls inherit the matched BS patient's index date
+      cohort            = "Obesity",                               # cohort label
+      surgery_type      = NA_character_,                           # obesity controls have no surgery type
+      matched_pnr       = bs_pnr,                                 # records which BS patient this control is matched to
+      bs_crossover_date = if_else(                                 # date this control later undergoes BS; NA if never or already did
         !is.na(sampled_bs_dates) & sampled_bs_dates > idx_date,
         sampled_bs_dates, NA_Date_
       )
@@ -749,12 +749,12 @@ build_obesity_comparator <- function(bs_cohort) {
 
     for (k in group_keys) {
       if (!is.null(pool_list[[k]])) {
-        pool_list[[k]] <- pool_list[[k]][!pool_list[[k]]$pnr %in% sampled_pnrs, ]
+        pool_list[[k]] <- pool_list[[k]][!pool_list[[k]]$pnr %in% sampled_pnrs, ]   # remove sampled pnrs from pool to prevent reuse
       }
     }
   }
 
-  ob_cohort <- bind_rows(matched_rows)
+  ob_cohort <- bind_rows(matched_rows)   # stack all matched tibbles into one data frame
 
   # --------------------------------------------------------------------------
   # Match rate audit for obesity comparator.
@@ -763,9 +763,9 @@ build_obesity_comparator <- function(bs_cohort) {
   # coding in Danish hospitals ramped up gradually over the study period.
   # --------------------------------------------------------------------------
   ob_match_counts <- ob_cohort %>%
-    dplyr::count(matched_pnr, name = "n_ob")
-  n_ob_zero   <- sum(!bs_cohort$pnr %in% ob_match_counts$matched_pnr)
-  n_ob_fewer  <- sum(ob_match_counts$n_ob < N_OBESITY_PER_BS)
+    dplyr::count(matched_pnr, name = "n_ob")                          # count obesity controls per BS patient
+  n_ob_zero   <- sum(!bs_cohort$pnr %in% ob_match_counts$matched_pnr) # BS patients with zero obesity matches
+  n_ob_fewer  <- sum(ob_match_counts$n_ob < N_OBESITY_PER_BS)         # BS patients with fewer than 5 obesity matches
   if (n_ob_zero > 0) {
     warning("Obesity comparator: ", n_ob_zero, " BS patient(s) received ZERO matches. ",
             "Consider widening birth-year window to ±2 years or checking E66 pool size by calendar year.")
@@ -775,59 +775,59 @@ build_obesity_comparator <- function(bs_cohort) {
             N_OBESITY_PER_BS, " controls.")
   }
 
-  n_matched_raw <- nrow(ob_cohort)                        # attrition: obesity comparators before dementia exclusion
+  n_matched_raw <- nrow(ob_cohort)                                     # total obesity comparators before exclusions
 
   # Exclude any obesity comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs <- ob_cohort %>% select(pnr, index_date)
-  dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
-  ob_after_dementia <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove pre-index ICD dementia from obesity comparators
+  cutoffs <- ob_cohort %>% select(pnr, index_date)                     # per-person cutoff: each control's assigned index date
+  dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
+  ob_after_dementia <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove obesity controls with pre-index dementia
 
-  n_after_dementia <- nrow(ob_after_dementia)             # attrition after ICD dementia exclusion
+  n_after_dementia <- nrow(ob_after_dementia)                          # attrition after ICD dementia exclusion
 
   # Exclusion: emigrated before index date (protocol criterion 3)
   # Obesity comparators who emigrated from Denmark before their assigned index date
   # cannot contribute Danish register follow-up time and must be excluded.
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
-  vnds_ob <- load_database("vnds") %>% rename_with(tolower)   # migration register
+  vnds_ob <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_ob_pnrs <- vnds_ob %>%
-    filter(pnr %in% !!ob_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only
+    filter(pnr %in% !!ob_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only ("U" = udrejse)
     select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
-    collect() %>%                                                      # pull into memory for join
-    mutate(haend_dato = as.Date(haend_dato)) %>%                       # character to Date
-    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%
+    collect() %>%                                                      # pull into R memory
+    mutate(haend_dato = as.Date(haend_dato)) %>%                       # convert character to Date class
+    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's index date
     filter(haend_dato < index_date) %>%                                # emigration before index date
     distinct(pnr) %>%                                                  # one row per person
-    pull(pnr)
+    pull(pnr)                                                          # plain vector of pnrs to exclude
   ob_after_emigration <- ob_after_dementia %>% filter(!pnr %in% emigrated_ob_pnrs)   # remove pre-index emigrants
 
-  n_after_emigration <- nrow(ob_after_emigration)         # attrition after emigration exclusion
+  n_after_emigration <- nrow(ob_after_emigration)                      # attrition after emigration-before-index exclusion
 
   # Exclude obesity comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
-  lmdb_ob <- load_database("lmdb") %>% rename_with(tolower)   # prescription register for obesity comparators
+  lmdb_ob <- load_database("lmdb") %>% rename_with(tolower)           # LMDB prescription register
 
-  max_index_ob <- max(ob_after_emigration$index_date)          # upper bound for lazy parquet filter
+  max_index_ob <- max(ob_after_emigration$index_date)                  # upper date bound for lazy parquet filter
 
   n06d_pnrs_ob <- lmdb_ob %>%
     filter(
-      pnr %in% !!ob_after_emigration$pnr,                      # restrict to matched obesity comparators
-      substr(atc, 1, 4) == "N06D",                             # antidementia ATC class
-      eksd <= !!max_index_ob                                   # pull up to latest index date; per-person cutoff applied after collect
+      pnr %in% !!ob_after_emigration$pnr,                             # restrict to remaining obesity controls
+      substr(atc, 1, 4) == "N06D",                                    # N06D = antidementia drug class
+      eksd <= !!max_index_ob                                          # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
-    select(pnr, eksd, atc) %>%                                 # only needed columns
-    collect() %>%                                              # pull filtered records into memory
-    inner_join(ob_after_emigration %>% select(pnr, index_date), by = "pnr") %>%  # attach each person's index date
-    filter(eksd < index_date) %>%                              # dispensing must predate this person's index date
-    distinct(pnr) %>%                                          # one row per person with any pre-index N06D
-    pull(pnr)
+    select(pnr, eksd, atc) %>%                                        # only needed columns
+    collect() %>%                                                      # pull into R memory
+    inner_join(ob_after_emigration %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's own index date
+    filter(eksd < index_date) %>%                                      # dispensing must predate this person's index date
+    distinct(pnr) %>%                                                  # one row per person with any pre-index N06D
+    pull(pnr)                                                          # plain vector of pnrs to exclude
 
-  ob_final <- ob_after_emigration %>% filter(!pnr %in% n06d_pnrs_ob)   # remove pre-index antidementia medication users
+  ob_final <- ob_after_emigration %>% filter(!pnr %in% n06d_pnrs_ob)  # remove obesity controls with pre-index antidementia medication
 
   list(
-    cohort              = ob_final,
-    n_matched_raw       = n_matched_raw,       # before exclusions
-    n_after_dementia    = n_after_dementia,    # after ICD dementia exclusion
-    n_after_emigration  = n_after_emigration,  # after emigration-before-index exclusion
-    n_final             = nrow(ob_final)       # after N06D exclusion
+    cohort              = ob_final,              # final obesity comparator data frame
+    n_matched_raw       = n_matched_raw,         # obesity n before exclusions
+    n_after_dementia    = n_after_dementia,      # obesity n after ICD dementia exclusion
+    n_after_emigration  = n_after_emigration,    # obesity n after emigration-before-index exclusion
+    n_final             = nrow(ob_final)         # obesity n after N06D exclusion; final obesity cohort size
   )
 }
 
@@ -978,5 +978,5 @@ cat(strrep("-", 74), "\n")
 cat(sprintf("%-52s %8d %12s\n",  "TOTAL full_cohort", nrow(full_cohort), ""))
 cat("\n")
 
-dir.create(path_output, showWarnings = FALSE, recursive = TRUE)
-saveRDS(full_cohort, file.path(path_output, "full_cohort.rds"))   # save combined cohort for downstream scripts
+dir.create(path_output, showWarnings = FALSE, recursive = TRUE)          # create output directory if it does not exist
+saveRDS(full_cohort, file.path(path_output, "full_cohort.rds"))            # save combined cohort for downstream scripts

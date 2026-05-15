@@ -193,14 +193,44 @@
 # ============================================================================
 # Base path: E:/workdata/708421/cleaned-data/parquet-registers/
 #
+# OVERVIEW TABLE — all confirmed via colnames() on DST server 2026-05-15
+# ─────────────────────────────────────────────────────────────────────────────
+# Register           │ load_database() name   │ Join key        │ Period
+# ───────────────────┼────────────────────────┼─────────────────┼────────────────
+# BEF                │ "bef"                  │ pnr             │ annual snapshots
+# DODSAARS           │ "dodsaars"             │ pnr             │ all years
+# LPR2 contacts      │ "lpr_adm"              │ recnum          │ up to Mar 2019
+# LPR2 diagnoses     │ "lpr_diag"             │ recnum          │ up to Mar 2019
+# LPR3 contacts      │ "lpr_a_kontakt"        │ dw_ek_kontakt   │ Mar 2019+
+# LPR3 diagnoses     │ "lpr_a_diagnose"       │ dw_ek_kontakt   │ Mar 2019+
+# Psych LPR2 admiss  │ "t_psyk_adm"           │ k_recnum→recnum │ to Mar 2019
+# Psych LPR2 diag    │ "t_psyk_diag"          │ v_recnum→recnum │ to Mar 2019
+# LMDB               │ "lmdb"                 │ pnr             │ 1994+
+# VNDS               │ "vnds"                 │ pnr             │ all years
+# DBSO               │ "dbso"                 │ pnr (col: cpr)  │ 2010+
+# FAIK               │ "faik"                 │ familie_id      │ annual
+# AKM                │ "akm"                  │ pnr             │ annual
+# UDDA               │ "udda"                 │ pnr             │ annual
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTE: "lpr_a_diagnose" — the "a" means "analysis model" (LPR_A series, 2025).
+#       It does NOT mean A-type diagnoses only. Contains all types: A, B, G.
+# NOTE: t_psyk_adm and t_psyk_diag are accessible via load_database() (confirmed
+#       2026-05-15) — open_dataset() and path variables are NOT needed.
+# NOTE: DBSO identifier column is named "cpr" in parquet (not "pnr"); renamed to
+#       pnr in 00_prepare_dbso.R. Code uses pnr throughout after that rename.
+#
+# ─────────────────────────────────────────────────────────────────────────────
 # BEF - Befolkningsregisteret (Population register)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: bef
 #   Key vars (lowercase after rename_with(tolower)):
 #     pnr, koen (sex: 1=M, 2=F), foed_dag (birth date), aar (year),
 #     familie_id (for income linkage), reg (region), civst (marital status)
 #   Note: does NOT contain death date - use DOD for that
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # DODSAARS - Doedsaarsagsregisteret (Cause of Death Register)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: dodsaars  (accessed via load_database("dodsaars"))
 #   One row per deceased person.
 #   Confirmed column names (rename_with(tolower) applied):
@@ -227,17 +257,40 @@
 #   NOTE: Use d_dodsdto for death date censoring (not dodsaasg — that is the
 #         cause-of-death classification file, not the individual record file)
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # LPR2 - Landspatientregisteret (National Patient Registry, 1977 to March 2019)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folders: lpr_adm (contacts) + lpr_diag (diagnoses)
-#   lpr_adm:  pnr, recnum, d_inddto (contact date), c_spec (specialty), aar
-#   lpr_diag: recnum, c_diagtype (A=primary, B=secondary, G=other), c_diag (ICD with D-prefix)
 #   Join: lpr_adm LEFT JOIN lpr_diag ON recnum
-#   ICD note: codes have "D" prefix (e.g. "DG30") -> use substr(c_diag, 2, 4) to get "G30"
-#   Keep diagtypes: c("A", "B") -- exclude H (referral) and M (complications)
+#   ICD note: codes have "D" prefix (e.g. "DG30") — use substr(c_diag, 2, 4) to strip to "G30"
+#   Keep diagtypes: c("A", "B") — exclude G (supplementary) unless explicitly needed (NMI)
 #
+#   lpr_adm confirmed columns (rename_with(tolower) applied; confirmed 2026-05-15):
+#     recnum       contact key — join to lpr_diag on this
+#     pnr          patient identifier
+#     d_inddto     admission date — USE THIS as contact date
+#     d_uddto      discharge date
+#     c_adiag      primary diagnosis code (convenience copy; also in lpr_diag with recnum join)
+#     c_spec       specialty code
+#     c_sex        sex code
+#     fdato        birth date
+#     v_indtime    admission time (hour)
+#     v_indminut   admission time (minute)
+#     cprtjek      CPR check digit
+#     year         year
+#
+#   lpr_diag confirmed columns (rename_with(tolower) applied; confirmed 2026-05-15):
+#     recnum       join key to lpr_adm
+#     c_diag       ICD-10 code with D-prefix (e.g. "DG30") — USE THIS for diagnosis matching
+#     c_diagtype   "A" = primary, "B" = secondary, "G" = supplementary — USE THIS for type filter
+#     c_diagmod    diagnosis modifier code
+#     c_tildiag    supplementary diagnosis code
+#     year         year
+#
+# ─────────────────────────────────────────────────────────────────────────────
 # LPR3 - Landspatientregisteret v3 (from March 2019 onwards, unified somatic + psychiatric)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folders: lpr_a_kontakt (contacts) + lpr_a_diagnose (diagnoses)
-#   CONFIRMED: "lpr3f_kontakter" and "lpr3f_diagnoser" do NOT exist on this project.
 #             load_database("lpr_a_kontakt") and load_database("lpr_a_diagnose") are correct.
 #
 #   lpr_a_kontakt confirmed columns (rename_with(tolower) applied):
@@ -297,21 +350,71 @@
 #     cprtype                CPR type
 #     year                   year
 #
-#   lpr_a_diagnose columns (CONFIRM-3b: not yet checked — assumed from code):
-#     dw_ek_kontakt          join key to lpr_a_kontakt
-#     diagnosekode           ICD-10 code with D-prefix (e.g. "DG30")
-#     diagnosetype           "A" = primary, "B" = secondary, "G" = supplementary
-#     senare_afkraeftet      "Ja" = later retracted (exclude); "Nej" = confirmed
-#     diagnosekode_parent    parent diagnosis code
+#   lpr_a_diagnose confirmed columns (rename_with(tolower) applied; confirmed 2026-05-15):
+#     dw_ek_kontakt              join key to lpr_a_kontakt — USE THIS for join
+#     diag_kode                  ICD-10 code WITH D-prefix (e.g. "DG30") — USE THIS for diagnosis matching
+#                                strip prefix: substr(diag_kode, 2, 4) for 3-char, substr(diag_kode, 2, 5) for 4-char
+#     diag_kode_type             "A" = primary, "B" = secondary, "G" = supplementary — USE THIS for type filter
+#     diag_kode_tekst            ICD-10 code text label
+#     diag_kode_type_tekst       diagnosis type text label
+#     diag_parent_kode           parent diagnosis code
+#     diag_parent_kode_tekst     parent diagnosis text label
+#     diag_parent_kode_type      parent diagnosis type code
+#     diag_parent_kode_type_tekst parent diagnosis type text label
+#     senere_afkraeftet          "Ja" = later retracted (exclude); "Nej" = confirmed; NA = not recorded
+#                                SPELLING confirmed 2026-05-15: "senere" (Danish: later) — NOT "senare" (Swedish)
+#                                Code updated to "senere_afkraeftet" in 01 and 02.
+#     lprindberetningssystem     LPR reporting system identifier
+#     year                       year
 #   Join: lpr_a_kontakt LEFT JOIN lpr_a_diagnose ON dw_ek_kontakt
 #
-# Psychiatric LPR contacts
-#   For LPR3: fully unified - psychiatric contacts included in kontakter;
-#             all A/B diagnoses searchable without specialty filter.
-#   For LPR2: t_psyk_adm + t_psyk_diag (pnr, recnum, d_inddto / recnum, c_diag, c_diagtype)
-#             ** CONFIRM-6: ask data manager if load_database() or SAS file on project 708421 **
+#   Fixed 2026-05-15: corrected column names in 01_build_cohorts.R and 02_extract_outcomes_covariates.R
+#     diagnosekode       →  diag_kode
+#     diagnosetype       →  diag_kode_type
+#     senare_afkraeftet  →  senere_afkraeftet
 #
+# Psychiatric LPR contacts
+#   For LPR3: fully unified — psychiatric contacts included in lpr_a_kontakt/lpr_a_diagnose;
+#             all A/B diagnoses searchable without specialty filter.
+#   For LPR2: use t_psyk_adm + t_psyk_diag (see dedicated sections below).
+#             Confirmed accessible via load_database() on project 708421 (2026-05-15).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# t_psyk_adm - Psychiatric LPR2 admissions (up to March 2019)
+# ─────────────────────────────────────────────────────────────────────────────
+#   DST folder: t_psyk_adm  (accessed via load_database("t_psyk_adm"))
+#   One row per psychiatric contact/admission per patient.
+#   Join: t_psyk_adm LEFT JOIN t_psyk_diag ON recnum (after rename)
+#   Confirmed column names (rename_with(tolower) applied; confirmed from code 2026-05-15):
+#     v_cpr        patient identifier — rename to pnr: rename(pnr = v_cpr)
+#     k_recnum     contact key — rename to recnum: rename(recnum = k_recnum)
+#                  join to t_psyk_diag on recnum after rename
+#     d_inddto     admission date — USE THIS as contact date (same as lpr_adm)
+#   Usage pattern:
+#     load_database("t_psyk_adm") %>%
+#       rename_with(tolower) %>%
+#       rename(pnr = v_cpr, recnum = k_recnum)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# t_psyk_diag - Psychiatric LPR2 diagnoses (up to March 2019)
+# ─────────────────────────────────────────────────────────────────────────────
+#   DST folder: t_psyk_diag  (accessed via load_database("t_psyk_diag"))
+#   One row per diagnosis per psychiatric contact.
+#   Confirmed column names (rename_with(tolower) applied; confirmed from code 2026-05-15):
+#     v_recnum     contact key — rename to recnum: rename(recnum = v_recnum)
+#                  join to t_psyk_adm on recnum after rename
+#     c_diag       ICD-10 code WITH D-prefix (e.g. "DF00") — same format as lpr_diag
+#                  strip prefix: substr(c_diag, 2, 4) for 3-char matching
+#     c_diagtype   "A" = primary, "B" = secondary, "G" = supplementary — same as lpr_diag
+#                  filter to c("A","B") for outcome/exclusion logic
+#   Usage pattern:
+#     load_database("t_psyk_diag") %>%
+#       rename_with(tolower) %>%
+#       rename(recnum = v_recnum)
+#
+# ─────────────────────────────────────────────────────────────────────────────
 # LMDB - Lagemiddeldatabasen (National Prescription Database)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: lmdb  (accessed via load_database("lmdb"))
 #   Covers: 1994 onwards, annual files combined in parquet
 #   Confirmed column names (rename_with(tolower) applied):
@@ -352,22 +455,45 @@
 #     abc          ABC classification
 #   Key vars for extraction: pnr, atc, eksd (all confirmed present)
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # UDDA - Uddannelsesregisteret (Education register)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: udda
 #   Key vars: pnr, hfaudd (highest completed education code), aar
 #   Use: filter aar == year(surgery_date) - 1 to get education at baseline
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # FAIK - Familieindkomst (Family income register)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: faik
 #   Key vars: familie_id, famaekvivadisp_13 (equivalized disposable household income), aar
 #   Link: join bef (pnr, familie_id, aar) with faik (familie_id, aar) to get income per person
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # AKM - Arbejdsklassifikationsmodulet (Employment classification)
+# ─────────────────────────────────────────────────────────────────────────────
 #   DST folder: akm
 #   Key vars: pnr, socio13 (socioeconomic group code), aar
 #   Use: filter aar == year(surgery_date) - 1
 #
+# ─────────────────────────────────────────────────────────────────────────────
+# VNDS - Vandrestatistikken (Migration register)
+# ─────────────────────────────────────────────────────────────────────────────
+#   DST folder: vnds  (accessed via load_database("vnds"))
+#   One row per migration event per person (both emigration and immigration events).
+#   Used for: censoring persons who emigrate from Denmark (no longer in registers).
+#   Confirmed column names (rename_with(tolower) applied; confirmed from code 2026-05-15):
+#     pnr          patient identifier
+#     indud_kode   migration direction code:
+#                    "U" = udrejse (emigration OUT of Denmark) — USE THIS for censoring
+#                    "I" = indrejse (immigration INTO Denmark)
+#     haend_dato   event date — USE THIS as emigration/immigration date
+#   Usage: filter indud_kode == "U", take min(haend_dato) per pnr for first emigration date.
+#   Non-emigrants (not in VNDS with "U" event) get emigration_date = NA.
+#
+# ─────────────────────────────────────────────────────────────────────────────
 # DBSO - Danish Obesity Surgery Registry (Databasen for Behandling af Svær Overvægt)
+# ─────────────────────────────────────────────────────────────────────────────
 #   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by 00_prepare_dbso.R
 #   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/dbso/
 #   Access: arrow::open_dataset(path_dbso) — NOT via load_database()
@@ -495,7 +621,9 @@
 #                         b12/jern/kalk + compliance columns (extract_dbso_clinical.rds)
 #                         a10a_foer/efter (insulin use; extract_dbso_clinical.rds)
 #
+# ─────────────────────────────────────────────────────────────────────────────
 # OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
+# ─────────────────────────────────────────────────────────────────────────────
 #   File path: confirm with data manager (likely dm_population_YYYY_YYYY.rds)
 #   Key vars: pnr (or PNR), diabetes_type (1=T1D, 2=T2D), do_dm (classification date)
 #   Package: https://steno-aarhus.github.io/osdc/index.html

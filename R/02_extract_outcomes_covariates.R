@@ -52,8 +52,7 @@ library(heaven)        # exposureMatch(), findCondition(), edu_code, etc.
 
 # Paths ----
 path_output        <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"
-path_psyk_adm      <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_adm"
-path_psyk_diag     <- "E:/workdata/708421/cleaned-data/parquet-external/t_psyk_diag"
+# t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 # full_cohort.rds is produced by 01_build_cohorts.R (BS + GP + obesity, with index_date)
 path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets/full_cohort.rds"
@@ -117,12 +116,12 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   # Psychiatric contacts before March 2019 are in a SEPARATE register (not in lpr_adm/lpr_diag).
   # This is the source for F00-F03 dementia diagnosed in geropsychiatric outpatient memory clinics.
   #
-  # Confirmed path: parquet-external folder (not via load_database).
+  # Confirmed 2026-05-15: t_psyk_adm and t_psyk_diag accessible via load_database().
   # Raw DST column names — rename v_cpr->pnr, k_recnum->recnum, v_recnum->recnum.
-  psyk_adm  <- arrow::open_dataset(path_psyk_adm)  %>% rename_with(tolower) %>%
-    rename(pnr = v_cpr, recnum = k_recnum)
-  psyk_diag <- arrow::open_dataset(path_psyk_diag) %>% rename_with(tolower) %>%
-    rename(recnum = v_recnum)
+  psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%          # psychiatric LPR2 admissions; accessible via load_database (confirmed 2026-05-15)
+    rename(pnr = v_cpr, recnum = k_recnum)                                         # v_cpr -> pnr, k_recnum -> recnum to align with somatic LPR naming
+  psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%          # psychiatric LPR2 diagnoses; accessible via load_database (confirmed 2026-05-15)
+    rename(recnum = v_recnum)                                                       # v_recnum -> recnum to match join key used in psyk_adm
 
   lpr2_psyk_adm_filtered <- psyk_adm %>%
     filter(pnr %in% !!pnr_vector) %>%
@@ -153,7 +152,7 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)  # confirmed name
   diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # confirmed name
   # confirmed kontakter columns: pnr, dw_ek_kontakt, kont_starttidspunkt (datetime), kont_type
-  # diagnoser columns: dw_ek_kontakt, diagnosekode, diagnosetype, senare_afkraeftet (CONFIRM-3b: not yet checked)
+  # diagnoser columns: dw_ek_kontakt, diag_kode, diag_kode_type, senere_afkraeftet (CONFIRM-3b: not yet checked)
 
   lpr3_kontakter_filtered <- kontakter %>%
     filter(pnr %in% !!pnr_vector) %>%
@@ -168,14 +167,14 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
     inner_join(
       diagnoser %>%
         filter(
-          diagnosetype %in% diagtypes,
-          # senare_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
+          diag_kode_type %in% diagtypes,
+          # senere_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
           # Current filter keeps NAs (defensive: if NAs exist, we include rather than drop).
           # OSDC uses == "Nej" (drops NAs). Verify whether NAs occur in real data before changing.
-          is.na(senare_afkraeftet) | senare_afkraeftet != "Ja"
+          is.na(senere_afkraeftet) | senere_afkraeftet != "Ja"
         ) %>%
-        mutate(icd3 = substr(diagnosekode, 2, 4),
-               icd4 = substr(diagnosekode, 2, 5)) %>%
+        mutate(icd3 = substr(diag_kode, 2, 4),
+               icd4 = substr(diag_kode, 2, 5)) %>%
         select(dw_ek_kontakt, icd3, icd4),
       by = "dw_ek_kontakt"
     ) %>%
