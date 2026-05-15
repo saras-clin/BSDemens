@@ -59,7 +59,7 @@ library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_
 
 # Paths ----
 path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"   # where .rds outputs are written
-path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
+path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
 # t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 

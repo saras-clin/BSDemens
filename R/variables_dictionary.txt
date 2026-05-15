@@ -31,46 +31,108 @@
 #   sex: koen in BEF (1=Male, 2=Female)
 #   birth_date: foed_dag in BEF
 
-### Nordic Multimorbidity Index (NMI) - Full condition list (GMC algorithm)
-# Source: LPR (lpr_adm + lpr_diag for LPR2; kontakter + diagnoser for LPR3)
-# Note: some conditions require BOTH a diagnosis AND prescription to be confirmed
-#   (see GMC algorithm in firstapperancediag2021.R). For baseline covariates we use
-#   diagnosis OR prescription (whichever appears first in lookback window).
+### BASELINE COMORBIDITY FLAGS — extract_baseline_comorbidities() (LPR, 5-year lookback)
+# Source: LPR somatic + psychiatric; A + B + G diagnosis types.
+# Binary flags (0/1 per person): ICD-10 diagnosis-based only.
+# GMC specifies "ICD OR prescription" for a few conditions — in this pipeline ICD is used
+# alone; ATC-based overlap is captured separately (see Baseline Medications section below).
 #
-#   Hypertension:         I10-I15 OR antihypertensives (C02, C03, C07-C09) in LMDB
-#   Dyslipidemia:         E78 OR lipid-lowering (C10) in LMDB
-#   IHD/Angina:           I20, I24, I25
-#   Atrial fibrillation:  I48
-#   Heart failure:        I50
-#   PAD:                  I70-I74
-#   Stroke/TIA:           I60-I64, I69, G45
-#   MI:                   I21-I23
-#   Diabetes (any):       E10-E14 (type classified via OSDC - see extract_diabetes_classification)
-#   Thyroid disorders:    E00-E07
-#   Gout:                 E79, M10
-#   COPD:                 J40-J44, J47
-#   Asthma:               J45-J46
-#   Allergy:              J301-J304, L23, L500, T780, T782, T784
-#   Peptic ulcer:         K221, K25-K28, K293-K295
-#   Liver disease:        B16-B19, K70-K75, K766, I85
-#   IBD:                  K50-K51
-#   Diverticular disease: K57
-#   Kidney disease:       N03, N11, N17-N19
-#   Prostate disorders:   N40 (men only)
-#   Connective tissue:    M05-M06, M08-M09, M30-M36, D86
-#   Osteoporosis:         M80-M82
-#   Depression:           F32-F33
-#   Bipolar disorder:     F30-F31
-#   Anemia:               D50-D53, D55-D59, D60-D61, D63-D64
-#   Cancer:               C00-C97
-#   HIV/AIDS:             B20-B24
-#   Vision disorders:     H25, H40, H54
-#   Hearing disorders:    H90-H91, H931
-#   Migraine:             G43
-#   Epilepsy:             G40-G41
-#   Parkinson's disease:  G20-G22
-#   Multiple sclerosis:   G35
-#   Peripheral neuropathies: G50-G64
+# Variable name        ICD-10 codes (3-char, D-prefix stripped)              Notes
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# mi                   I21, I22, I23
+# stroke_tia           I60, I61, I62, I63, I64, I69, G45
+# pad                  I70, I71, I72, I73, I74
+# ihd                  I20, I24, I25
+# heart_failure        I50  [+ I110, I130, I132, I420-I429 via icd4 block]
+# afib                 I48
+# hypertension         I10, I11, I12, I13, I15                               GMC also uses C02/C03/C07-C09; not implemented here
+# diabetes_any         E10, E11, E12, E13, E14                               type classified by OSDC separately
+# dyslipidemia         E78                                                   GMC also uses C10; not implemented here
+# thyroid              E00, E01, E02, E03, E04, E05, E06, E07               E06.0 (acute thyroiditis) excluded per GMC
+# gout                 E79, M10
+# copd                 J40, J41, J42, J43, J44, J47
+# asthma               J45, J46
+# liver                B16, B17, B18, B19, K70, K71, K72, K73, K74, I85    K76.6 added via icd4 block
+# peptic_ulcer         K25, K26, K27, K28  [+ K22.1, K29.3-K29.5 via icd4 block]
+# ibd                  K50, K51
+# diverticular         K57
+# ckd                  N03, N11, N18, N19
+# prostate             N40                                                   men only; filter in analysis stage
+# connective_tissue    M05, M06, M08, M09, M30-M36, D86
+# osteoporosis         M80, M81, M82
+# depression           F32, F33
+# bipolar              F30, F31
+# parkinsons           G20, G21, G22
+# epilepsy             G40, G41
+# ms                   G35
+# migraine             G43
+# neuropathy           G50-G64
+# cancer               C00-C97 (excl. C44 non-melanoma skin cancer)
+# anemia               D50, D51, D52, D53, D55-D59, D60, D61, D63, D64
+# hiv                  B20, B21, B22, B23, B24
+# vision               H25, H40, H54
+# hearing              H90, H91, H93                                         GMC specifies H93.1 only; pipeline uses all H93
+#
+### NMI SCORE — extract_nmi() — continuous weighted score (Kristensen et al. Clin Epidemiol 2022)
+# 29 DIAGNOSIS predictors (ICD, 5-year lookback, A/B/G types) + 21 PRESCRIPTION predictors (ATC, LMDB).
+# Regex patterns verbatim from official Stata code (online_nmi.do); weights from Table 2.
+# Study 1: dx_F00_G30 and rx_N06D excluded to avoid circularity with the dementia outcome.
+#
+# DIAGNOSIS predictors — regex matched on icd4 (4-char ICD, D-prefix stripped):
+# Predictor         ICD regex                        Wt   Description
+# dx_B18            ^B18                             10   chronic viral hepatitis
+# dx_C34            ^C34                             19   lung cancer
+# dx_C50            ^C50                              4   breast cancer
+# dx_C61            ^C61                              5   prostate cancer
+# dx_C67            ^C67                              8   bladder cancer
+# dx_C70_D432       ^C7[01]|...|^D43[0-2]             8   CNS/brain tumours
+# dx_C76_C80        ^C7[6-9]|^C80                    22   secondary/unspecified malignancies
+# dx_C91_C95        ^C9[1-5]                           8   haematological cancers
+# dx_D50_D64        ^D5[0-9]|^D6[0-4]                 5   anaemia and blood disorders
+# dx_E11            ^E11                               2   type 2 diabetes
+# dx_E86            ^E86                               6   volume depletion / dehydration
+# dx_F00_G30        ^F0[0-3]|^G30                      9   dementia [excluded Study 1]
+# dx_F10            ^F10                              12   alcohol use disorder
+# dx_F17            ^F17                               4   tobacco dependence
+# dx_G20_G22        ^G2[0-2]                           7   Parkinson's disease
+# dx_G35            ^G35                               7   multiple sclerosis
+# dx_G40_G41        ^G4[01]                            5   epilepsy
+# dx_I05_I35        ^I0[56]|^I3[45]                    2   valvular heart disease
+# dx_I110_I50       ^I110|^I13[02]|^I42...|^I50        4   heart failure
+# dx_I60_I69        ^I6[0-9]                           4   cerebrovascular disease
+# dx_I70_I77        ^I7[0347]                          5   PAD and aortic aneurysm
+# dx_I71_I72        ^I7[12]                            4   aortic aneurysm/dissection
+# dx_J12_J18        ^J1[2-8]                           4   pneumonia
+# dx_J41_J47        ^J4[12347]|^J96[19]                4   COPD and respiratory failure
+# dx_J84            ^J84                               7   interstitial lung disease
+# dx_K02_K08        ^K0[234568]                        5   dental and oral diseases
+# dx_K70_K767       ^K7[024]|^K76[67]                 13   liver disease
+# dx_L89            ^L89                              11   pressure ulcers
+# dx_N18_N19        ^N1[89]                            7   CKD and renal failure
+#
+# PRESCRIPTION predictors — regex matched on full ATC string in LMDB:
+# Predictor         ATC regex                        Wt   Description
+# rx_A06A           ^A06A                             8   laxatives
+# rx_A07DA          ^A07DA                            5   opioid antidiarrhoeals (loperamide)
+# rx_A10A           ^A10A                             4   insulin
+# rx_B01AC          ^B01AC                            2   platelet aggregation inhibitors
+# rx_B03A           ^B03A                             5   iron preparations
+# rx_C01AA          ^C01AA                            4   cardiac glycosides (digoxin)
+# rx_C03C_C03EB     ^C03C|^C03EB                     5   loop diuretics (furosemide)
+# rx_C03DA          ^C03DA                            3   aldosterone antagonists (spironolactone)
+# rx_C09C_C09D      ^C09[CD]                         -2   ARBs / sartans [negative weight: protective]
+# rx_C10AA          ^C10AA                           -3   statins [negative weight: protective]
+# rx_H02AB          ^H02AB                            2   systemic glucocorticoids
+# rx_J01C           ^J01C                             1   penicillins (infection severity marker)
+# rx_N02A           ^N02A                             2   opioid analgesics
+# rx_N02BE          ^N02BE                            2   paracetamol
+# rx_N05BA_N05CF    ^N05BA|^N05C[DF]                 1   anxiolytics and hypnotics (BZD, Z-drugs)
+# rx_N05AA_N05AX    ^N05A[A-L]|^N05AX                7   antipsychotics (typical and atypical)
+# rx_N06A           ^N06A                             3   antidepressants
+# rx_N06D           ^N06D                            11   anti-dementia drugs [excluded Study 1]
+# rx_N07BC          ^N07BC                            7   opioid dependence treatment (methadone)
+# rx_R03AC02_05     ^R03AC0[2-5]                     3   short-acting beta-2 agonists (salbutamol)
+# rx_R03BB04_07     ^R03BB0[4-7]                     5   long-acting anticholinergics for COPD
 
 ### Socioeconomic Status (SES)
 # Extracted separately in: 03_extract_ses.R
@@ -94,17 +156,17 @@
 #     - "Retired":           322, 323
 #     - "Unknown":           0, 420 (children), or missing
 
-### Baseline Medications (ATC codes from LMDB, 5 years before surgery)
-# Purpose:
-#   (1) Required component of NMI/GMC conditions that need BOTH diagnosis AND medication
-#       (e.g. treated hypertension = I10-I15 OR >=2 antihypertensive prescriptions/year)
-#   (2) Independent covariates reflecting metabolic/psychiatric status at baseline
+### BASELINE MEDICATIONS — extract_baseline_medications() (LMDB, 5-year lookback)
+# Source: LMDB; binary flags (1 = at least one dispensing in the 5-year window before surgery).
+# Purpose: independent covariates in Table 1; not combined with ICD flags for comorbidity flags.
 #
-#   antihypertensive: C02, C03, C07, C08, C09
-#   lipid_lowering:   C10
-#   antidiabetic:     A10 (all); A10A = insulin only
-#   antidepressant:   N06A
-#   antidementia:     N06D (sensitivity check - flag persons already treated for dementia)
+# Variable name       ATC codes        Description
+# ─────────────────────────────────────────────────────────────────────────────
+# antihypertensive    C02, C03, C07-C09  all antihypertensive drug classes
+# lipid_lowering      C10                lipid-lowering agents (statins and others)
+# antidiabetic        A10                all antidiabetic drugs; A10A = insulin flagged separately
+# antidepressant      N06A               antidepressants
+# antidementia        N06D               cholinesterase inhibitors, memantine (sensitivity check)
 
 ### Obesity-related comorbidities (from LPR diagnoses + LMDB, 5 years before surgery)
 # Purpose: These are the primary BS eligibility criteria (BMI >=40, or >=35 + comorbidity)
@@ -624,6 +686,15 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
 # ─────────────────────────────────────────────────────────────────────────────
-#   File path: confirm with data manager (likely dm_population_YYYY_YYYY.rds)
-#   Key vars: pnr (or PNR), diabetes_type (1=T1D, 2=T2D), do_dm (classification date)
+#   File path: E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds
+#   Access: readRDS(path_dm_pop) — RDS file, not a parquet register; no load_database()
+#   Covers: 1977-2022 (sufficient for all baseline diabetes classification in this study)
+#   Documented column names (from code; confirm with colnames() before first run):
+#     PNR            patient identifier (uppercase — rename: tolower() or rename(pnr = PNR))
+#     diabetes_type  numeric: 1 = T1D, 2 = T2D; recoded to "T1D"/"T2D" in pipeline
+#     do_dm          date of diabetes classification — renamed to date_diabetes in pipeline
+#     age_at_onset   age at diabetes onset (numeric)
+#   To confirm column names on DST server:
+#     dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
+#     names(dm_pop)
 #   Package: https://steno-aarhus.github.io/osdc/index.html

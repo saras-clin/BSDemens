@@ -59,7 +59,7 @@ path_full_cohort <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datase
 # OSDC path confirmed in DARTER kickstarter. Covers to 2022; sufficient for baseline
 # diabetes classification for surgeries up to 2022. Patients with surgery 2023-2024
 # whose diabetes onset is after 2022 will be misclassified as No_diabetes (minor limitation).
-path_dm_pop      <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
+path_dm_pop      <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"
 
 # ============================================================================
 # 2.0 SHARED HELPER: PULL DIAGNOSES FROM ALL LPR SOURCES
