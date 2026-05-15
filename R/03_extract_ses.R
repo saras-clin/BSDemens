@@ -330,16 +330,10 @@ extract_ses <- function(bs_cohort) {
 }
 
 # ============================================================================
-# 3.5 MAIN: RUN AND SAVE
+# 3.5 RUN — execute each block interactively, or source the whole file
 # ============================================================================
 
-main_ses_extraction <- function() {
-  bs_cohort <- load_full_cohort()                                              # loads full_cohort.rds (all three cohort groups: BS, GP, Obesity)
-  ses_data  <- extract_ses(bs_cohort)                                          # runs education, income, and occupation extractions; combines into one data frame
-  dir.create(path_output, showWarnings = FALSE, recursive = TRUE)              # create output directory if it does not already exist
-  saveRDS(ses_data, file.path(path_output, "ses_data.rds"))                    # write results to disk; loaded by 04_data_management_dementia.R
-  invisible(ses_data)                                                          # return silently; caller can capture result if needed
-}
-
-# Run:
-# ses_results <- main_ses_extraction()
+full_cohort <- load_full_cohort()                                              # loads full_cohort.rds (all three cohort groups: BS, GP, Obesity)
+ses_data    <- extract_ses(full_cohort)                                        # runs education, income, and occupation extractions; combines into one data frame
+dir.create(path_output, showWarnings = FALSE, recursive = TRUE)                # create output directory if it does not already exist
+saveRDS(ses_data, file.path(path_output, "ses_data.rds"))                      # write results to disk; loaded by 04_data_management_dementia.R

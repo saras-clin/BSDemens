@@ -58,7 +58,6 @@ The cohort is divided into an RYGB sub-cohort and an SG sub-cohort.
 
 4. **Death within 30 days of surgery**
 5. **Fewer than 5 years of registry history before index date**
-6. **Emigration before index date**
 
 > **Note on healthy user / surveillance bias** *(Protocol comment s):* Patients with incipient cognitive decline are likely excluded from BS eligibility at the preoperative assessment. This could artefactually lower dementia rates post-surgery and must be addressed in limitations and in the sensitivity analysis (exclusion of early events, criterion 7g.2).
 
@@ -129,7 +128,7 @@ GLP-1 receptor agonist (ATC A10BJ) use by obesity comparators is **not** an excl
 
 ## 5. Covariates
 
-All measured in the 5-year lookback window before the index date.
+Lookback windows follow the NMI algorithm (Kristensen 2022): ICD-10 diagnosis codes use a **5-year** lookback; ATC prescription-based predictors use a **6-month** lookback.
 
 ### Demographics
 - Age at surgery (continuous)
@@ -554,7 +553,7 @@ The two approaches answer different questions and are not interchangeable.
 
 RYGB was dominant in Denmark approximately 2010–2015; SG became dominant from approximately 2015 onwards. Persons who had RYGB therefore tend to have earlier index dates and longer follow-up than persons who had SG, independently of any surgical effect on dementia.
 
-*Current mitigation:* Surgery year period included as a covariate in Model 3 (3 periods: 2010–2013, 2014–2017, 2018+).
+*Current mitigation:* Surgery year period included as a covariate in Model 3 (3 periods: 2010–2014, 2015–2019, 2020–2024).
 
 *Residual concern:* Period adjustment may not fully remove the calendar confounding because the RYGB-to-SG transition happened at different times in different hospital centres, and patient selection for RYGB vs SG changed over the period.
 

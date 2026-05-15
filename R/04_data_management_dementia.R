@@ -475,41 +475,24 @@ format_variables <- function(df) {
 # 4.6 MAIN: ASSEMBLE AND SAVE STUDY1_CLEAN.RDS
 # ============================================================================
 
-main_data_management <- function() {
-  cat("Loading and merging extracted data...\n")
-  df <- load_and_merge()
-  cat("  n =", nrow(df), "before exclusions\n")
+# ============================================================================
+# RUN — execute each block interactively, or source the whole file
+# ============================================================================
 
-  # Attach emigration dates from VNDS register (indud_kode == "U"; haend_dato = emigration date).
-  # Persons not in VNDS or with no "U" event get emigration_date = NA (never emigrated).
-  emigration <- get_emigration_dates(df$pnr)        # earliest emigration date per person; NA if none
-  df <- df %>% left_join(emigration, by = "pnr")    # non-emigrants get emigration_date = NA
+df <- load_and_merge()                             # joins all extract_*.rds + ses_data.rds
 
-  cat("Applying exclusions...\n")
-  df <- apply_exclusions(df)
-  cat("  n =", nrow(df), "after exclusions\n")
+# Attach emigration dates from VNDS (indud_kode == "U"; haend_dato = emigration date).
+# Persons not in VNDS or with no "U" event get emigration_date = NA.
+emigration <- get_emigration_dates(df$pnr)         # earliest emigration date per person; NA if none
+df <- df %>% left_join(emigration, by = "pnr")     # non-emigrants get emigration_date = NA
 
-  cat("Combining ICD + prescription flags...\n")
-  df <- combine_icd_rx_flags(df)
+df <- apply_exclusions(df)                         # removes any prevalent dementia not caught in step 1
+df <- combine_icd_rx_flags(df)                     # adds hypertension_combined, dyslipidemia_combined
+df <- compute_multimorbidity_count(df)             # adds nmi_count (integer) and nmi_cat (factor 0/1/2/3+)
+# nmi_score (weighted Kristensen index) already in df from load_and_merge() via extract_nmi.rds
+df <- format_variables(df)                         # factors, date diffs, age_cat, surgery_period, event indicators
 
-  cat("Computing multimorbidity condition count and category (Table 1)...\n")
-  df <- compute_multimorbidity_count(df)
-  # nmi_score (weighted Kristensen NMI) is already in df from load_and_merge() via extract_nmi.rds
+print(table(df$cohort))                            # cohort sizes
+print(table(df$cohort, df$dementia_event, useNA = "ifany"))   # dementia events by cohort
 
-  cat("Formatting variables...\n")
-  df <- format_variables(df)
-
-  # Cohort sizes
-  cat("\nCohort sizes:\n")
-  print(table(df$cohort))
-
-  cat("\nDementia events by cohort:\n")
-  print(table(df$cohort, df$dementia_event, useNA = "ifany"))
-
-  saveRDS(df, file.path(path_output, "study1_clean.rds"))
-  cat("\nSaved: study1_clean.rds\n")
-  invisible(df)
-}
-
-# Run:
-# study1 <- main_data_management()
+saveRDS(df, file.path(path_output, "study1_clean.rds"))        # save final analysis dataset

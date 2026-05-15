@@ -1087,67 +1087,45 @@ load_ses <- function() {
 }
 
 # ============================================================================
-# 2.13 MAIN WORKFLOW
+# 2.13 RUN — execute each block interactively, or source the whole file
 # ============================================================================
 
-main_extraction <- function() {
-  dir.create(path_output, showWarnings = FALSE, recursive = TRUE)
+dir.create(path_output, showWarnings = FALSE, recursive = TRUE)   # create output directory if it does not already exist
 
-  cat("Loading full cohort (BS + GP + Obesity)...\n")
-  full_cohort <- load_full_cohort()
-  # surgery_date here is index_date for all cohort members
+full_cohort <- load_full_cohort()                                  # loads full_cohort.rds (BS + GP + Obesity); surgery_date is index_date for all members
+bs_only     <- full_cohort %>% filter(cohort == "BS")             # DBSO-based extracts apply to BS patients only
 
-  # Weight and insulin outcomes only apply to BS patients (DBSO data)
-  bs_only <- full_cohort %>% filter(cohort == "BS")
+demographics <- extract_demographics(full_cohort)                  # age, sex, birth year for all cohort members
+saveRDS(demographics, file.path(path_output, "extract_demographics.rds"))   # save to disk; loaded by 04_data_management_dementia.R
 
-  cat("Extracting demographics (all cohort members)...\n")
-  demographics <- extract_demographics(full_cohort)
-  saveRDS(demographics, file.path(path_output, "extract_demographics.rds"))
+dementia <- extract_dementia_outcomes(full_cohort)                 # all-cause, Alzheimer, vascular dementia; includes date_dementia_primary for sensitivity 7g.1
+saveRDS(dementia, file.path(path_output, "extract_dementia.rds"))
 
-  cat("Extracting dementia outcomes (all cohort members)...\n")
-  dementia <- extract_dementia_outcomes(full_cohort)   # includes date_dementia_primary for sensitivity 7g.1
-  saveRDS(dementia, file.path(path_output, "extract_dementia.rds"))
+negative_controls <- extract_negative_controls(full_cohort)        # cataract outcome for negative control sensitivity analysis (7g.6)
+saveRDS(negative_controls, file.path(path_output, "extract_negative_controls.rds"))
 
-  cat("Extracting negative control outcome — cataract (sensitivity 7g.6)...\n")
-  negative_controls <- extract_negative_controls(full_cohort)
-  saveRDS(negative_controls, file.path(path_output, "extract_negative_controls.rds"))
+weights <- extract_weight_outcomes(bs_only)                        # pre-op and follow-up weight, height, BMI from DBSO (BS cohort only)
+saveRDS(weights, file.path(path_output, "extract_weights.rds"))
 
-  cat("Extracting weight outcomes (BS patients only -- DBSO)...\n")
-  weights <- extract_weight_outcomes(bs_only)
-  saveRDS(weights, file.path(path_output, "extract_weights.rds"))
+dbso_clinical <- extract_dbso_clinical(bs_only)                    # reoperation flags, EOSS stage, sleep apnea, nutritional supplements (BS only)
+saveRDS(dbso_clinical, file.path(path_output, "extract_dbso_clinical.rds"))
 
-  cat("Extracting DBSO clinical outcomes (BS patients only -- Study 2)...\n")
-  dbso_clinical <- extract_dbso_clinical(bs_only)   # reoperation flags, EOSS, sleep apnea, nutritional supplements
-  saveRDS(dbso_clinical, file.path(path_output, "extract_dbso_clinical.rds"))
+insulin <- extract_insulin_outcomes(bs_only)                       # insulin use before and after surgery (BS cohort only)
+saveRDS(insulin, file.path(path_output, "extract_insulin.rds"))
 
-  cat("Extracting insulin outcomes (BS patients only)...\n")
-  insulin <- extract_insulin_outcomes(bs_only)
-  saveRDS(insulin, file.path(path_output, "extract_insulin.rds"))
+hospitals <- extract_hospital_contacts(full_cohort)                # number of hospital contacts in lookback window (all cohort members)
+saveRDS(hospitals, file.path(path_output, "extract_hospitals.rds"))
 
-  cat("Extracting hospital contacts (all cohort members)...\n")
-  hospitals <- extract_hospital_contacts(full_cohort)
-  saveRDS(hospitals, file.path(path_output, "extract_hospitals.rds"))
+comorbidities <- extract_baseline_comorbidities(full_cohort)       # individual NMI condition flags at baseline (all cohort members)
+saveRDS(comorbidities, file.path(path_output, "extract_comorbidities.rds"))
 
-  cat("Extracting baseline comorbidities (all cohort members)...\n")
-  comorbidities <- extract_baseline_comorbidities(full_cohort)
-  saveRDS(comorbidities, file.path(path_output, "extract_comorbidities.rds"))
+nmi <- extract_nmi(full_cohort, exclude_dementia_predictors = TRUE)   # NMI score excluding dx_F00_G30 and rx_N06D to avoid circular confounding with dementia outcome
+saveRDS(nmi, file.path(path_output, "extract_nmi.rds"))
 
-  cat("Extracting NMI score (all cohort members, dementia predictors excluded for Study 1)...\n")
-  nmi <- extract_nmi(full_cohort, exclude_dementia_predictors = TRUE)  # Study 1 uses dementia-free NMI (28 dx + 20 rx predictors)
-  saveRDS(nmi, file.path(path_output, "extract_nmi.rds"))
+medications <- extract_baseline_medications(full_cohort)           # antihypertensive, lipid-lowering, antidiabetic, antidepressant use at baseline
+saveRDS(medications, file.path(path_output, "extract_medications.rds"))
 
-  cat("Extracting baseline medications (all cohort members)...\n")
-  medications <- extract_baseline_medications(full_cohort)
-  saveRDS(medications, file.path(path_output, "extract_medications.rds"))
+diabetes <- extract_diabetes_classification(full_cohort)           # No_diabetes / T1D / T2D from OSDC (covers up to 2022; see TODO [MINOR-3])
+saveRDS(diabetes, file.path(path_output, "extract_diabetes.rds"))
 
-  cat("Extracting diabetes classification (all cohort members)...\n")
-  diabetes <- extract_diabetes_classification(full_cohort)
-  saveRDS(diabetes, file.path(path_output, "extract_diabetes.rds"))
-
-  cat("Done! Individual extracts saved to", path_output, "\n")
-  cat("Next: run 03_extract_ses.R, then 04_data_management_dementia.R\n")
-  invisible(NULL)
-}
-
-# Run:
-# main_extraction()
+# Next: run 03_extract_ses.R, then 04_data_management_dementia.R

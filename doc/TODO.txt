@@ -30,6 +30,51 @@ CONFIRM — VERIFY BEFORE TRUSTING RESULTS
 
 
 ================================================================================
+ANALYSIS DECISIONS — CONFIRM BEFORE WRITING 07_analysis_dementia.R
+================================================================================
+
+[ANALYSIS-1] Time-period analysis method — confirm approach before coding
+  The methods plan (section 7e, [B2]) pre-specifies landmark analyses at 1 year
+  and 5 years but leaves the implementation approach as TBD. Three options:
+
+  Option A — Time-band IRs and HRs (RECOMMENDED based on literature review)
+    Split follow-up into bands: [0–1 yr], [1–5 yr], [5+ yr].
+    Compute separate crude IR and adjusted Cox HR for each band.
+    Everyone contributes to all bands they were at risk for.
+    Most common approach in register-based bariatric surgery outcome studies.
+    Directly addresses: early surveillance bias (0–1 yr) vs. sustained effect (5+).
+    Aligns with sensitivity analysis 7g.2 (exclusion of first-12-month events).
+
+  Option B — Landmark restriction (more formal)
+    At 1-year landmark: exclude all persons who had the outcome or were censored
+    before 1 year. Restart analysis from that point in the remaining cohort.
+    Changes the study population at each landmark — harder to compare across
+    landmarks. Less common in BS/dementia literature.
+
+  Option C — Cumulative incidence at fixed time points (1 yr, 5 yr)
+    Report the cumulative probability of dementia by 1 year and 5 years
+    (Aalen-Johansen estimator, accounting for competing mortality).
+    Descriptive; does not produce HRs. Complement to Kaplan-Meier curves.
+    Already partially covered by Figure 2 (CIF plots).
+
+  Current plan in 07_analysis_dementia.R: Option A (time-band analysis).
+  Action:   Confirm Option A with supervisors before coding.
+            If Option B is preferred, note it modifies the study population
+            and estimates must be interpreted as conditional on early survival.
+  See:      study1_methods_plan.md section 11 [B2].
+
+[ANALYSIS-2] Pre-op BMI / DBSO weight distribution — where to report
+  Pre-op BMI distribution (by clinical category: <30, 30–35, 35–40, 40–50, ≥50)
+  and surgery-day weight are available for the BS cohort only (from DBSO).
+  These are descriptive characteristics of the BS cohort.
+  Action:   Decide whether to include as additional rows in Table 1 (BS columns
+            only, with a note that comparators have no BMI data) or as a
+            separate supplementary table describing the BS cohort.
+            Currently not in methods plan — confirm with co-authors.
+  Code:     bmi_preop, weight_preop, height_preop in study1_clean.rds (BS only).
+
+
+================================================================================
 MINOR — REFINEMENTS AND DECISIONS TO MAKE
 ================================================================================
 
@@ -57,23 +102,3 @@ MINOR — REFINEMENTS AND DECISIONS TO MAKE
             of the manuscript. Already documented in study1_methods_plan.md
             section 5 (Covariates) and section 10 (Limitations).
   Code:     R/02_extract_outcomes_covariates.R — extract_nmi(exclude_dementia_predictors = TRUE).
-
-
-================================================================================
-RESOLVED — REMOVED FROM ACTIVE LIST
-================================================================================
-
-The following were resolved and removed. See git log for implementation details.
-
-  CRITICAL-1  Pre-surgery N06D exclusion          → implemented in 01_build_cohorts.R
-  CRITICAL-2  Death within 30 days of surgery     → implemented in 01_build_cohorts.R
-  CRITICAL-3  NMI dementia predictors excluded     → implemented in 02_extract_outcomes_covariates.R
-  CRITICAL-4  Emigration censoring                 → implemented in 04_data_management_dementia.R
-  CONFIRM-1   LMDB column names                    → confirmed (pnr, atc, eksd, indo)
-  CONFIRM-2   DODSAARS death date column           → confirmed (d_dodsdto)
-  CONFIRM-3   LPR_A_KONTAKT/DIAGNOSE columns       → confirmed (kont_starttidspunkt, kont_type,
-                                                       dw_ek_kontakt, diagnosekode, diagnosetype)
-  CONFIRM-6   load_database("dbso")                → confirmed and implemented
-  MINOR-2     sep_category composite               → removed per SEPLINE (use 3 separate dimensions)
-
-================================================================================
