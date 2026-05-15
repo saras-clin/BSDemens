@@ -12,7 +12,7 @@
 #   Inputs:  parquet-external/dbso/part-0.parquet (DBSO, from 00_prepare_dbso.R)
 #            load_database("bef")                     — population register
 #            load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
-#            arrow::open_dataset(path_psyk_adm/diag)  — LPR2 psychiatric diagnoses
+#            load_database("t_psyk_adm/diag")           — LPR2 psychiatric diagnoses
 #            load_database("lpr_a_kontakt/diagnose")  — LPR3 unified diagnoses
 #            load_database("dodsaars")                — death register
 #
@@ -28,26 +28,19 @@
 #     4. Death before index date
 #     5. Age < 18 at surgery / < 5 years of registry history before index date
 #
-#   NOTE: The obesity comparator is defined by E66 diagnosis code — standard approach in Danish
-#   register epidemiology.
-#
-#   Psychiatric LPR2: t_psyk_adm and t_psyk_diag are parquet folders in
-#   parquet-external, accessed via arrow::open_dataset(). Raw DST column names
-#   (v_cpr, k_recnum, v_recnum) are renamed in code after loading.
-#
+#   NOTE: The obesity comparator is defined by E66 diagnosis code 
+##
 # TABLE OF CONTENTS
 # -----------------
-#   Packages / paths / constants              ~line  40
-#   1.0  Helper functions                     ~line  68
-#        get_prior_dementia_pnrs()            ~line  70
-#        get_bs_surgery_dates()              ~line 171
-#        get_bef_demographics()             ~line 194
-#   1.1  build_bs_cohort()                   ~line 212
-#   1.2  build_gp_comparator()              ~line 325
-#        [Alt: exposureMatch version]        ~line 500
-#   1.3  build_obesity_comparator()         ~line 575
-#        [Alt: exposureMatch version]        ~line 768
-#   1.4  main_build_cohorts()               ~line 840
+#   Packages / paths / constants
+#   1.0  Helper functions
+#        get_prior_dementia_pnrs()
+#        get_bs_surgery_dates()
+#        get_bef_demographics()
+#   1.1  BS cohort block (sequential)
+#   1.2  GP comparator block (sequential)
+#   1.3  Obesity comparator block (sequential)
+#   1.4  Assemble and save full cohort
 # ============================================================================
 
 # Packages ----
@@ -59,7 +52,7 @@ library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_
 
 # Paths ----
 path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"   # where .rds outputs are written
-path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
+path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
 # t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
 
@@ -237,23 +230,23 @@ get_bef_demographics <- function(pnr_vector) {
 #                 (redo_prim == 1 cases are excluded by the filter below)
 #   index_date:   datoper_prim (DBSO's own clinical record of surgery date)
 
-build_bs_cohort <- function() {
-  dbso <- load_database("dbso") %>% rename_with(tolower) %>%   # DBSO prepared by 00_prepare_dbso.R; one row per clinic visit
+dbso <- load_database("dbso") %>% rename_with(tolower) %>%   # DBSO prepared by 00_prepare_dbso.R; one row per clinic visit
     filter(
-      redo_prim != 1,                                   # exclude revision/redo surgeries
+      redo_prim != 1,                                     # exclude revision/redo surgeries
       gastricbypass_prim == 1 | gastricsleeve_prim == 1,  # primary RYGB or SG only
-      !is.na(datoper_prim),                             # must have a valid surgery date
-      as.Date(datoper_prim) >= as.Date("2010-01-01"),   # DBSO mandatory reporting began 2010; study start
-      as.Date(datoper_prim) <= as.Date("2024-12-31")    # study end per protocol
+      !is.na(datoper_prim),                               # must have a valid surgery date
+      as.Date(datoper_prim) >= as.Date("2010-01-01"),     # DBSO mandatory reporting began 2010; study start
+      as.Date(datoper_prim) <= as.Date("2024-12-31")      # study end per protocol
     ) %>%
     select(pnr, datoper_prim, gastricbypass_prim, gastricsleeve_prim) %>%   # only columns needed to derive index_date and surgery_type
-    collect() %>%                                       # pull filtered rows into R memory
-    distinct(pnr, .keep_all = TRUE)                     # one row per patient; DBSO may have multiple visit rows per person
+    collect() %>%                                         # pull filtered rows into R memory
+    distinct(pnr, .keep_all = TRUE)                       # one row per patient; DBSO may have multiple visit rows per person
 
-  n_dbso_start <- nrow(dbso)                            # attrition step 1: all DBSO RYGB/SG with valid date 2010-2024
+  cat(sprintf("BS  DBSO all RYGB/SG 2010-2024:                     %d\n", nrow(dbso)))   # attrition step 1
 
   demo <- get_bef_demographics(unique(dbso$pnr))        # fetch sex and birth date from BEF for each DBSO patient
   bs   <- dbso %>% left_join(demo, by = "pnr")          # attach sex and birth date to DBSO records
+  n_bs_start <- nrow(bs)                                 # save count before eligibility filters
 
   # Exclusion: died before surgery, age < 18 at surgery, < 5 years of registry history
   dod <- load_database("dodsaars") %>% rename_with(tolower)   # individual death records register (one row per death)
@@ -276,14 +269,16 @@ build_bs_cohort <- function() {
       as.Date(datoper_prim) >= as.Date(foed_dag) + 365.25 * 5      # >= 5 years of registry history before surgery (needed for reliable lookback)
     )
 
-  n_after_eligibility <- nrow(bs)                        # attrition step 2: after 30-day death / age / registry filters
+  cat(sprintf("BS  after 30-day death / age <18 / <5-yr registry:  %d  (-%d)\n",
+      nrow(bs), n_bs_start - nrow(bs)))   # attrition step 2
 
   # Exclusion: pre-surgery dementia (LPR2 somatic + LPR2 psychiatric + LPR3)
   cutoffs       <- bs %>% transmute(pnr, index_date = as.Date(datoper_prim))   # build per-person cutoff table: each patient's own surgery date
   dementia_pnrs <- get_prior_dementia_pnrs(bs$pnr, cutoffs)                    # returns pnrs with any dementia diagnosis before their surgery date
   bs <- bs %>% filter(!pnr %in% dementia_pnrs)                                 # remove patients with pre-surgery dementia
 
-  n_after_dementia <- nrow(bs)                           # attrition step 3: after pre-surgery dementia exclusion
+  cat(sprintf("BS  after pre-surgery dementia (ICD + psyk + LPR3): %d  (-%d)\n",
+      nrow(bs), length(dementia_pnrs)))   # attrition step 3
 
   # Exclusion: emigrated before surgery date (protocol criterion 3)
   # Persons who left Denmark before their surgery date are not valid cohort members —
@@ -301,14 +296,12 @@ build_bs_cohort <- function() {
     pull(pnr)                                                  # return plain vector of pnrs to exclude
   bs <- bs %>% filter(!pnr %in% emigrated_bs_pnrs)            # remove pre-surgery emigrants from BS cohort
 
-  n_after_emigration <- nrow(bs)                              # attrition step 4: after emigration-before-surgery exclusion
+  cat(sprintf("BS  after emigration before surgery date:            %d  (-%d)\n",
+      nrow(bs), length(emigrated_bs_pnrs)))   # attrition step 4
 
   # Exclusion: antidementia medication (ATC N06D) dispensed before surgery
-  # Protocol criterion 3. N06D at baseline (donepezil, rivastigmine, galantamine,
-  # memantine) is diagnostic of either diagnosed or suspected dementia. Excluding
-  # N06D users removes likely undiagnosed dementia cases that the ICD-code check
-  # above may have missed (e.g. if the prescribing GP never registered a hospital
-  # diagnosis). N06D users are also excluded from the NMI calculation (see TODO MINOR-4).
+  # N06D (donepezil, rivastigmine, galantamine, memantine) is a proxy for undiagnosed
+  # or clinically suspected dementia not yet captured by ICD codes in LPR.
   lmdb <- load_database("lmdb") %>% rename_with(tolower)   # LMDB: national prescription register; one row per dispensed prescription
 
   max_surgery_date <- max(as.Date(bs$datoper_prim))         # upper date bound for lazy parquet filter; avoids pulling all LMDB years into memory
@@ -328,25 +321,27 @@ build_bs_cohort <- function() {
 
   bs <- bs %>% filter(!pnr %in% n06d_pnrs)                  # remove persons with pre-surgery antidementia medication
 
-  cohort <- bs %>%
+  cat(sprintf("BS  after pre-surgery N06D prescriptions:            %d  (-%d)\n",
+      nrow(bs), length(n06d_pnrs)))   # attrition step 5
+
+  bs_cohort <- bs %>%
     transmute(
       pnr,
       index_date        = as.Date(datoper_prim),                           # surgery date becomes the index date for the BS cohort
       cohort            = "BS",                                             # cohort label used downstream in all analyses
       surgery_type      = if_else(gastricbypass_prim == 1, "RYGB", "SG"), # RYGB if bypass flag = 1; otherwise SG (redo already excluded above)
-      matched_pnr       = pnr,                                             # BS patients reference themselves; comparators will carry the BS patient's pnr here
-      bs_crossover_date = NA_Date_                                         # not applicable for the exposed group; only comparators can cross over to BS
+      matched_pnr       = pnr,                                             # BS patients reference themselves
+      bs_crossover_date = NA_Date_                                         # not applicable for the exposed group
     )
 
-  list(
-    cohort              = cohort,                # final BS cohort data frame
-    n_dbso_start        = n_dbso_start,          # n before any exclusions
-    n_after_eligibility = n_after_eligibility,   # n after 30-day death / age / registry filters
-    n_after_dementia    = n_after_dementia,      # n after pre-surgery dementia exclusion
-    n_after_emigration  = n_after_emigration,    # n after emigration-before-surgery exclusion
-    n_final             = nrow(cohort)           # n after N06D exclusion; this is the final BS cohort size
-  )
-}
+  cat(sprintf("BS COHORT FINAL:                                     %d\n\n", nrow(bs_cohort)))
+
+  # Sort by surgery date — incidence density sampling draws from pool in temporal order
+  # so earlier cases are not disadvantaged by pool depletion from later patients.
+  bs_cohort <- bs_cohort %>% arrange(index_date)   # ascending sort by index date
+
+  rm(dbso, demo, bs, deaths, n_bs_start, cutoffs, dementia_pnrs, vnds_bs,
+     emigrated_bs_pnrs, max_surgery_date, n06d_pnrs); gc()   # free memory; lmdb and dod reused in GP and obesity blocks
 
 
 # ============================================================================
@@ -355,8 +350,7 @@ build_bs_cohort <- function() {
 # Strategy: group BEF by sex + birth_year, for each BS patient sample N_GP_PER_BS
 # people from the matching group who are alive at the index date and dementia-free.
 
-build_gp_comparator <- function(bs_cohort) {
-  bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population register; one row per person per year
+bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population register; one row per person per year
 
   # Pull only the years when surgeries occurred — people in BEF those years were alive then.
   surgery_years <- unique(year(bs_cohort$index_date))   # calendar years covered by our BS cohort index dates
@@ -489,135 +483,60 @@ build_gp_comparator <- function(bs_cohort) {
             N_GP_PER_BS, " controls (pool exhaustion for rare birth years).")
   }
 
-  n_matched_raw <- nrow(gp_cohort)                                     # total GP comparators before exclusions (attrition denominator)
+  cat(sprintf("GP  matched (before exclusions):                     %d\n", nrow(gp_cohort)))   # attrition step 1
 
   # Exclude any GP comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs <- gp_cohort %>% select(pnr, index_date)                     # per-person cutoff: each control's assigned index date
-  dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)     # returns pnrs with any dementia diagnosis before their index date
-  gp_after_dementia <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove GP controls with pre-index dementia
+  cutoffs       <- gp_cohort %>% select(pnr, index_date)               # per-person cutoff: each control's assigned index date
+  dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
+  gp_cohort     <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)       # remove GP controls with pre-index dementia
 
-  n_after_dementia <- nrow(gp_after_dementia)                          # attrition after ICD dementia exclusion
+  cat(sprintf("GP  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%d)\n",
+      nrow(gp_cohort), length(dementia_pnrs)))   # attrition step 2
 
-  # Exclusion: emigrated before index date (protocol criterion 3)
-  # GP comparators who emigrated from Denmark before their assigned index date
-  # cannot contribute Danish register follow-up time and must be excluded.
+  # Exclusion: emigrated before index date
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
   vnds_gp <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_gp_pnrs <- vnds_gp %>%
-    filter(pnr %in% !!gp_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only ("U" = udrejse)
+    filter(pnr %in% !!gp_cohort$pnr, indud_kode == "U") %>%           # emigration events only ("U" = udrejse)
     select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
     collect() %>%                                                      # pull into R memory
     mutate(haend_dato = as.Date(haend_dato)) %>%                       # convert character to Date class
-    inner_join(gp_after_dementia %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's index date
+    inner_join(gp_cohort %>% select(pnr, index_date), by = "pnr") %>% # attach each control's index date
     filter(haend_dato < index_date) %>%                                # emigration must be strictly before index date
     distinct(pnr) %>%                                                  # one row per person
     pull(pnr)                                                          # plain vector of pnrs to exclude
-  gp_after_emigration <- gp_after_dementia %>% filter(!pnr %in% emigrated_gp_pnrs)   # remove pre-index emigrants
+  gp_cohort <- gp_cohort %>% filter(!pnr %in% emigrated_gp_pnrs)      # remove pre-index emigrants
 
-  n_after_emigration <- nrow(gp_after_emigration)                      # attrition after emigration-before-index exclusion
+  cat(sprintf("GP  after emigration before index date:              %d  (-%d)\n",
+      nrow(gp_cohort), length(emigrated_gp_pnrs)))   # attrition step 3
 
-  # Exclude GP comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
-  # N06D is a proxy for undiagnosed or pre-clinical dementia not captured by ICD codes alone.
-  # Applied symmetrically to all three cohorts: any dispensing before the person's index date qualifies.
-  lmdb_gp <- load_database("lmdb") %>% rename_with(tolower)           # LMDB prescription register
+  # Exclude GP comparators with pre-index N06D dispensing (same criterion as BS cohort).
+  # Applied symmetrically to all three cohorts; lmdb already loaded in BS block.
+  max_index_gp <- max(gp_cohort$index_date)                            # upper date bound for lazy parquet filter
 
-  max_index_gp <- max(gp_after_emigration$index_date)                  # upper date bound for lazy parquet filter
-
-  n06d_pnrs_gp <- lmdb_gp %>%
+  n06d_pnrs_gp <- lmdb %>%
     filter(
-      pnr %in% !!gp_after_emigration$pnr,                             # restrict to remaining GP controls
+      pnr %in% !!gp_cohort$pnr,                                       # restrict to remaining GP controls
       substr(atc, 1, 4) == "N06D",                                    # N06D = antidementia drug class
-      eksd <= !!max_index_gp                                          # pull up to latest index date; per-person cutoff applied after collect
+      eksd <= !!max_index_gp                                           # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
     select(pnr, eksd, atc) %>%                                        # only needed columns
     collect() %>%                                                      # pull into R memory
-    inner_join(gp_after_emigration %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's own index date
+    inner_join(gp_cohort %>% select(pnr, index_date), by = "pnr") %>% # attach each control's own index date
     filter(eksd < index_date) %>%                                      # dispensing must predate this person's index date
     distinct(pnr) %>%                                                  # one row per person with any pre-index N06D
     pull(pnr)                                                          # plain vector of pnrs to exclude
 
-  gp_final <- gp_after_emigration %>% filter(!pnr %in% n06d_pnrs_gp)  # remove GP controls with pre-index antidementia medication
+  gp_cohort <- gp_cohort %>% filter(!pnr %in% n06d_pnrs_gp)           # remove GP controls with pre-index antidementia medication
 
-  list(
-    cohort              = gp_final,              # final GP comparator data frame
-    n_matched_raw       = n_matched_raw,         # GP n before exclusions
-    n_after_dementia    = n_after_dementia,      # GP n after ICD dementia exclusion
-    n_after_emigration  = n_after_emigration,    # GP n after emigration-before-index exclusion
-    n_final             = nrow(gp_final)         # GP n after N06D exclusion; final GP cohort size
-  )
-}
+  cat(sprintf("GP  after pre-index N06D prescriptions:              %d  (-%d)\n",
+      nrow(gp_cohort), length(n06d_pnrs_gp)))   # attrition step 4
+  cat(sprintf("GP COHORT FINAL:                                     %d\n\n", nrow(gp_cohort)))
 
-## ---------------------------------------------------------------------------
-## ALTERNATIVE FOR 1.2: heaven::exposureMatch()
-## Commented out — the manual loop above is the default.
-##
-## heaven::exposureMatch() (= riskSetMatch) does validated risk-set matching
-## and is the standard tool used by the CTP group on DST. It handles alive/
-## event-free eligibility via the end.followup parameter.
-##
-## KEY LIMITATION vs current approach: terms= does EXACT matching only.
-## Our protocol specifies birth year ±1. Options:
-##   (a) Exact birth year — simpler; very minor reduction in match rate for
-##       rare birth years at the edges of the study period.
-##   (b) Collapse to 2-year birth groups before calling exposureMatch.
-##
-## To activate: replace the body of build_gp_comparator() with this block.
-## ---------------------------------------------------------------------------
-## build_gp_comparator_exposureMatch <- function(bs_cohort) {
-##   bef_pool <- ...   # same pool preparation as above (lines 260-295)
-##
-##   bs_key <- bs_cohort %>%
-##     left_join(get_bef_demographics(bs_cohort$pnr) %>%
-##                 select(pnr, koen, birth_year), by = "pnr") %>%
-##     left_join(pool_deaths %>% select(pnr, death_date), by = "pnr") %>%
-##     mutate(
-##       is_case      = 1L,
-##       case_index   = index_date,
-##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
-##                           as.Date("2025-12-31"), na.rm = TRUE),
-##       koen         = as.character(koen),          # terms must be character
-##       birth_year   = as.character(birth_year)
-##     )
-##
-##   ctrl_dt <- bef_pool %>%
-##     mutate(
-##       is_case      = 0L,
-##       case_index   = as.Date(NA),                 # NA = never exposed
-##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
-##                           as.Date("2025-12-31"), na.rm = TRUE),
-##       koen         = as.character(koen),
-##       birth_year   = as.character(birth_year)
-##     )
-##
-##   combined <- data.table::rbindlist(
-##     list(data.table::as.data.table(bs_key),
-##          data.table::as.data.table(ctrl_dt)), fill = TRUE
-##   )
-##
-##   matched <- heaven::exposureMatch(
-##     ptid         = "pnr",
-##     event        = "is_case",       # 1 = BS patient, 0 = GP control
-##     terms        = c("koen", "birth_year"),
-##     data         = combined,
-##     n.controls   = N_GP_PER_BS,
-##     case.index   = "case_index",
-##     end.followup = "end_followup",
-##     seed         = 42
-##   )
-##
-##   # Format to match current output structure
-##   case_ids <- matched[matched$is_case == 1, c("pnr", "case.id")]
-##   names(case_ids)[1] <- "matched_pnr"
-##
-##   gp_cohort <- matched[matched$is_case == 0, ] %>%
-##     dplyr::left_join(case_ids, by = "case.id") %>%
-##     dplyr::mutate(cohort = "GP", surgery_type = NA_character_) %>%
-##     dplyr::select(pnr, index_date = case_index, cohort, surgery_type, matched_pnr)
-##
-##   cutoffs <- gp_cohort %>% select(pnr, index_date)
-##   dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)
-##   gp_cohort %>% filter(!pnr %in% dementia_pnrs)
-## }
+  rm(bef, bef_pool, bs_dates_in_pool, pool_deaths, pool_list, bs_key, matched_rows,
+     match_counts, n_zero, n_fewer, cutoffs, dementia_pnrs, vnds_gp,
+     emigrated_gp_pnrs, max_index_gp, n06d_pnrs_gp); gc()   # free memory; lmdb and dod reused in obesity block
+
 
 
 # ============================================================================
@@ -628,8 +547,7 @@ build_gp_comparator <- function(bs_cohort) {
 # (Post-index BS is handled by censoring at bs_crossover_date, not exclusion.)
 # Same sex + birth year (±1) matching as GP comparator.
 
-build_obesity_comparator <- function(bs_cohort) {
-  # Get all E66 contacts from LPR, keeping the contact date.
+# Get all E66 contacts from LPR, keeping the contact date.
   # We need the date to enforce: E66 diagnosis must predate the BS patient's index date.
   # [FIX] Without this, a person who received an E66 diagnosis in 2020 could be matched
   # to a BS patient with surgery in 2012, violating the study design.
@@ -775,208 +693,73 @@ build_obesity_comparator <- function(bs_cohort) {
             N_OBESITY_PER_BS, " controls.")
   }
 
-  n_matched_raw <- nrow(ob_cohort)                                     # total obesity comparators before exclusions
+  cat(sprintf("OB  matched (before exclusions):                     %d\n", nrow(ob_cohort)))   # attrition step 1
 
   # Exclude any obesity comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs <- ob_cohort %>% select(pnr, index_date)                     # per-person cutoff: each control's assigned index date
+  cutoffs       <- ob_cohort %>% select(pnr, index_date)               # per-person cutoff: each control's assigned index date
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
-  ob_after_dementia <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)   # remove obesity controls with pre-index dementia
+  ob_cohort     <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)       # remove obesity controls with pre-index dementia
 
-  n_after_dementia <- nrow(ob_after_dementia)                          # attrition after ICD dementia exclusion
+  cat(sprintf("OB  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%%d)\n",
+      nrow(ob_cohort), length(dementia_pnrs)))   # attrition step 2
 
-  # Exclusion: emigrated before index date (protocol criterion 3)
-  # Obesity comparators who emigrated from Denmark before their assigned index date
-  # cannot contribute Danish register follow-up time and must be excluded.
+  # Exclusion: emigrated before index date
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
   vnds_ob <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_ob_pnrs <- vnds_ob %>%
-    filter(pnr %in% !!ob_after_dementia$pnr, indud_kode == "U") %>%   # emigration events only ("U" = udrejse)
+    filter(pnr %in% !!ob_cohort$pnr, indud_kode == "U") %>%           # emigration events only ("U" = udrejse)
     select(pnr, haend_dato) %>%                                        # haend_dato = emigration date
     collect() %>%                                                      # pull into R memory
     mutate(haend_dato = as.Date(haend_dato)) %>%                       # convert character to Date class
-    inner_join(ob_after_dementia %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's index date
+    inner_join(ob_cohort %>% select(pnr, index_date), by = "pnr") %>% # attach each control's index date
     filter(haend_dato < index_date) %>%                                # emigration before index date
     distinct(pnr) %>%                                                  # one row per person
     pull(pnr)                                                          # plain vector of pnrs to exclude
-  ob_after_emigration <- ob_after_dementia %>% filter(!pnr %in% emigrated_ob_pnrs)   # remove pre-index emigrants
+  ob_cohort <- ob_cohort %>% filter(!pnr %in% emigrated_ob_pnrs)      # remove pre-index emigrants
 
-  n_after_emigration <- nrow(ob_after_emigration)                      # attrition after emigration-before-index exclusion
+  cat(sprintf("OB  after emigration before index date:              %d  (-%%d)\n",
+      nrow(ob_cohort), length(emigrated_ob_pnrs)))   # attrition step 3
 
-  # Exclude obesity comparators with pre-index N06D dispensing (same criterion as BS cohort, criterion 3a.3)
-  lmdb_ob <- load_database("lmdb") %>% rename_with(tolower)           # LMDB prescription register
+  # Exclude obesity comparators with pre-index N06D dispensing; lmdb already loaded in BS block.
+  max_index_ob <- max(ob_cohort$index_date)                            # upper date bound for lazy parquet filter
 
-  max_index_ob <- max(ob_after_emigration$index_date)                  # upper date bound for lazy parquet filter
-
-  n06d_pnrs_ob <- lmdb_ob %>%
+  n06d_pnrs_ob <- lmdb %>%
     filter(
-      pnr %in% !!ob_after_emigration$pnr,                             # restrict to remaining obesity controls
+      pnr %in% !!ob_cohort$pnr,                                       # restrict to remaining obesity controls
       substr(atc, 1, 4) == "N06D",                                    # N06D = antidementia drug class
-      eksd <= !!max_index_ob                                          # pull up to latest index date; per-person cutoff applied after collect
+      eksd <= !!max_index_ob                                           # pull up to latest index date; per-person cutoff applied after collect
     ) %>%
     select(pnr, eksd, atc) %>%                                        # only needed columns
     collect() %>%                                                      # pull into R memory
-    inner_join(ob_after_emigration %>% select(pnr, index_date), by = "pnr") %>%   # attach each control's own index date
+    inner_join(ob_cohort %>% select(pnr, index_date), by = "pnr") %>% # attach each control's own index date
     filter(eksd < index_date) %>%                                      # dispensing must predate this person's index date
     distinct(pnr) %>%                                                  # one row per person with any pre-index N06D
     pull(pnr)                                                          # plain vector of pnrs to exclude
 
-  ob_final <- ob_after_emigration %>% filter(!pnr %in% n06d_pnrs_ob)  # remove obesity controls with pre-index antidementia medication
+  ob_cohort <- ob_cohort %>% filter(!pnr %in% n06d_pnrs_ob)           # remove obesity controls with pre-index antidementia medication
 
-  list(
-    cohort              = ob_final,              # final obesity comparator data frame
-    n_matched_raw       = n_matched_raw,         # obesity n before exclusions
-    n_after_dementia    = n_after_dementia,      # obesity n after ICD dementia exclusion
-    n_after_emigration  = n_after_emigration,    # obesity n after emigration-before-index exclusion
-    n_final             = nrow(ob_final)         # obesity n after N06D exclusion; final obesity cohort size
-  )
-}
+  cat(sprintf("OB  after pre-index N06D prescriptions:              %d  (-%%d)\n",
+      nrow(ob_cohort), length(n06d_pnrs_ob)))   # attrition step 4
+  cat(sprintf("OB COHORT FINAL:                                     %d\n\n", nrow(ob_cohort)))
 
-## ---------------------------------------------------------------------------
-## ALTERNATIVE FOR 1.3: heaven::exposureMatch()
-## Commented out — the manual loop above is the default.
-##
-## The E66 pre-index requirement (control must have E66 before case's index
-## date) maps to date.terms = "earliest_e66". exposureMatch interprets this
-## as: if the case has not yet reached the date at case.index (NA for BS
-## patients), the control must also not have reached it — which is the
-## opposite of what we need. Pre-filtering the pool to earliest_e66 < ANY
-## index date, then letting exposureMatch handle per-patient eligibility via
-## end.followup, is the practical workaround.
-##
-## To activate: replace the body of build_obesity_comparator() with this block.
-## ---------------------------------------------------------------------------
-## build_obesity_comparator_exposureMatch <- function(bs_cohort) {
-##   # Build obesity_pool with earliest_e66 and death_date as above (lines 387-437)
-##   # obesity_pool already filtered to: !pnr %in% bs_cohort, E66 confirmed
-##
-##   bs_key <- bs_cohort %>%
-##     left_join(get_bef_demographics(bs_cohort$pnr) %>%
-##                 select(pnr, koen, birth_year), by = "pnr") %>%
-##     mutate(
-##       is_case      = 1L,
-##       case_index   = index_date,
-##       end_followup = as.Date("2025-12-31"),
-##       koen         = as.character(koen),
-##       birth_year   = as.character(birth_year)
-##     )
-##
-##   # For obesity controls, end.followup = earliest_e66 ensures a control is
-##   # only eligible at index dates AFTER their E66 diagnosis.
-##   ctrl_dt <- obesity_pool %>%
-##     mutate(
-##       is_case      = 0L,
-##       case_index   = as.Date(NA),
-##       end_followup = pmin(coalesce(death_date, as.Date("2025-12-31")),
-##                           as.Date("2025-12-31"), na.rm = TRUE),
-##       koen         = as.character(koen),
-##       birth_year   = as.character(birth_year)
-##     )
-##
-##   combined <- data.table::rbindlist(
-##     list(data.table::as.data.table(bs_key),
-##          data.table::as.data.table(ctrl_dt)), fill = TRUE
-##   )
-##
-##   matched <- heaven::exposureMatch(
-##     ptid         = "pnr",
-##     event        = "is_case",
-##     terms        = c("koen", "birth_year"),
-##     data         = combined,
-##     n.controls   = N_OBESITY_PER_BS,
-##     case.index   = "case_index",
-##     end.followup = "end_followup",
-##     seed         = 42
-##   )
-##
-##   case_ids <- matched[matched$is_case == 1, c("pnr", "case.id")]
-##   names(case_ids)[1] <- "matched_pnr"
-##
-##   ob_cohort <- matched[matched$is_case == 0, ] %>%
-##     dplyr::left_join(case_ids, by = "case.id") %>%
-##     dplyr::mutate(cohort = "Obesity", surgery_type = NA_character_) %>%
-##     dplyr::select(pnr, index_date = case_index, cohort, surgery_type, matched_pnr)
-##
-##   cutoffs <- ob_cohort %>% select(pnr, index_date)
-##   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)
-##   ob_cohort %>% filter(!pnr %in% dementia_pnrs)
-## }
-
+  rm(lpr_adm, lpr_diag, kontakter, diagnoser, obesity_lpr2, obesity_lpr3, obesity_dates,
+     obesity_pool, bs_dates_in_pool, pool_deaths, bs_key, matched_rows,
+     ob_match_counts, n_ob_zero, n_ob_fewer, pool_list, cutoffs, dementia_pnrs,
+     vnds_ob, emigrated_ob_pnrs, max_index_ob, n06d_pnrs_ob); gc()   # free remaining large objects
 
 # ============================================================================
-# 1.4 MAIN: ASSEMBLE AND SAVE FULL COHORT
+# 1.4 ASSEMBLE AND SAVE FULL COHORT
 # ============================================================================
+# bs_cohort, gp_cohort, ob_cohort are in scope from the blocks above.
+# bs_crossover_date is set at match time inside each comparator block.
 
-# ============================================================================
-# RUN — execute each block interactively, or source the whole file
-# ============================================================================
-
-bs_result <- build_bs_cohort()                          # returns list(cohort + attrition counts)
-bs_cohort  <- bs_result$cohort                          # data frame of BS patients after all exclusions
-# Sort ascending by surgery date before matching.
-# Incidence density sampling draws from the pool in temporal order so earlier
-# cases are not disadvantaged by pool depletion from later patients.
-bs_cohort <- bs_cohort %>% dplyr::arrange(index_date)
-
-gp_result <- build_gp_comparator(bs_cohort)             # risk-set matched 1:25 on sex + birth year
-gp_cohort  <- gp_result$cohort
-
-ob_result <- build_obesity_comparator(bs_cohort)        # risk-set matched 1:5 on sex + birth year; requires E66
-ob_cohort  <- ob_result$cohort
-
-# bs_crossover_date already set inside the comparator build functions at match time.
-# bs_cohort rows carry bs_crossover_date = NA_Date_.
-# bind_rows aligns columns by name automatically.
 full_cohort <- bind_rows(bs_cohort, gp_cohort, ob_cohort) %>%
   mutate(cohort = factor(cohort, levels = c("BS", "GP", "Obesity")))   # ordered factor for table/plot ordering
 
-# Attrition flow table — print to console; capture with sink() if a log file is needed
-cat("\n")
-cat(sprintf("%-52s %8s %12s\n", "Attrition step", "n", "Excluded"))
-cat(strrep("-", 74), "\n")
-cat(sprintf("%-52s %8d %12s\n",  "DBSO: all RYGB/SG 2010-2024",
-    bs_result$n_dbso_start, ""))
-cat(sprintf("%-52s %8d %12d\n",  "  After: 30-day death / age <18 / <5-yr registry",
-    bs_result$n_after_eligibility,
-    bs_result$n_dbso_start - bs_result$n_after_eligibility))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-surgery dementia (ICD)",
-    bs_result$n_after_dementia,
-    bs_result$n_after_eligibility - bs_result$n_after_dementia))
-cat(sprintf("%-52s %8d %12d\n",  "  After: emigration before surgery date",
-    bs_result$n_after_emigration,
-    bs_result$n_after_dementia - bs_result$n_after_emigration))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-surgery N06D prescriptions",
-    bs_result$n_final,
-    bs_result$n_after_emigration - bs_result$n_final))
-cat(sprintf("%-52s %8d %12s\n",  "BS cohort (final)", bs_result$n_final, ""))
-cat(strrep("-", 74), "\n")
-cat(sprintf("%-52s %8d %12s\n",  "GP comparators matched (before dementia check)",
-    gp_result$n_matched_raw, ""))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-index dementia (ICD)",
-    gp_result$n_after_dementia,
-    gp_result$n_matched_raw - gp_result$n_after_dementia))
-cat(sprintf("%-52s %8d %12d\n",  "  After: emigration before index date",
-    gp_result$n_after_emigration,
-    gp_result$n_after_dementia - gp_result$n_after_emigration))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-index N06D prescriptions",
-    gp_result$n_final,
-    gp_result$n_after_emigration - gp_result$n_final))
-cat(sprintf("%-52s %8d %12s\n",  "GP cohort (final)", gp_result$n_final, ""))
-cat(strrep("-", 74), "\n")
-cat(sprintf("%-52s %8d %12s\n",  "Obesity comparators matched (before dementia check)",
-    ob_result$n_matched_raw, ""))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-index dementia (ICD)",
-    ob_result$n_after_dementia,
-    ob_result$n_matched_raw - ob_result$n_after_dementia))
-cat(sprintf("%-52s %8d %12d\n",  "  After: emigration before index date",
-    ob_result$n_after_emigration,
-    ob_result$n_after_dementia - ob_result$n_after_emigration))
-cat(sprintf("%-52s %8d %12d\n",  "  After: pre-index N06D prescriptions",
-    ob_result$n_final,
-    ob_result$n_after_emigration - ob_result$n_final))
-cat(sprintf("%-52s %8d %12s\n",  "Obesity cohort (final)", ob_result$n_final, ""))
-cat(strrep("-", 74), "\n")
-cat(sprintf("%-52s %8d %12s\n",  "TOTAL full_cohort", nrow(full_cohort), ""))
-cat("\n")
+cat(sprintf("FULL COHORT:                                         %d\n", nrow(full_cohort)))
+print(table(full_cohort$cohort))   # n per cohort
+
+rm(dod, lmdb); gc()   # free the last large register handles
 
 dir.create(path_output, showWarnings = FALSE, recursive = TRUE)          # create output directory if it does not exist
 saveRDS(full_cohort, file.path(path_output, "full_cohort.rds"))            # save combined cohort for downstream scripts

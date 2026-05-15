@@ -686,7 +686,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
 # ─────────────────────────────────────────────────────────────────────────────
-#   File path: E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds
+#   File path: E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds
 #   Access: readRDS(path_dm_pop) — RDS file, not a parquet register; no load_database()
 #   Covers: 1977-2022 (sufficient for all baseline diabetes classification in this study)
 #   Documented column names (from code; confirm with colnames() before first run):
@@ -695,6 +695,6 @@
 #     do_dm          date of diabetes classification — renamed to date_diabetes in pipeline
 #     age_at_onset   age at diabetes onset (numeric)
 #   To confirm column names on DST server:
-#     dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
+#     dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
 #     names(dm_pop)
 #   Package: https://steno-aarhus.github.io/osdc/index.html
