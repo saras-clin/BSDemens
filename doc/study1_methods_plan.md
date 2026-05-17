@@ -498,6 +498,55 @@ Both comparisons are pre-specified and will be reported. The question is which s
 
 *Note:* DBSO underreporting in 2010–2012 (MINOR-16 in TODO.txt) may cause zero-match warnings for early-index-date BS patients in the obesity comparator. If ≥5% of 2010–2012 patients receive zero obesity comparator matches, a sensitivity analysis restricting to index dates from 2013 onwards will be added. This is linked to the study period decision in [A1].
 
+#### [A5] Comparator Sampling Strategy — With vs Without Replacement, and Matching Ratio
+
+**Background:** Heide-Jørgensen et al. (2018) compared three strategies for sampling general population comparison cohorts from Danish register data (matching on sex, birth year, and calendar period — identical to our approach). *(Heide-Jørgensen U et al. Clin Epidemiol. 2018;10:1325–1337. DOI: 10.2147/CLEP.S164456)*
+
+Their empirical findings at a 5:1 matching ratio:
+
+| Strategy | Bias direction | Key finding |
+|---|---|---|
+| Without replacement, random order | Upward (comparators look sicker) | Immortal time bias; substantial when index persons aged >50 |
+| Without replacement, chronological order | Downward (comparators look healthier) + match failure for late patients | Up to 20% of heart failure patients received zero matches; comparison cohort skewed younger than index cohort |
+| With replacement | None detected | Unbiased across all settings tested |
+
+**Current implementation:** Sampling without replacement in chronological order (BS cohort sorted ascending by surgery date before the matching loop). This avoids the worst immortal time bias from random order, but the paper shows chronological order introduces its own downward bias in outcome rates and match failure for late/older cases — especially at ratios beyond 1:1.
+
+**Why this is probably not a serious problem for our cohort:**
+The paper's concerning findings were driven by high outcome rates in the comparison pool (heart failure cohort, median age 77 years; mortality ~228/1,000 person-years). Our BS cohort has a mean surgery age of approximately 38–48 years. Dementia incidence in this age group is very low (~2–5/1,000 person-years), leaving little signal for pool depletion bias to distort. The paper explicitly notes the effect was "minuscule" in general population analyses unless index persons were aged >50. However, the concern is not zero — older BS patients (operated at 55–65) and the later study years (2020–2024, where pool depletion is largest) represent the highest-risk combination.
+
+**The 1:25 ratio itself:** The paper (citing Daly et al. 2000) notes: *"it is questionable if there is much to gain in statistical power when the sampling ratio exceeds four."* Statistical power for a Cox model saturates rapidly beyond 1:4–1:5; increasing from 1:10 to 1:25 provides negligible additional precision. The 1:25 ratio increases computational burden, pool depletion, and the complexity of any switch to with-replacement sampling, for minimal methodological return.
+
+**If we switch to sampling with replacement — expected duplication rate:**
+
+With 23,700 BS patients at a 1:25 ratio, 592,500 GP comparator draws are needed. For a representative sex × birth-year stratum (women born ~1975, pool ≈ 60,000–90,000 eligible women), approximately 8,000–15,000 draws come from that stratum across the full study period. Using the coupon-collector approximation for expected unique draws:
+
+E[unique] = N × (1 − e^(−n/N))
+
+For n = 12,500 draws from N = 75,000: E[unique] ≈ 75,000 × (1 − e^(−0.167)) ≈ 11,600 unique persons out of 12,500 total draws → approximately 7% duplicate comparator-observations in the most common strata. Averaged across all strata (including smaller, less-depleted ones), a realistic overall duplication rate is **5–10% of GP comparator-observations**. For the obesity comparator (smaller eligible pool), the duplication rate would be higher.
+
+This level of duplication is operationally manageable but requires an analytical change.
+
+**Analytical changes required if sampling with replacement:**
+
+With replacement, the same person can appear as a comparator for multiple BS patients — once as a comparator for a 2012 surgery and again for a 2018 surgery, each time with a different assigned index date and a different follow-up window. These are not independent observations.
+
+The Cox model must account for this non-independence. Two options:
+
+1. *`cluster(pnr)` in `coxph()`* — robust sandwich variance estimator, treating each unique person as a cluster. This corrects standard errors and confidence intervals; point estimates are unchanged. This is in addition to any `cluster(matched_pnr)` term for the matched design (see decision B1). In practice, `cluster(pnr)` subsumes the matched-set clustering because pnr is a finer grouping than matched set when with-replacement allows a person to appear in multiple matched sets.
+
+2. *Explicit duplicate indicator* — flag duplicated pnrs, report the proportion, and run a sensitivity analysis excluding second (and third) appearances. If the sensitivity analysis gives similar estimates, duplicates have not materially influenced the results.
+
+**Questions for supervisors:**
+
+1. Should we switch the GP comparator from 1:25 to a lower ratio (e.g., 1:10 or 1:5), given the negligible power gain beyond 1:4?
+2. Should we switch to sampling with replacement (accepting the `cluster(pnr)` adjustment in Cox models) to eliminate the chronological-order downward bias, even if it is likely small for our age group?
+3. If we keep 1:25 without replacement in chronological order, should we add a sentence in the methods section explicitly citing Heide-Jørgensen 2018 and justifying the approach by the low dementia incidence rate in our age group?
+
+*References:*
+- Heide-Jørgensen U et al. Sampling strategies for selecting general population comparison cohorts. *Clin Epidemiol.* 2018;10:1325–1337. DOI: 10.2147/CLEP.S164456
+- Miettinen OS. Estimability and estimation in case-referent studies. *Am J Epidemiol.* 1976;103(2):226–235. DOI: 10.1093/oxfordjournals.aje.a112220
+
 ---
 
 ### B. Analysis Methods

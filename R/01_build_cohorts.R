@@ -51,7 +51,7 @@ library(lubridate)     # year(), as.Date(), date arithmetic
 library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_code, etc.
 
 # Paths ----
-path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"   # where .rds outputs are written
+path_output    <- "E:/workdata/708421/workspaces/saraschwartz/BSDemens/data"   # where .rds outputs are written
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
 # t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
@@ -283,6 +283,10 @@ dbso <- load_database("dbso") %>% rename_with(tolower) %>%   # DBSO prepared by 
   # Exclusion: emigrated before surgery date (protocol criterion 3)
   # Persons who left Denmark before their surgery date are not valid cohort members —
   # they cannot contribute Danish register follow-up time for dementia outcomes.
+  # Rule: ANY VNDS "U" (udrejse) event with haend_dato < surgery date -> excluded.
+  # We do not check for subsequent re-immigration. This is deliberate and conservative:
+  # persons with any period abroad before surgery may have incomplete covariate history
+  # in Danish registers. Re-immigrants are a small proportion; exclusion is acceptable.
   # VNDS register: indud_kode == "U" = emigration (udrejse); haend_dato = departure date.
   vnds_bs <- load_database("vnds") %>% rename_with(tolower)   # VNDS: migration register tracking arrivals and departures
   emigrated_bs_pnrs <- vnds_bs %>%
@@ -493,7 +497,9 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   cat(sprintf("GP  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%d)\n",
       nrow(gp_cohort), length(dementia_pnrs)))   # attrition step 2
 
-  # Exclusion: emigrated before index date
+  # Exclusion: emigrated before index date (protocol criterion 3)
+  # Rule: ANY VNDS "U" event with haend_dato < index date -> excluded.
+  # Re-immigration is not checked: conservative approach, same as BS block.
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
   vnds_gp <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_gp_pnrs <- vnds_gp %>%
@@ -703,7 +709,9 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   cat(sprintf("OB  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%%d)\n",
       nrow(ob_cohort), length(dementia_pnrs)))   # attrition step 2
 
-  # Exclusion: emigrated before index date
+  # Exclusion: emigrated before index date (protocol criterion 3)
+  # Rule: ANY VNDS "U" event with haend_dato < index date -> excluded.
+  # Re-immigration is not checked: conservative approach, same as BS and GP blocks.
   # VNDS register: indud_kode == "U" = emigration; haend_dato = departure date.
   vnds_ob <- load_database("vnds") %>% rename_with(tolower)            # VNDS migration register
   emigrated_ob_pnrs <- vnds_ob %>%

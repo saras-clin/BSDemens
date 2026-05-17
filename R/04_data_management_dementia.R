@@ -449,7 +449,7 @@ format_variables <- function(df) {
       #                  Long (university). Reference: Medium (most common).
       #                  Adjust reference level before modelling if needed.
       education_cat  = factor(education_cat,
-                              levels = c("Short", "Medium", "Long", "Unknown")),
+                              levels = c("Medium", "Short", "Long", "Unknown")),   # Medium first = default reference level
 
       #   income_cat: from FAIK register (famaekvivadisp_13 = equivalised
       #               disposable household income). Population-standardised quintiles:
@@ -457,7 +457,7 @@ format_variables <- function(df) {
       #               Q20/Q40/Q60/Q80 cutpoints from the full BEF population,
       #               stratified by sex x 5-year age group x reference year (SEPLINE).
       income_cat     = factor(income_cat,
-                              levels = c("Low", "Medium", "High", "Unknown")),
+                              levels = c("Medium", "Low", "High", "Unknown")),     # Medium first = default reference level
 
       #   occupation_cat: from AKM register (socio13 = socioeconomic classification).
       #                   Reference level: Working (employed at index date).
