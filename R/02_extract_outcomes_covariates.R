@@ -23,7 +23,7 @@
 #     load_database("bef")                      — BEF population register
 #     load_database("dodsaars")                 — death register (d_dodsdto)
 #     load_database("lpr_adm") + "lpr_diag"    — LPR2 somatic diagnoses
-#     arrow::open_dataset(path_psyk_adm/diag)   — LPR2 psychiatric diagnoses
+#     load_database("t_psyk_adm") + "t_psyk_diag"  — LPR2 psychiatric diagnoses (confirmed via load_database, 2026-05-15)
 #     load_database("lpr_a_kontakt") + "diagnose"— LPR3 unified diagnoses (2019+)
 #     load_database("lmdb")                     — prescription register
 #     load_database("dbso")                     — DBSO weight/surgery data (parquet prepared by 00_prepare_dbso.R)
@@ -103,9 +103,12 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   lpr2 <- lpr2_adm_filtered %>%
     inner_join(
       lpr_diag %>%
-        filter(c_diagtype %in% diagtypes) %>%
-        mutate(icd3 = substr(c_diag, 2, 4),
-               icd4 = substr(c_diag, 2, 5)) %>%
+        filter(
+          c_diagtype %in% diagtypes,
+          substr(c_diag, 1, 1) == "D"   # exclude ICD-8 records (pre-1994: all-numeric 5-digit codes, no D prefix)
+        ) %>%
+        mutate(icd3 = substr(c_diag, 2, 4),   # D + letter + 2 digits -> e.g. DF00 -> F00
+               icd4 = substr(c_diag, 2, 5)) %>%  # D + letter + 3 digits -> e.g. DF003 -> F003
         select(recnum, icd3, icd4),
       by = "recnum"
     ) %>%
@@ -336,37 +339,54 @@ extract_dementia_outcomes <- function(bs_cohort) {
 # ============================================================================
 # 2.3b NEGATIVE CONTROL OUTCOMES — STUDY 1 SENSITIVITY 7g.6
 # ============================================================================
-# Cataract was selected as the negative control because it has no plausible
-# causal pathway from bariatric surgery: lens opacification is determined by
-# age, UV exposure, smoking, and genetics — none altered by BS.
-# Fracture was considered and explicitly rejected: RYGB causes calcium and
-# Vitamin D malabsorption leading to secondary hyperparathyroidism and
-# increased fracture risk. A non-null HR for fracture would be uninterpretable
-# as a bias indicator because it could reflect a true biological effect of RYGB.
-# See Section 7g.6 in study1_methods_plan.txt for full rationale.
+# Two negative control outcomes are extracted:
 #
-# ICD-10 codes (3-char, D prefix stripped):
-#   H25: age-related cataract
-#   H26: other cataract
+#   CATARACT (primary negative control, pre-specified as 7g.6)
+#     Lens opacification is determined by age, UV exposure, smoking, and genetics
+#     — none altered by BS. H27/H28 excluded: H28 = diabetic cataract, on the
+#     metabolic pathway shared with obesity.
+#     ICD-10: H25 (age-related cataract), H26 (other cataract)
+#
+#   HIP/KNEE OSTEOARTHRITIS (secondary negative control, added for surveillance bias check)
+#     Degenerative joint disease driven by age, mechanical load, and genetics.
+#     CAVEAT: BS causes substantial weight loss, which reduces mechanical load on
+#     joints. A protective HR for OA (i.e., HR < 1) would therefore be ambiguous —
+#     it could reflect reduced mechanical load rather than the absence of bias.
+#     This negative control is most useful if the OA HR is close to 1.0 (no effect
+#     in either direction). A large HR in either direction warrants discussion.
+#     Discuss with supervisors whether to retain OA or use cataract alone.
+#     ICD-10: M16 (coxarthrosis/hip OA), M17 (gonarthrosis/knee OA)
+#     Fracture was considered and explicitly rejected: RYGB causes calcium and
+#     Vitamin D malabsorption, secondary hyperparathyroidism, and increased fracture
+#     risk — a true biological effect making fracture uninterpretable as a control.
 
 extract_negative_controls <- function(bs_cohort) {
-  cataract_icd3 <- c("H25", "H26")   # age-related and other cataract (H27/H28 excluded: linked to metabolic disease)
+  all_dx_raw <- get_lpr_diagnoses(unique(bs_cohort$pnr), diagtypes = c("A", "B")) %>%   # A+B consistent with main outcomes
+    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%                 # attach index date per person
+    filter(date_contact > surgery_date)                                                    # post-index contacts only
 
-  all_dx <- get_lpr_diagnoses(unique(bs_cohort$pnr), diagtypes = c("A", "B")) %>%   # A+B consistent with main outcomes
-    filter(icd3 %in% cataract_icd3) %>%                                              # cataract contacts only
-    inner_join(bs_cohort %>% select(pnr, surgery_date), by = "pnr") %>%             # attach index date per person
-    filter(date_contact > surgery_date)                                               # post-index contacts only
-
-  date_cataract <- all_dx %>%
+  # --- Cataract ---
+  date_cataract <- all_dx_raw %>%
+    filter(icd3 %in% c("H25", "H26")) %>%   # age-related and other cataract; H27/H28 excluded (metabolic pathway)
     group_by(pnr) %>%
     arrange(date_contact) %>%
-    slice(1) %>%                                   # earliest cataract contact per person
+    slice(1) %>%                             # earliest cataract contact per person
     ungroup() %>%
     select(pnr, date_cataract = date_contact)
 
+  # --- Hip/knee osteoarthritis ---
+  date_oa <- all_dx_raw %>%
+    filter(icd3 %in% c("M16", "M17")) %>%   # M16 = coxarthrosis (hip OA); M17 = gonarthrosis (knee OA)
+    group_by(pnr) %>%
+    arrange(date_contact) %>%
+    slice(1) %>%                             # earliest OA contact per person
+    ungroup() %>%
+    select(pnr, date_oa = date_contact)
+
   bs_cohort %>%
     select(pnr) %>%
-    left_join(date_cataract, by = "pnr")   # NA for persons with no post-index cataract
+    left_join(date_cataract, by = "pnr") %>%   # NA for persons with no post-index cataract
+    left_join(date_oa,       by = "pnr")        # NA for persons with no post-index OA
 }
 
 # ============================================================================

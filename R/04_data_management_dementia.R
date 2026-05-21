@@ -360,6 +360,18 @@ format_variables <- function(df) {
         surgery_date, units = "days"
       )),
 
+      # -----------------------------------------------------------------------
+      # 4.5e-ii HIP/KNEE OSTEOARTHRITIS (secondary negative control)
+      # -----------------------------------------------------------------------
+      # M16 = coxarthrosis (hip); M17 = gonarthrosis (knee). No plausible BS
+      # pathway via disease aetiology, but BS may reduce joint load via weight
+      # loss — interpret cautiously if HR < 1. See 02 comment for full rationale.
+      oa_event = as.integer(!is.na(date_oa) & date_oa <= censor_date),
+      follow_up_days_oa = as.numeric(difftime(
+        if_else(oa_event == 1L, date_oa, censor_date),
+        surgery_date, units = "days"
+      )),
+
 
       # -----------------------------------------------------------------------
       # 4.5e ALZHEIMER'S DISEASE OUTCOME (secondary)

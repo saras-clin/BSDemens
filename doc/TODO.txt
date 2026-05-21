@@ -30,6 +30,36 @@ CONFIRM — VERIFY BEFORE TRUSTING RESULTS
 
 
 ================================================================================
+AWAIT SUPERVISOR MEETING — DO NOT CODE UNTIL RESOLVED
+================================================================================
+
+[SUPERVISOR-1] Additional confounder flags — confirm before adding to extraction
+  Based on DAG review, five conditions are associated with both BS (exposure) and
+  dementia (outcome) and are not well captured by the modified NMI (48-predictor).
+  These would be added as binary flags (5-year lookback, A+B+G diagtypes) in
+  02_extract_outcomes_covariates.R and entered as covariates in Model 3.
+  Candidate flags:
+    sleep_apnoea    G47.3   — not in NMI; highly prevalent in BS patients; cognitive decline RF
+    af_flag         I48     — not in NMI; AF is a strong dementia RF (embolic stroke)
+    ihd_flag        I20-I25 — not in NMI; atherosclerosis shares pathway with vascular dementia
+    depression_flag F32-F34 — NMI has rx_N06A proxy only; ICD dx more specific
+    hypertension_flag I10-I15 — NMI has rx proxies only; strongest modifiable dementia RF
+  Action:   Discuss with supervisors. Confirm which conditions to add and whether
+            to enter as individual binary flags alongside nmi_score or replace nmi_score.
+            Do NOT add these to 02 or 04 until decision is made.
+  See:      study1_methods_plan.md section 5 (Covariates), section 11.
+
+[SUPERVISOR-2] Cox model clustering — cluster() vs strata() — confirm before coding
+  Current plan in methods plan is TBD (section 11 [B1]).
+  Options:
+    cluster(matched_pnr) — robust sandwich SE; corrects SEs only, point estimates unchanged
+    strata(matched_pnr)  — stratified baseline hazard; can change point estimates
+  Must be pre-specified before running the analysis.
+  Action:   Confirm with supervisors and co-authors. Check what prior published
+            analyses from this group / this data environment have used.
+  See:      study1_methods_plan.md section 11 [B1].
+
+================================================================================
 ANALYSIS DECISIONS — CONFIRM BEFORE WRITING 07_analysis_dementia.R
 ================================================================================
 
