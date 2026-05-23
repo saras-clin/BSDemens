@@ -251,9 +251,9 @@ extract_demographics <- function(bs_cohort) {
       birth_date     = as.Date(foed_dag),
       # Age at surgery in years: difference between surgery date and birth date.
       age_at_surgery = as.numeric(difftime(surgery_date, birth_date, units = "days")) / 365.25,
-      # follow_up_end: the later-of-death vs administrative censoring.
+      # follow_up_end: the earlier of death_date and administrative end (2025-12-31).
       # pmin(..., na.rm = TRUE): for living persons (death_date = NA), returns 2025-12-31.
-      # For deceased persons, returns the earlier of death_date and 2025-12-31.
+      # For deceased persons, returns death_date (earlier than 2025-12-31).
       # Emigration censoring applied in 04_data_management_dementia.R via pmin() with emigration_date.
       follow_up_end  = pmin(as.Date("2025-12-31"), death_date, na.rm = TRUE)
     ) %>%
@@ -1023,6 +1023,10 @@ extract_baseline_medications <- function(bs_cohort) {
   # than anything derived from ICD codes or prescriptions, and it covers both studies.
   # insulin (A10A) is retained for baseline characterisation: knowing who was on
   # insulin pre-surgery is relevant for Study 2 (T1D outcomes) Table 1.
+  # NOTE: if A10B (oral antidiabetics) is ever added back here, a PCOS filter is required:
+  # metformin (A10BA02) is prescribed to women with PCOS regardless of diabetes status.
+  # Filter: exclude rows where atc == "A10BA02" & sex == "Female" & indo %in% <PCOS codes>
+  # The indo column (indication) must be added to the lmdb select() before applying this filter.
   atc_groups <- list(
     antihypertensive = c("C02", "C03", "C07", "C08", "C09"),
     lipid_lowering   = "C10",
