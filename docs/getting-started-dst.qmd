@@ -279,7 +279,7 @@ gantt
     section LPR2 psykiatrisk
     t_psyk_adm + t_psyk_diag         :done,   1995, 2019
     section LPR3 samlet
-    lpr_a_kontakt + lpr_a_diagnose   :active, 2019, 2025
+    lpr_a_kontakt + lpr_a_diagnose   :active, 2019, 2027
     section Studieperiode
     2010-2024                         :crit,   2010, 2025
 ```
