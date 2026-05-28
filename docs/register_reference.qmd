@@ -249,11 +249,6 @@ Tabellen indeholder alle typer: A, B og G — du skal stadig filtrere på `diag_
 | `diag_parent_kode` | character | Overordnet diagnosekode |
 | `year` | integer | År |
 
-::: {.callout-warning}
-**Stavemåde:** kolonnen hedder `senere_afkraeftet` (dansk) — ikke `senare_afkraeftet` (svensk).
-Forkert stavemåde giver ingen fejl, men ingen diagnoser ekskluderes.
-:::
-
 Standardfilter for `senere_afkraeftet`:
 ```r
 filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
