@@ -102,7 +102,7 @@ load_and_merge <- function() {
 # ============================================================================
 # The primary pre-surgery dementia exclusion runs in 01_build_cohorts.R using
 # get_prior_dementia_pnrs(). That function covers LPR2 somatic (lpr_adm/lpr_diag),
-# LPR2 psychiatric (psyk_adm/psyk_diag via arrow::open_dataset), and LPR3
+# LPR2 psychiatric (t_psyk_adm/t_psyk_diag via load_database(), confirmed 2026-05-15), and LPR3
 # (lpr_a_kontakt/lpr_a_diagnose). All three sources are now included.
 #
 # F-code dementia (F00 Alzheimer's, F01 vascular, F02 other, F03 unspecified)

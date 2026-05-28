@@ -81,7 +81,7 @@ BS_PROC_CODES <- c("KJDF10", "KJDF11", "KJDF40", "KJDF41", "KJDF96", "KJDF97")  
 # 1.0 HELPER FUNCTIONS
 # ============================================================================
 
-get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {          # Here we state which pnrs (named pnr_vector) and which cutoff dates (named before_dates) (defined when calling the function) 
+get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {   # pnr_vector: person IDs to check; before_dates: per-person cutoff dates (data frame with pnr + index_date) or a single scalar date
   # Returns pnrs that have ANY dementia diagnosis (F00-F03, G30-G31) before their
   # respective cutoff date. The function is called three times: for BS, gp-cohort and obesity-cohort.
   # Covers three data sources:
@@ -89,7 +89,7 @@ get_prior_dementia_pnrs <- function(pnr_vector, before_dates) {          # Here 
   #   1. LPR2 somatic     (lpr_adm + lpr_diag):         somatic contacts up to March 2019
   #   2. LPR2 psychiatric (t_psyk_adm + t_psyk_diag):   psychiatric contacts 1995-March 2019
   #      Names confirmed from archive/other peoples code/psyc2021.R (DST project 708614).
-  #      Confirmed: accessible via arrow::open_dataset(path_psyk_adm/path_psyk_diag).
+  #      Confirmed: accessible via load_database("t_psyk_adm") / load_database("t_psyk_diag") (2026-05-15).
   #   3. LPR3 unified     (kontakter + diagnoser):       all contacts from March 2019 onwards.
   #      LPR3 covers BOTH somatic and psychiatric in one register — no separate psych table needed.
 

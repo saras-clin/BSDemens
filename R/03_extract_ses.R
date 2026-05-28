@@ -324,7 +324,7 @@ extract_ses <- function(bs_cohort) {
     dplyr::select(
       pnr, index_year,
       hfaudd, education_cat,                               # raw HFAUDD code and derived education category
-      famaekvivadisp_13, income_quintile, income_cat,      # raw income, quintile rank, and category
+      income_3yr_avg, income_quintile, income_cat,          # 3-year average income, quintile rank, and category
       socio13, occupation_cat                              # raw SOCIO13 code and derived occupation category
     )
 }
