@@ -288,7 +288,7 @@ Alle tre registre bruges til SEP-udtræk i `03_extract_ses.R` efter SEPLINE-retn
 
 ### UDDA — Uddannelsesregistret
 
-Én post per person per år, uddannelsesniveauet ændres.
+Én post per person per år — opdateres, når uddannelsesniveauet ændrer sig.
 
 | Kolonne | Type | Indhold |
 |---|---|---|
@@ -346,7 +346,7 @@ Langt format: **én række per klinikbesøg per patient** (PRE = præoperativt, 
 ::: {.callout-warning}
 **Tre DBSO-specifikke quirks:**
 
-1. **Datokolonner er character-strenge** — kræver `as.Date()`. Undtagelse: `foerstefedmeopr_dato`.
+1. **`kontaktstartdato` og `kontaktslutdato` er character-strenge** — kræver `as.Date()`. Øvrige datokolonner (`datoper_prim`, `datopre`, `datofol`, `cprstatusdato`) er Date-objekter.
 2. **`foerstefedmeopr_dato` er et SAS-heltal** — brug `as.Date(x, origin = "1960-01-01")`.
 3. **`koen` bruger "M"/"K"**, ikke 1/2 som BEF.
 4. **Kirurgi-flag bruger 1 = ja, 2 = nej** — ikke 0/1 booleans.
@@ -357,13 +357,15 @@ Langt format: **én række per klinikbesøg per patient** (PRE = præoperativt, 
 | Kolonne | Type | Indhold |
 |---|---|---|
 | **`pnr`** | character | Personidentifikator (omdøbt fra `cpr` i 00_prepare_dbso.R) |
-| **`datoper_prim`** | character | **Operationsdato** (primær BS) — konverter med `as.Date()` |
+| **`datoper_prim`** | Date | **Operationsdato** (primær BS) |
 | **`gastricbypass_prim`** | numeric | 1 = RYGB, 2 = nej, NA = ukendt |
 | **`gastricsleeve_prim`** | numeric | 1 = SG, 2 = nej, NA = ukendt |
 | **`redo_prim`** | numeric | 1 = revisionsoperation, 2 = primær, NA = ukendt |
 | `koen` | character | Køn: **`"M"` = mand, `"K"` = kvinde** (ikke 1/2) |
-| `datopre` | character | Præoperativt besøg — konverter med `as.Date()` |
-| `datofol` | character | Opfølgningsbesøg — konverter med `as.Date()` |
+| `datopre` | Date | Præoperativt besøg |
+| `datofol` | Date | Opfølgningsbesøg |
+| `kontaktstartdato` | character | Besøgsstartdato — konverter med `as.Date()` |
+| `kontaktslutdato` | character | Besøgsslutdato — konverter med `as.Date()` |
 | `foerstefedmeopr_dato` | numeric | Første fedmeoperation nogensinde (SAS-heltal) |
 
 #### Vægt og højde

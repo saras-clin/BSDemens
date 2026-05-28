@@ -94,31 +94,29 @@ bef <- load_database("bef")                            # forkert — kolonnerne 
 
 ---
 
-## 5. DBSO-datokolonner er character-strenge
+## 5. `kontaktstartdato` og `kontaktslutdato` er character-strenge
 
-I DBSO er alle datokolonner gemt som character-strenge i formatet `"YYYY-MM-DD"`,
-ikke som Date-objekter.
+De fleste datokolonner i DBSO er gemt som Date-objekter og kan bruges direkte.
+Undtagelserne er `kontaktstartdato` og `kontaktslutdato`, som er gemt som character-strenge
+i formatet `"YYYY-MM-DD"` og kræver eksplicit konvertering med `as.Date()`.
 
 ```r
-# Disse kolonner er character i DBSO-parquet:
-# datoper_prim, datopre, datofol, kontaktstartdato, kontaktslutdato, cprstatusdato
+# Disse to kolonner er character i DBSO-parquet (kræver as.Date()):
+# kontaktstartdato, kontaktslutdato
 
-# Glemmer du as.Date(), fejler dato-aritmetik STILLE
-# Eksempel på fejl: surgery_date > "2010-01-01" virker tilsyneladende,
-# men sammenligner tekst alfabetisk, ikke datoer.
+# Øvrige datokolonner (datoper_prim, datopre, datofol, cprstatusdato) er Date-objekter.
 
 dbso <- load_database("dbso") %>% rename_with(tolower)
 
-dbso_datoer <- dbso %>%
+dbso_kontakter <- dbso %>%
   filter(pnr %in% !!kohort_pnrs) %>%
-  select(pnr, datoper_prim) %>%
+  select(pnr, kontaktstartdato, kontaktslutdato) %>%
   collect() %>%
-  mutate(surgery_date = as.Date(datoper_prim))   # as.Date() er obligatorisk
+  mutate(
+    kontaktstartdato = as.Date(kontaktstartdato),   # as.Date() nødvendigt
+    kontaktslutdato  = as.Date(kontaktslutdato)     # as.Date() nødvendigt
+  )
 ```
-
-::: {.callout-note}
-**Undtagelse:** `foerstefedmeopr_dato` er ikke en character-streng, men er NA for alle rækker i projektets udtræk og kan ikke bruges — se faldgrube 6.
-:::
 
 ---
 
@@ -151,7 +149,7 @@ lpr_a_diagnose %>%
 ## 8. DBSO's `koen` er "M"/"K", ikke 1/2
 
 BEF bruger `koen` med koderne `1` (mand) og `2` (kvinde).
-DBSO bruger `koen` med koderne `"M"` (mand) og `"K"` (kvinde/female).
+DBSO bruger `koen` med koderne `"M"` (mand) og `"K"` (kvinde).
 
 Hvis du joiner eller sammenligner køn på tværs af de to registre uden at recode,
 får du et stille mismatch — ingen fejlmeddelelse, men alle sammenligninger er forkerte.

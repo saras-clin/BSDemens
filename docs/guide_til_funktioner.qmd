@@ -44,7 +44,7 @@ Alle funktioner i R skrives med parenteser: `funktionsnavn(hvad_der_sendes_ind)`
 
 ## Røret — `%>%`
 
-Det mest vigtige symbol i al koden er `%>%`, som hedder "røret" (på engelsk: "the pipe").
+Det vigtigste symbol i al koden er `%>%`, som hedder "røret" (på engelsk: "the pipe").
 
 ```r
 lpr_adm %>%
@@ -162,7 +162,7 @@ Bruges kun i `00_prepare_dbso.R`.
 
 ### `file.path(mappe, "filnavn.rds")`
 
-**Hvad det gør:** sætter en mappeaddresse og et filnavn korrekt sammen til en fuld sti.
+**Hvad det gør:** sætter en mappesti og et filnavn korrekt sammen til en fuld sti.
 
 **Anekdote:** Tænk på det som at skrive en adresse: `file.path("C:/data", "resultater.rds")` giver `"C:/data/resultater.rds"`.
 Det er sikrere end bare at klistre strenge sammen med `paste0()`, fordi det håndterer skråstreger korrekt på alle operativsystemer.
@@ -463,7 +463,7 @@ Indkomstkvintiler beregnes ved at sammenligne hver persons 3-årsgennemsnit med 
 
 ## Join — sammensæt tabeller
 
-Det er en af de ting, der tager lengst tid at forstå, men som er afgørende for alt registerarbejde.
+Det er en af de ting, der tager længst tid at forstå, men som er afgørende for alt registerarbejde.
 En join sætter to tabeller sammen baseret på en fælles nøgle — typisk `pnr`.
 
 ### `inner_join(y, by = "nøgle")`

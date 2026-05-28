@@ -14,11 +14,8 @@ format:
 
 ## Inden du læser dette
 
-Denne side erstatter ikke Steno-onboarding-guiden.
+Denne side bygger ovenpå Steno-onboarding-guiden.
 Læs den først.
-Denne side fortsætter præcis der, hvor onboarding slutter:
-du har læst om Parquet og DuckDB på et konceptuelt niveau, du forstår pipes og `filter()`,
-og du sidder nu foran RStudio på DST for første gang og undrer dig over, hvorfor ingenting virker.
 
 Når du begynder at læse koden og støder på en funktion du ikke genkender,
 kan du slå den op i [Guide til funktioner](guide_til_funktioner.qmd) —
@@ -33,11 +30,14 @@ en detaljeret forklaring af alle funktioner i projektet med eksempler og analogi
 `dstDataPrep` er pakken, der giver dig `load_database()`.
 Den er ikke på CRAN.
 Den ligger på DST-serveren og skal bygges manuelt.
-Dette trin er ikke valgfrit, og det er den hyppigste årsag til problemer den første dag.
 
 1. I RStudio: **File → Open Project in New Session**
 2. Naviger til: `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
 3. Når projektet er åbnet: tryk **Ctrl + Shift + B** (Build)
+
+   ::: {.callout-note}
+   **Mac-brugere:** Ctrl + Shift + B virker ikke altid i Remote Desktop. Brug i stedet RStudios menulinje: **Build → Install Package**.
+   :::
 4. Vent på "Done" i Build-panelet, og luk derefter den session.
 
 ::: {.callout-warning}
@@ -66,11 +66,13 @@ File → Open Project → naviger til din workspace-mappe
 E:/workdata/708421/workspaces/dit-navn/BSDemens/BSDemens.Rproj
 ```
 
-Din outputmappe (hvor `.rds`-filer gemmes af pipeline'en) er:
+Din outputmappe (hvor `.rds`-filer gemmes af pipelinen) er:
 
 ```
 E:/workdata/708421/workspaces/dit-navn/BSDemens/datasets/
 ```
+
+Denne mappe eksisterer ikke automatisk — du skal oprette den selv inden du kører scripts.
 
 ### Trin 4 — Verificer at alt virker
 
@@ -135,10 +137,9 @@ Filerne er gitignored og ligger under `datasets/` i din workspace.
 
 ---
 
-## 3. Det ene mønster, du vil bruge overalt
+## 3. Struktur/mønster, du vil bruge igen og igen
 
 Alle registerforespørgsler i dette projekt følger det samme femtrins-mønster.
-Forstår du dette mønster, kan du læse enhver linje i ethvert script.
 
 ```r
 # Trin 1: åbn en doven forbindelse til registret
@@ -163,7 +164,7 @@ så resten af din kode kan bruge `pnr` overalt uden at bekymre sig om bogstavsst
 
 **Kald altid `rename_with(tolower)` på samme linje som `load_database()`.**
 
-### Hvorfor `!!` (bang-bang) optræder i hvert filter
+### Hvorfor `!!` (bang-bang) optræder i hvert filter 
 
 ```r
 filter(pnr %in% !!min_pnr_vektor)
@@ -175,6 +176,8 @@ Den kolonne eksisterer ikke — `min_pnr_vektor` er en lokal R-vektor, du define
 
 Du vil se `!!` foran næsten hver lokal variabel, der bruges inde i et `filter()`-kald.
 Det er påkrævet, når du refererer til et R-objekt (ikke en kolonne) inde i en doven forespørgsel.
+
+[Se mere om `!!` og doven evaluering i Funktionsguiden →](guide_til_funktioner.qmd#bang-bang-to-udråbstegn)
 
 ### Hvad sker der i de fem trin — visuelt
 
@@ -288,7 +291,7 @@ gantt
 ```
 
 I LPR3 er `kont_starttidspunkt` en fuld datetime (f.eks. `"2021-03-15 14:32:00"`).
-Konverter til en almindelig dato: `as.Date(kont_starttidspunkt)`.
+Konverter til en almindelig dato: `as.Date(kont_starttidspunkt)`, hvis du skal bruge denne.
 
 ### Det psykiatriske LPR2-register
 
@@ -450,8 +453,20 @@ peger på din egen workspace-mappe.
 
 ## 8. Tilføj et nyt udfald — det rå LPR-mønster
 
-Alle udtræk i projektet følger samme skabelon:
-hent diagnoser fra LPR2 og LPR3 separat, fjern D-præfikset, filtrer på kode og dato, find første forekomst per person, join til kohorten.
+Alle udtræk i projektet følger samme to-fase strategi:
+
+**Fase 1 — byg en diagnosetabel for kohorten (uafhængig af udfaldet)**
+
+Vi henter alle diagnoser for vores kohortmedlemmer fra LPR2 og LPR3 — uden at filtrere på specifikke koder endnu.
+Resultatet er én stor tabel (`alle_dx`) med én række per diagnose per person, med D-præfikset fjernet.
+Denne tabel er udfaldsagnostisk og kan genbruges til alle udfaldsekstraktioner.
+
+**Fase 2 — udtræk det specifikke udfald**
+
+Vi filtrerer `alle_dx` på de ønskede ICD-koder, finder den første forekomst per person efter indeksdatoen, og joiner resultatet tilbage til kohorten med `left_join`.
+Personer uden udfaldet får `NA` — de er i risiko, men hændelsen skete ikke i studieperioden.
+
+Den eneste linje, du skal skifte for et nyt udfald, er `KODER <- c(...)`.
 
 ::: {.callout-note}
 `get_lpr_diagnoses(pnr_vector, diagtypes, inpatient_only)` i `02_extract_outcomes_covariates.R` pakker LPR2/LPR3-opdelingen ind og tilføjer psykiatrisk LPR2 automatisk.
@@ -505,6 +520,7 @@ lpr3_dx <- lpr3_k %>%
 alle_dx <- bind_rows(lpr2_dx, lpr3_dx)
 
 # ── Udtræk udfald ────────────────────────────────────────────────────────
+# Først laver du en variabel med alle de koder, du gerne vil trække ud: 
 KODER <- c("I21")   # skift til det ønskede udfald
 
 udfald <- alle_dx %>%
