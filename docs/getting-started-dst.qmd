@@ -179,14 +179,17 @@ Det er påkrævet, når du refererer til et R-objekt (ikke en kolonne) inde i en
 ### Hvad sker der i de fem trin — visuelt
 
 ```{mermaid}
-flowchart LR
-    P[("Parquet-fil\npå DST")]
-    A["load_database()\n— doven reference\n— ingenting flyttes"]
-    B["filter() + select()\n— instruktioner\n  staplet op"]
-    C["collect()\n— send nu!"]
-    R[("R-hukommelse\ndata.frame\n— kun nødvendige\n  rækker + kolonner")]
+flowchart TD
+    P[("Parquet-fil på DST")]
+    L["load_database()"]
+    F["filter() + select()"]
+    C["collect()"]
+    R[("R-hukommelse · data.frame")]
 
-    P --> A --> B --> C --> R
+    P -->|"doven reference — ingenting flyttes til R"| L
+    L -->|"instruktioner staplet op i DuckDB"| F
+    F -->|"send nu!"| C
+    C -->|"kun nødvendige rækker + kolonner"| R
 ```
 
 `load_database()`, `filter()` og `select()` er rene instruktioner — de koster næsten ingen RAM.
