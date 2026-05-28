@@ -415,6 +415,10 @@ Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
 
 ## 7. Pipeline'en i ét diagram {#pipeline-i-ét-diagram}
 
+Diagrammet herunder viser, hvordan jeg har struktureret dette projekt.
+Det er ikke den eneste måde at gøre det på — men det er en måde, der virker til et registerbaseret kohortestudie på DST.
+Du kan bruge det som inspiration og tilpasse antallet af scripts, hvilke udtræk du har brug for, og hvad dit endelige analysedatasæt skal indeholde.
+
 De fem scripts køres i rækkefølge.
 Trin 2 og 3 kan køre parallelt — de læser begge `full_cohort.rds` uafhængigt af hinanden.
 
@@ -458,7 +462,7 @@ Alle udtræk i projektet følger samme to-fase strategi:
 **Fase 1 — byg en diagnosetabel for kohorten (uafhængig af udfaldet)**
 
 Vi henter alle diagnoser for vores kohortmedlemmer fra LPR2 og LPR3 — uden at filtrere på specifikke koder endnu.
-Resultatet er én stor tabel (`alle_dx`) med én række per diagnose per person, med D-præfikset fjernet.
+Resultatet er én stor tabel (`alle_dx` - det er blot det navn vi giver det, du kan kalde det hvad som helst) med én række per diagnose per person, med D-præfikset fjernet.
 Denne tabel er udfaldsagnostisk og kan genbruges til alle udfaldsekstraktioner.
 
 **Fase 2 — udtræk det specifikke udfald**
@@ -558,4 +562,3 @@ Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtr�
 | Forkert eller manglende dødsdato | Brug `dodsaars` kolonne `d_dodsdto`, ikke `dodsaasg` |
 | Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(stort_objekt); gc()` efter store udtræk |
 | `!!` giver en fejl | Sørg for, at du er inde i et `dplyr`-verbum (`filter`, `mutate`) på et dovent objekt |
-| Mine resultater afviger fra et tidligere kørsel | Kontroller at `set.seed(42)` er til stede inden matching-løkkerne |
