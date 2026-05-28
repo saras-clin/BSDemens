@@ -102,8 +102,10 @@ Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
 **Du behøver ikke at samle årsfiler manuelt.**
 Onboarding-guiden viser, hvordan man gemmer og læser årspartitionerede parquet-filer.
 På DST gør `load_database()` dette allerede — den åbner alle år af BEF (eller et andet register)
-som én enkelt doven forbindelse.
+som én enkelt "doven" forbindelse — dvs. data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()`.
 Der er intet trin, hvor du sammensætter `bef2010.parquet`, `bef2011.parquet`, osv.
+
+Konceptet forklares grundigt i Steno-onboarding-guiden — læs det afsnit, hvis du ikke er bekendt med doven evaluering.
 :::
 
 ::: {.callout-note}
@@ -124,7 +126,7 @@ Den klassificerer alle personer i Danmark som T1D, T2D eller Ingen diabetes frem
 ### Hvad er en `.rds`-fil?
 
 Pipeline-scripts sender data videre til hinanden via `.rds`-filer.
-`.rds` er R's eget gemmingsformat — hurtigere og mere kompakt end CSV,
+`.rds` er R's eget filformat til at gemme data — hurtigere og mere kompakt end CSV,
 og det bevarer alle R-objekters egenskaber (datatyper, kolonnenavne, faktorniveauer) perfekt.
 
 | Funktion | Hvad den gør |

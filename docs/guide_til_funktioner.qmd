@@ -76,7 +76,7 @@ Projektet bruger `%>%`, men hvis du skriver `|>` er det helt fint.
 
 ## Dataindlæsning
 
-### `load_database("navn")`
+### `load_database("navn")` <small>— `dstDataPrep`</small>
 
 **Hvad det gør:** åbner en doven forbindelse til et DST-register.
 
@@ -548,15 +548,27 @@ Du vil se `!!` foran næsten alle lokale R-variabler inde i `filter()`-kald.
 
 ### `!!kolonnenavn := værdi` (inde i `mutate`)
 
-**Hvad det gør:** opretter en kolonne, hvis NAVN er gemt i en variabel.
+**Hvad det gør:** opretter en kolonne, hvis NAVN er bestemt af en R-variabel — ikke skrevet direkte i koden.
 
+Normalt skriver du et fast kolonnenavn til venstre for `=` i `mutate()`:
 ```r
-mutate(!!tilstandsnavn := 1L)
-# Opretter en kolonne med det navn, der er gemt i variablen tilstandsnavn
-# f.eks. "mi" eller "stroke"
+mutate(mi = 1L)   # opretter altid en kolonne der hedder "mi"
 ```
 
-`:=` er nødvendigt, når venstre side af en tildeling er dynamisk (ikke et fast navn).
+Men i NMI-løkken kører vi over en liste af tilstande (`"mi"`, `"stroke"`, `"diabetes"`, ...) og vil oprette én kolonne per tilstand. Kolonnens navn er derfor gemt i en variabel:
+```r
+tilstandsnavn <- "mi"   # variablen indeholder navnet som en tekststreng
+
+mutate(!!tilstandsnavn := 1L)
+# !! injicerer værdien af tilstandsnavn — dvs. koden svarer til: mutate(mi = 1L)
+# Næste iteration: tilstandsnavn <- "stroke" → mutate(stroke = 1L)
+```
+
+To ting er anderledes end normalt:
+- **`!!`** — som i `filter()`: injicerer R-variabelens *indhold* i stedet for at tolke den som et kolonnenavn
+- **`:=`** — bruges i stedet for `=`, fordi R kræver det, når venstre side af en tildeling er dynamisk. Det er ikke muligt at skrive `mutate(!!navn = 1L)` — kun `mutate(!!navn := 1L)` virker.
+
+`1L` er et heltal (se [`as.integer()` / `1L`](#as.integer-x-1l)) — flag-kolonner gemmes som heltal for at spare hukommelse.
 
 ---
 

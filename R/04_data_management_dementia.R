@@ -29,8 +29,9 @@
 #   Output:  datasets/study1_clean.rds  (one row per person; ready for Cox models)
 # ============================================================================
 
+install.packages("duckplyr")   # DST CRAN is outdated — reinstall at start of every session
+library(dplyr)                 # duckplyr is loaded via dplyr; install before library()
 library(dstDataPrep)   # load_database() — used in get_emigration_dates() for VNDS
-library(dplyr)
 library(lubridate)
 library(heaven)        # exposureMatch(), charlsonIndex(), etc.
 

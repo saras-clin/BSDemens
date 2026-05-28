@@ -53,7 +53,9 @@
 # ============================================================================
 
 # Packages ----
-library(dstDataPrep)   # load_database() and rename helpers for DST parquet registers
+install.packages("duckplyr")   # DST CRAN is outdated — reinstall at start of every session
+library(dplyr)                 # duckplyr is loaded via dplyr; install before library()
+library(dstDataPrep)           # load_database() and rename helpers for DST parquet registers
 library(arrow)         # write_parquet() used in 00_prepare_dbso.R; loaded here for session consistency
 library(dplyr)         # data manipulation throughout
 library(lubridate)     # year(), as.Date(), date arithmetic

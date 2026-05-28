@@ -30,6 +30,8 @@
 # ============================================================================
 
 # Packages ----
+install.packages("duckplyr")   # DST CRAN is outdated — reinstall at start of every session
+library(dplyr)                 # duckplyr is loaded via dplyr; install before library()
 library(dstDataPrep)   # load_database() - pre-installed on DST, must be built first
 library(arrow)
 library(dplyr)
