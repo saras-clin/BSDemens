@@ -1,0 +1,201 @@
+---
+title: "Faldgruber på DST"
+subtitle: "10 fejl der koster tid og giver uinformative fejlmeddelelser"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-title: "På denne side"
+    theme: cosmo
+    highlight-style: github
+---
+
+Denne side samler de fejl, der hyppigst rammer nye brugere af DST-registrene.
+Fælles for dem: fejlmeddelelserne er enten forvirrende, eller der er slet ingen fejlmeddelelse —
+resultatet er bare stille forkert.
+
+Se også den korte hurtigreference i bunden af [Kom i gang](getting-started-dst.qmd#hurtig-reference).
+
+---
+
+## 1. `dodsaars` vs `dodsaasg` — brug det rigtige dødsregister
+
+Der er to registre med lignende navne:
+
+| Register | Indeholder | Bruges til |
+|---|---|---|
+| `dodsaars` | Individuelle dødsregistreringer med præcis dødsdato (`d_dodsdto`) | **Censurering ved dødsfald** |
+| `dodsaasg` | Dødsårsagsklassifikation | Kun analyse af dødsårsag |
+
+`dodsaasg` har ikke dødsdatoen i det rigtige format og er ikke den autoritative kilde til individuelle dødsdatoer.
+
+```r
+# KORREKT
+dod <- load_database("dodsaars") %>% rename_with(tolower)
+dod_person <- dod %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
+  select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto er den bekræftede kolonne
+  collect()
+
+# FORKERT — brug ikke dodsaasg til censureringsdatoer
+```
+
+---
+
+## 2. `duckplyr` nulstilles ved logout
+
+Den forudinstallerede `duckplyr` på DST er for gammel og mangler funktioner, som koden bruger.
+Kør dette **inden** du indlæser biblioteker — i starten af hver session:
+
+```r
+install.packages("duckplyr")
+```
+
+Installationen er midlertidig og forsvinder, når du logger ud.
+Glemmer du det og får mærkelige fejl fra `dplyr`-operationer på dovne objekter, er dette årsagen.
+
+Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
+
+---
+
+## 3. RAM er delt — ryd op efter store udtræk
+
+Du er på en delt server med fælles RAM.
+Når hukommelsesbjælken i RStudio bliver rød, oplever alle på serveren langsomhed.
+
+```r
+# Filtrer tidligt — aldrig collect() først
+result <- lmdb %>%
+  filter(pnr %in% !!kohort_pnrs, substr(atc, 1, 4) == "N06D") %>%
+  select(pnr, atc, eksd) %>%
+  collect()
+
+# Frigør, når du er færdig
+rm(lmdb, result_intermediate)
+gc()   # frigiver hukommelse tilbage til operativsystemet
+```
+
+---
+
+## 4. `rename_with(tolower)` skal kaldes på hvert register
+
+Rå kolonnenavne varierer efter register og år: `PNR`, `pnr`, `Pnr`, `V_CPR`.
+Glemmer du `rename_with(tolower)`, fejler `filter(pnr %in% ...)` stille —
+fordi kolonnen faktisk hedder `PNR`, og R finder den ikke.
+Fejlmeddelelsen ("Column `pnr` not found") er forvirrende, fordi kolonnen burde være der.
+
+Reglen: **hvert `load_database()`-kald ender med `%>% rename_with(tolower)`**, altid på samme linje.
+
+```r
+bef <- load_database("bef") %>% rename_with(tolower)   # korrekt
+bef <- load_database("bef")                            # forkert — kolonnerne er i ukendt case
+```
+
+---
+
+## 5. DBSO-datokolonner er character-strenge
+
+I DBSO er alle datokolonner gemt som character-strenge i formatet `"YYYY-MM-DD"`,
+ikke som Date-objekter.
+
+```r
+# Disse kolonner er character i DBSO-parquet:
+# datoper_prim, datopre, datofol, kontaktstartdato, kontaktslutdato, cprstatusdato
+
+# Glemmer du as.Date(), fejler dato-aritmetik STILLE
+# Eksempel på fejl: surgery_date > "2010-01-01" virker tilsyneladende,
+# men sammenligner tekst alfabetisk, ikke datoer.
+
+dbso <- load_database("dbso") %>% rename_with(tolower)
+
+dbso_datoer <- dbso %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
+  select(pnr, datoper_prim) %>%
+  collect() %>%
+  mutate(surgery_date = as.Date(datoper_prim))   # as.Date() er obligatorisk
+```
+
+::: {.callout-note}
+**Undtagelse:** `foerstefedmeopr_dato` er ikke en character-streng, men er NA for alle rækker i projektets udtræk og kan ikke bruges — se faldgrube 6.
+:::
+
+---
+
+## 6. `foerstefedmeopr_dato` er NA for alle
+
+Kolonnen `foerstefedmeopr_dato` i DBSO er NA for alle rækker i projektets udtræk.
+Den kan ikke bruges til datofiltrering — brug `datoper_prim` (primær operationsdato) i stedet.
+
+Teknisk note: kolonnen er lagret som et numerisk SAS-datoheltal (antal dage siden 1. januar 1960) i den originale SAS-fil, ikke som en character-streng som de øvrige DBSO-datokolonner.
+Korrekt konvertering ville være `as.Date(foerstefedmeopr_dato, origin = "1960-01-01")`, men da alle værdier er NA, er det irrelevant i praksis.
+
+---
+
+## 7. LPR3's "a" i `lpr_a_diagnose` er ikke A-type diagnoser
+
+Tabellen hedder `lpr_a_diagnose` — det "a" refererer til "analysemodel" (LPR_A-serien introduceret i 2025).
+Det betyder **ikke**, at tabellen kun indeholder A-type (aktions-)diagnoser.
+
+Tabellen indeholder alle diagnosetyper: A (aktion), B (bi-diagnose) og G (grundmorbus).
+Du skal stadig filtrere på `diag_kode_type`:
+
+```r
+lpr_a_diagnose %>%
+  filter(diag_kode_type %in% c("A", "B")) %>%   # stadig nødvendigt
+  ...
+```
+
+---
+
+## 8. DBSO's `koen` er "M"/"K", ikke 1/2
+
+BEF bruger `koen` med koderne `1` (mand) og `2` (kvinde).
+DBSO bruger `koen` med koderne `"M"` (mand) og `"K"` (kvinde/female).
+
+Hvis du joiner eller sammenligner køn på tværs af de to registre uden at recode,
+får du et stille mismatch — ingen fejlmeddelelse, men alle sammenligninger er forkerte.
+
+```r
+# Recode DBSO til BEF-konventionen inden join
+dbso_koen <- dbso_data %>%
+  mutate(koen = if_else(koen == "M", 1L, 2L))   # M -> 1, K -> 2
+```
+
+---
+
+## 9. DBSO's kirurgi-flag: 1 = ja, 2 = nej (ikke 0/1)
+
+DBSO-kirurgi-flag (`gastricbypass_prim`, `gastricsleeve_prim`, `redo_prim`) bruger
+dansk SAS-konvention: **1 = ja, 2 = nej**, ikke booleans (0 = nej, 1 = ja).
+
+```r
+# FORKERT — giver TRUE for alle rækker hvor flaget IKKE er NA
+filter(redo_prim)         # fortolker 2 (= nej) som sandt
+
+# KORREKT
+filter(redo_prim == 1)    # kun dem der rent faktisk er redo
+filter(redo_prim != 1)    # dem der ikke er redo (beholder NA → ukendt)
+```
+
+::: {.callout-note}
+`filter(redo_prim != 1)` beholder rækker med `NA` (ukendt) — det er bevidst.
+`filter(redo_prim == 2)` ville ekskludere de ukendte.
+:::
+
+---
+
+## 10. `nmi_count` ≠ `nmi_score`
+
+Disse to variabler er **ikke** det samme og er ikke udskiftelige:
+
+| Variabel | Hvad den er | Kilde |
+|---|---|---|
+| `nmi_score` | Kristensens (2022) **vægtede** indeks — 50 prediktorer med individuelle vægte (f.eks. lungekreft tæller 19, type 2-diabetes tæller 2) | `extract_nmi.rds` |
+| `nmi_count` | Simpel **optælling** af, hvor mange af 33 GMC-tilstande personen har | Beregnet i `compute_multimorbidity_count()` i script 04 |
+
+I Cox-modeller bruges `nmi_score` som kontinuert kovariat.
+`nmi_count` bruges til deskriptive tabeller og kategorisk præsentation (`nmi_cat`).
+
+---
+

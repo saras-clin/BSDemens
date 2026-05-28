@@ -1,0 +1,115 @@
+---
+title: "BS & Demens — Projekt 708421"
+subtitle: "Kodevejledning til registerbaseret kohortestudie"
+---
+
+## Om projektet
+
+Dette website er en kodevejledning til registerbaserede kohortestudier på DST (projekt 708421).
+
+**Bariatrisk kirurgi** (BS) er behandlingen for svær fedme.
+De to hyppigste indgreb er *Roux-en-Y gastric bypass* (RYGB) og *sleeve gastrektomi* (SG).
+Begge reducerer mavsækkens volumen og ændrer tarmens hormonmiljø, hvilket fører til vedvarende vægttab og metaboliske forandringer.
+
+**Et registerbaseret kohortestudie** følger en gruppe mennesker over tid ved at sammenkoble oplysninger fra nationalt dækkende administrative registre: hospitalsdiagnoser, recepter, socioøkonomiske data og vitalstatus.
+I stedet for at rekruttere deltagere og indsamle data prospektivt udnytter man data, der allerede er registreret af sundhedsvæsenet.
+Studiedesignet giver stor statistisk styrke, men kræver omhyggelig håndtering af confounding, censurering og registerspecifikke quirks.
+Kodebasen er skrevet generelt — andre studier kan bruge den samme infrastruktur med andre inklusionskriterier og andre udfaldsvariabler.
+
+**Studie 1** undersøger, om bariatrisk kirurgi reducerer risikoen for demens i et matchet kohortdesign med tre grupper: BS-patienter, almenbefolkningsmatchede kontroller og fedmematchede kontroller (opfølgning 2010–2024).
+
+**Studie 2** undersøger glykæmiske og hospitalsmæssige udkomme efter bariatrisk kirurgi hos personer med type 1-diabetes.
+
+---
+
+## Pipeline-oversigt
+
+Data flyttes fra råregistre til analysedata i fem trin:
+
+```
+00_prepare_dbso.R   →  DBSO parquet (kun én gang)
+01_build_cohorts.R  →  full_cohort.rds
+02_extract_*.R      →  extract_dementia.rds, extract_comorbidities.rds, ...
+03_extract_ses.R    →  ses_data.rds
+04_data_mgmt.R      →  study1_clean.rds  (klar til Cox-modeller)
+```
+
+Trin 2 og 3 kan køre parallelt. Se den fulde pipeline med Mermaid-diagram på siden [Kom i gang](getting-started-dst.qmd#pipeline-i-ét-diagram).
+
+---
+
+## Inden du starter
+
+To trin skal altid gøres, inden du åbner projektet:
+
+::: {.callout-important}
+**1. Byg `dstDataPrep`**
+
+Åbn `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj` → **Ctrl + Shift + B**.
+Skal gentages efter servernulstillinger.
+:::
+
+::: {.callout-important}
+**2. Geninstaller `duckplyr` i starten af hver session**
+
+```r
+install.packages("duckplyr")   # skal køres inden library()
+```
+Den forudinstallerede version er for gammel. Installationen nulstilles ved logout.
+:::
+
+---
+
+## Sider på dette website
+
+::: {.grid}
+
+::: {.g-col-6}
+### [Kom i gang](getting-started-dst.qmd)
+Alt hvad du behøver for at komme i gang på DST for første gang:
+de to datastores, det universelle forespørgselsmønster, ICD D-præfikset,
+LPR2/LPR3-opdelingen og pipeline-diagrammet.
+:::
+
+::: {.g-col-6}
+### [Funktionsguide](guide_til_funktioner.qmd)
+Forklaring af alle R-funktioner brugt i projektet —
+fra røret `%>%` og `filter()` til joins, datoberegninger og doven evaluering.
+Med analogier til hverdagen og de 7 vigtigste funktioner fremhævet øverst.
+:::
+
+::: {.g-col-6}
+### [Registerreference](register_reference.qmd)
+Fulde kolonnenavne for alle 14 registre, bekræftet på DST 2026-05-15.
+Nøglekolonner fremhævet. Særlige quirks markeret med advarsler.
+:::
+
+::: {.g-col-6}
+### [Faldgruber](dst_faldgruber.qmd)
+12 DST-specifikke fejl der koster tid og giver uinformative fejlmeddelelser —
+fra `dodsaars` vs `dodsaasg` til DBSO-datoformater og NMI-score vs NMI-count.
+:::
+
+:::
+
+---
+
+## Mappestruktur
+
+```
+R/
+  00_prepare_dbso.R              # Engangs: SAS → parquet for DBSO
+  01_build_cohorts.R             # BS-kohort + GP + fedme-sammenligning
+  02_extract_outcomes_covariates.R   # LPR/LMDB/DBSO-udtræk
+  03_extract_ses.R               # Socioøkonomiske variabler
+  04_data_management_dementia.R  # Merge, eksklusioner, analysedatasæt
+  variables_dictionary.txt       # Bekræftede registerkolonner
+  functions_guide.txt            # Funktionsinventar (arkiv)
+docs/
+  index.qmd                      # Denne side
+  getting-started-dst.qmd        # Kom i gang på DST
+  guide_til_funktioner.qmd       # Funktionsforklaringer
+  register_reference.qmd         # Registerkolonner
+  dst_faldgruber.qmd             # Faldgruber
+datasets/                        # gitignored: .rds-outputfiler
+```

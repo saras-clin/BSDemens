@@ -1,0 +1,425 @@
+---
+title: "Registerreference"
+subtitle: "Bekræftede kolonnenavne for alle 14 registre — projekt 708421"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "På denne side"
+    theme: cosmo
+    highlight-style: github
+---
+
+Alle kolonnenavne på denne side er bekræftet på DST 2026-05-15 via `colnames()`.
+De vises **efter** `rename_with(tolower)` er kaldt.
+Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
+
+Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ved hvert register.
+
+---
+
+## Hvad vil jeg finde? — omvendt opslagstabel
+
+Kend dit spørgsmål. Find registret. Kig i kolonnen.
+
+| Jeg vil finde... | Register | Nøglekolonne(r) |
+|---|---|---|
+| Fødselsdato og køn | BEF | `foed_dag`, `koen` |
+| Om personen er død — og hvornår | DODSAARS | `d_dodsdto` |
+| Om personen er emigreret | VNDS | `haend_dato`, `indud_kode` |
+| En somatisk hospitalskontakt (før 2019) | lpr_adm | `d_inddto`, `recnum`, `c_pattype` |
+| En somatisk diagnose (før 2019) | lpr_diag | `c_diag`, `c_diagtype`, `recnum` |
+| En psykiatrisk diagnose (fx demens, før 2019) | t_psyk_adm + t_psyk_diag | `d_inddto`, `c_diag`, `c_diagtype` |
+| En hospitalskontakt eller diagnose (2019+) | lpr_a_kontakt + lpr_a_diagnose | `kont_starttidspunkt`, `diag_kode`, `diag_kode_type` |
+| En udskrevet recept | LMDB | `atc`, `eksd` |
+| Uddannelsesniveau | UDDA | `hfaudd`, `aar` |
+| Husstandsindkomst | FAIK | `famaekvivadisp_13`, `familie_id` |
+| Beskæftigelsesstatus | AKM | `socio13`, `aar` |
+| Dato for bariatrisk operation | DBSO | `datoper_prim` |
+| Diabetestype og debutdato | OSDC | `diabetes_type`, `do_dm` |
+
+::: {.callout-note}
+**Join-nøgler:**
+BEF, DODSAARS, VNDS, LMDB, UDDA, AKM, DBSO og OSDC joines alle på `pnr`.
+FAIK joines via `familie_id` — hent den fra BEF.
+LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
+:::
+
+---
+
+## Oversigt — alle registre
+
+| Register | `load_database()`-navn | Join-nøgle | Periode | Kritisk kolonne |
+|---|---|---|---|---|
+| BEF | `"bef"` | `pnr` | Alle år | `koen`, `foed_dag`, `familie_id` |
+| DODSAARS | `"dodsaars"` | `pnr` | Alle år | **`d_dodsdto`** (dødsdato til censurering) |
+| VNDS | `"vnds"` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
+| LPR2 kontakter | `"lpr_adm"` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
+| LPR2 diagnoser | `"lpr_diag"` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |
+| LPR2 psyk kontakter | `"t_psyk_adm"` | `k_recnum` → `recnum` | 1995–marts 2019 | `v_cpr` → `pnr` |
+| LPR2 psyk diagnoser | `"t_psyk_diag"` | `v_recnum` → `recnum` | 1995–marts 2019 | `c_diag`, `c_diagtype` |
+| LPR3 kontakter | `"lpr_a_kontakt"` | `dw_ek_kontakt` | Marts 2019+ | `kont_starttidspunkt` (datetime) |
+| LPR3 diagnoser | `"lpr_a_diagnose"` | `dw_ek_kontakt` | Marts 2019+ | `diag_kode`, `diag_kode_type`, `senere_afkraeftet` |
+| LMDB | `"lmdb"` | `pnr` | Ca. 1994+ | `atc`, `eksd` |
+| UDDA | `"udda"` | `pnr` | Alle år | `hfaudd`, `aar` |
+| FAIK | `"faik"` | `familie_id` | Alle år | `famaekvivadisp_13` |
+| AKM | `"akm"` | `pnr` | Alle år | `socio13`, `aar` |
+| DBSO | `load_database("dbso")` | `pnr` | 2010+ | `datoper_prim`, kirurgi-flag |
+| OSDC | `readRDS(sti)` | `pnr` (hedder `PNR` — rename) | 1977–2022 | `diabetes_type`, `do_dm` |
+
+---
+
+## 1. Demografi og vitalstatus
+
+### BEF — Befolkningsregistret
+
+Ét snapshot per person per år. Bruges til køn, fødselsdato og indkomstlink.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`koen`** | numeric | Køn: 1 = mand, 2 = kvinde |
+| **`foed_dag`** | Date | Fødselsdato |
+| **`aar`** | integer | Registerår (én post per år) |
+| **`familie_id`** | character | Husstandsnøgle — join til FAIK |
+| `reg` | character | Region |
+| `civst` | character | Civilstand |
+
+::: {.callout-note}
+BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering.
+:::
+
+---
+
+### DODSAARS — Dødsregistret
+
+Én række per afdød person.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`d_dodsdto`** | Date | **Dødsdato — brug denne til censurering** |
+| `fdato` | Date | Fødselsdato |
+| `c_sex` | character | Køn |
+| `v_alder` | numeric | Alder ved dødsfald |
+| `year` | integer | Dødsår |
+| `c_dod1` | character | Underliggende dødsårsag (ICD-10) |
+| `c_dod2`–`c_dod4` | character | Medvirkende dødsårsager |
+| `c_dodskom` | character | Dødsmåde/-sted |
+| `c_bopkom` | character | Bopælskommune ved dødsfald |
+
+::: {.callout-warning}
+**`dodsaasg`** er klassifikationsregistret for dødsårsager — det er **ikke** kilden til individuelle dødsdatoer.
+Brug altid `dodsaars` med kolonnen `d_dodsdto`.
+:::
+
+---
+
+### VNDS — Migrationsregistret
+
+Én række per migrationsbegivenhed per person.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`indud_kode`** | character | `"U"` = udvandring (brug til censurering), `"I"` = indvandring |
+| **`haend_dato`** | Date | Begivenhedsdato |
+
+Brug: `filter(indud_kode == "U")` → `min(haend_dato)` per pnr for første udvandringsdato.
+Ikke-udvandrere optræder ikke i VNDS med en "U"-hændelse og får `emigration_date = NA`.
+
+---
+
+## 2. LPR2 — Somatisk (frem til marts 2019)
+
+Join: `lpr_adm` **LEFT JOIN** `lpr_diag` **ON** `recnum`.
+
+### lpr_adm — Kontakter
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`recnum`** | character | Kontaktnøgle — join til lpr_diag |
+| **`pnr`** | character | Personidentifikator |
+| **`d_inddto`** | Date | Indlæggelsesdato — brug som kontaktdato |
+| **`c_pattype`** | character | Kontakttype: `"0"` = indlagt, `"1"` = ambulant, `"2"` = skadestue |
+| `d_uddto` | Date | Udskrivningsdato |
+| `c_adiag` | character | Aktionsdiagnose (kopi — brug lpr_diag via join i stedet) |
+| `c_spec` | character | Specialekode |
+| `year` | integer | År |
+
+### lpr_diag — Diagnoser
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`recnum`** | character | Join-nøgle til lpr_adm |
+| **`c_diag`** | character | ICD-10-kode **med D-præfiks** (f.eks. `"DG30"`) — brug `substr(c_diag, 2, 4)` |
+| **`c_diagtype`** | character | `"A"` = aktionsdiagnose, `"B"` = bidiagnose, `"G"` = grundmorbus |
+| `c_diagmod` | character | Diagnosemodifikator |
+| `year` | integer | År |
+
+---
+
+## 3. LPR2 — Psykiatrisk (1995 – marts 2019)
+
+Psykiatriske kontakter før marts 2019 er i **separate registre** fra somatisk LPR2.
+Fra marts 2019 dækker LPR3 begge i én tabel.
+
+::: {.callout-warning}
+**Glemmer du at forespørge de psykiatriske registre** for perioden 1995–2019, misser du alle demensdiagnoser
+(F00–F03) stillet på geropsykiatriske ambulatorier og hukommelsesklinikker.
+De patienter vil fremstå demensfrie og forblive i kohorten som falske negativer.
+:::
+
+### t_psyk_adm — Psykiatriske kontakter
+
+Kolonnenavne afviger fra somatisk LPR2 — **omdøb ved load**:
+
+```r
+psyk_adm <- load_database("t_psyk_adm") %>%
+  rename_with(tolower) %>%
+  rename(pnr = v_cpr, recnum = k_recnum)
+```
+
+| Rå kolonnenavn | Efter rename | Type | Indhold |
+|---|---|---|---|
+| **`v_cpr`** | → **`pnr`** | character | Personidentifikator |
+| **`k_recnum`** | → **`recnum`** | character | Kontaktnøgle — join til t_psyk_diag |
+| **`d_inddto`** | (uændret) | Date | Kontaktdato — samme som lpr_adm |
+| `c_pattype` | (uændret) | character | Kontakttype |
+
+### t_psyk_diag — Psykiatriske diagnoser
+
+```r
+psyk_diag <- load_database("t_psyk_diag") %>%
+  rename_with(tolower) %>%
+  rename(recnum = v_recnum)
+```
+
+| Rå kolonnenavn | Efter rename | Type | Indhold |
+|---|---|---|---|
+| **`v_recnum`** | → **`recnum`** | character | Join-nøgle til t_psyk_adm |
+| **`c_diag`** | (uændret) | character | ICD-10 **med D-præfiks** — brug `substr(c_diag, 2, 4)` |
+| **`c_diagtype`** | (uændret) | character | `"A"` / `"B"` / `"G"` — samme som lpr_diag |
+
+---
+
+## 4. LPR3 (marts 2019 og frem)
+
+LPR3 dækker **både** somatiske og psykiatriske kontakter i én tabel.
+Join: `lpr_a_kontakt` **LEFT JOIN** `lpr_a_diagnose` **ON** `dw_ek_kontakt`.
+
+::: {.callout-note}
+**"a" i `lpr_a_diagnose` betyder ikke A-type diagnoser.**
+Det refererer til analysemodel-betegnelsen for LPR3-serien (LPR_A, introduceret 2025).
+Tabellen indeholder alle typer: A, B og G — du skal stadig filtrere på `diag_kode_type`.
+:::
+
+### lpr_a_kontakt — Kontakter
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`dw_ek_kontakt`** | character | Kontaktnøgle — join til lpr_a_diagnose |
+| **`kont_starttidspunkt`** | datetime | Kontaktstarttidspunkt — **konverter med `as.Date()`** |
+| **`kont_type`** | character | Kontakttype: `"ALCA00"` = indlagt |
+| `kont_sluttidspunkt` | datetime | Kontaktsluttidspunkt |
+| `kont_ans_hovedspec` | character | Specialekode |
+| `borger_doedsdato` | Date | Dødsdato (kopi fra CPR) |
+| `borger_foedselsdato` | Date | Fødselsdato (kopi fra CPR) |
+| `borger_koen` | character | Køn (kopi fra CPR) |
+| `year` | integer | År |
+
+<details>
+<summary>Alle bekræftede kolonner i lpr_a_kontakt</summary>
+
+`pnr`, `dw_ek_kontakt`, `kont_starttidspunkt`, `kont_sluttidspunkt`, `kont_type`, `kont_type_tekst`, `kont_patient_type`, `kont_patient_type_tekst`, `kont_ans_hovedspec`, `kont_ans_hovedspec_shak`, `kont_ans_inst`, `kont_ans`, `kont_ans_geo_reg`, `kont_ans_geo_reg_tekst`, `kont_ans_org_reg`, `kont_ans_org_reg_tekst`, `borger_doedsdato`, `borger_foedselsdato`, `borger_koen`, `borger_alder_aar_ind`, `borger_alder_aar_ud`, `borger_bo_kom`, `borger_bo_kom_tekst`, `borger_bo_reg`, `borger_bo_reg_tekst`, `dw_sk_sygehusophold`, `dw_ek_helbredsforloeb`, `dw_ek_forloeb`, `dw_ek_borger`, `adiag`, `adiag_tekst`, `beh_starttidspunkt`, `flag_kont_afsluttet`, `kont_aarsag`, `kont_aarsag_tekst`, `kont_indb_tidspunkt`, `kont_fir_kode`, `kont_fir_tekst`, `kont_fritvalg`, `kont_fritvalg_tekst`, `kont_henv_aarsag`, `kont_henv_aarsag_tekst`, `kont_henv_instans`, `kont_henv_maade`, `kont_henv_maade_tekst`, `kont_henv_tidspunkt`, `kont_inst_ejertype`, `lprindberetningssystem`, `prioritet`, `prioritet_tekst`, `kont_lpr_entity_id`, `cprtjek`, `cprtype`, `year`
+
+</details>
+
+### lpr_a_diagnose — Diagnoser
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`dw_ek_kontakt`** | character | Join-nøgle til lpr_a_kontakt |
+| **`diag_kode`** | character | ICD-10 **med D-præfiks** (f.eks. `"DG30"`) — brug `substr(diag_kode, 2, 4)` |
+| **`diag_kode_type`** | character | `"A"` = aktionsdiagnose, `"B"` = bidiagnose, `"G"` = grundmorbus |
+| **`senere_afkraeftet`** | character | `"Ja"` = tilbagekaldt (ekskluder), `"Nej"` = bekræftet, `NA` = ikke registreret |
+| `diag_kode_tekst` | character | ICD-10-kodetekst |
+| `diag_parent_kode` | character | Overordnet diagnosekode |
+| `year` | integer | År |
+
+::: {.callout-warning}
+**Stavemåde:** kolonnen hedder `senere_afkraeftet` (dansk) — ikke `senare_afkraeftet` (svensk).
+Forkert stavemåde giver ingen fejl, men ingen diagnoser ekskluderes.
+:::
+
+Standardfilter for `senere_afkraeftet`:
+```r
+filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
+```
+
+---
+
+## 5. LMDB — Lægemiddelstatistikregistret
+
+Én række per ekspederet recept. Dækker ca. 1994 og frem.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`atc`** | character | Fuld ATC-kode (f.eks. `"N06D01"`) |
+| **`eksd`** | Date | Ekspeditionsdato — brug som receptdato |
+| `atc1`–`atc4` | character | ATC-niveauer 1–4 |
+| `indo` | character | Indikationskode |
+| `vnr` | character | Varenummer |
+| `apk` | numeric | Pakningsstørrelse |
+| `aldr` | numeric | Alder ved ekspedition |
+| `year` | integer | Ekspeditionsår |
+
+<details>
+<summary>Alle bekræftede kolonner i LMDB</summary>
+
+`pnr`, `eksd`, `ekst`, `atc`, `atc1`, `atc2`, `atc3`, `atc4`, `indo`, `vnr`, `apk`, `aldr`, `bald`, `eksp`, `korr`, `rinr`, `name`, `streng`, `packtext`, `volume`, `voltypecode`, `voltypetxt`, `dosform`, `strnum`, `strunit`, `packsize`, `cprtjek`, `cprtype`, `year`, `etid`, `ovnr`, `patt`, `doso`, `reca`, `abc`
+
+</details>
+
+---
+
+## 6. Socioøkonomiske registre
+
+Alle tre registre bruges til SEP-udtræk i `03_extract_ses.R` efter SEPLINE-retningslinjerne
+(Hjorth et al. 2025). Ingen samlet SEP-variabel beregnes — tre separate dimensioner.
+
+### UDDA — Uddannelsesregistret
+
+Én post per person per år, uddannelsesniveauet ændres.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`hfaudd`** | character | ISCED-uddannelseskode (f.eks. `"35"` = erhvervsuddannelse) |
+| **`aar`** | integer | Registerår |
+
+Kategorisering (SEPLINE): `substr(as.character(hfaudd), 1, 2)` → `"10"`/`"15"` = kort, `"20"`–`"35"` = mellemlang, `"40"`–`"80"` = lang, `"90"` = ukendt.
+
+---
+
+### FAIK — Familieindkomst
+
+Husstandsækvivaleret disponibel indkomst per år.
+Link: join BEF (`pnr`, `familie_id`, `aar`) med FAIK (`familie_id`, `aar`).
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`familie_id`** | character | Husstandsnøgle — join til BEF |
+| **`famaekvivadisp_13`** | numeric | Husstandsækvivaleret disponibel indkomst |
+| **`aar`** | integer | Registerår |
+
+Indkomstkvintiler beregnes som 3-årsgennemsnit sammenlignet med Q20/Q40/Q60/Q80-grænseværdier
+fra den fulde BEF-population stratificeret på køn × 5-årsaldersgruppe × referenceår.
+
+---
+
+### AKM — Arbejdsklassifikationsmodulet
+
+Arbejdsmarkedsstatus per person per år.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`socio13`** | numeric | Beskæftigelseskode |
+| **`aar`** | integer | Registerår |
+
+SEPLINE-kategorisering af `socio13`:
+- Beskæftiget: 110–114, 120, 131–135, 139
+- Studerende: 310
+- Ledig: 210, 410
+- Udenfor arbejdsmarkedet: 220, 321, 330
+- Pensionist: 322, 323
+- Ukendt: 0, 420 eller manglende
+
+---
+
+## 7. Eksterne registre
+
+### DBSO — Bariatrisk kirurgiregister
+
+Leveret som SAS-fil fra SunDK, konverteret én gang af `00_prepare_dbso.R`.
+Langt format: **én række per klinikbesøg per patient** (PRE = præoperativt, PER = operationsdag, FOL = opfølgning).
+
+::: {.callout-warning}
+**Tre DBSO-specifikke quirks:**
+
+1. **Datokolonner er character-strenge** — kræver `as.Date()`. Undtagelse: `foerstefedmeopr_dato`.
+2. **`foerstefedmeopr_dato` er et SAS-heltal** — brug `as.Date(x, origin = "1960-01-01")`.
+3. **`koen` bruger "M"/"K"**, ikke 1/2 som BEF.
+4. **Kirurgi-flag bruger 1 = ja, 2 = nej** — ikke 0/1 booleans.
+:::
+
+#### Nøglekolonner
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator (omdøbt fra `cpr` i 00_prepare_dbso.R) |
+| **`datoper_prim`** | character | **Operationsdato** (primær BS) — konverter med `as.Date()` |
+| **`gastricbypass_prim`** | numeric | 1 = RYGB, 2 = nej, NA = ukendt |
+| **`gastricsleeve_prim`** | numeric | 1 = SG, 2 = nej, NA = ukendt |
+| **`redo_prim`** | numeric | 1 = revisionsoperation, 2 = primær, NA = ukendt |
+| `koen` | character | Køn: **`"M"` = mand, `"K"` = kvinde** (ikke 1/2) |
+| `datopre` | character | Præoperativt besøg — konverter med `as.Date()` |
+| `datofol` | character | Opfølgningsbesøg — konverter med `as.Date()` |
+| `foerstefedmeopr_dato` | numeric | Første fedmeoperation nogensinde (SAS-heltal) |
+
+#### Vægt og højde
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`udgangsvaegtpre_prim`** | numeric | Vægt (kg) ved præoperativt besøg |
+| **`hoejde`** | numeric | Højde (cm) — konstant per patient |
+| `vaegtper_prim` | numeric | Vægt (kg) på operationsdagen |
+| `vaegtfol` | numeric | Vægt (kg) ved dette opfølgningsbesøg |
+| `udgangsvaegt` | numeric | Vægt (kg) ved programindtræden |
+
+`bmi_pre` beregnes i pipeline: `udgangsvaegtpre_prim / (hoejde/100)^2`.
+
+#### DBSO-kliniske udfald (Study 2)
+
+| Kolonne | Indhold |
+|---|---|
+| `akutgenindlaeggelse30d` | 1 = akut genindlæggelse inden 30 dage |
+| `reop30d_3` | 1 = reoperation inden 30 dage |
+| `reoplaar_3` | 1 = reoperation inden 1 år |
+| `reop5aar_2` | 1 = reoperation inden 5 år |
+| `medkomplikdiarre` | 1 = diarré som komplikation |
+| `medkomplikdumpingsymptomer` | 1 = dumping-syndrom |
+| `medkomplikhypoglyksymptomer` | 1 = hypoglykæmisymptomer |
+
+#### Opfølgningsvinduer
+
+| Kolonne | Indhold |
+|---|---|
+| `fumellem6mdr1aar` | 1 = dette besøg falder i 6–12-måneders vinduet |
+| `fumellem1_5aar2_5aar` | 1 = dette besøg falder i 1,5–2,5-årsvinduet |
+| `id_funaermest2aar` | Hvilket opfølgningsbesøg er nærmest 2 år (`"F1"`–`"F4"`) |
+
+---
+
+### OSDC — Open Source Diabetes Classifier
+
+Færdigberegnet `.rds`-fil — ikke et parquetregister.
+
+```r
+dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
+names(dm_pop)   # bekræft kolonnenavne ved første kørsel
+```
+
+| Kolonne (rå) | Type | Indhold |
+|---|---|---|
+| **`PNR`** | character | Personidentifikator — **rename til `pnr`** (rå er uppercase) |
+| **`diabetes_type`** | numeric | 1 = T1D, 2 = T2D (rekodet til `"T1D"`/`"T2D"` i pipeline) |
+| **`do_dm`** | Date | Dato for diabetesklassifikation (renamed til `date_diabetes`) |
+| `age_at_onset` | numeric | Alder ved diabetesdebut |
+
+Dækker diagnoser frem til 2022.
+Klassificerer alle personer i Danmark — ikke begrænset til kohortmedlemmer.

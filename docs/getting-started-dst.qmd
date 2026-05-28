@@ -1,0 +1,542 @@
+---
+title: "Kom i gang på DST"
+subtitle: "En praktisk vejledning til BS & Demens-projektet (708421)"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "På denne side"
+    code-fold: false
+    theme: cosmo
+    highlight-style: github
+---
+
+## Inden du læser dette
+
+Denne side erstatter ikke Steno-onboarding-guiden.
+Læs den først.
+Denne side fortsætter præcis der, hvor onboarding slutter:
+du har læst om Parquet og DuckDB på et konceptuelt niveau, du forstår pipes og `filter()`,
+og du sidder nu foran RStudio på DST for første gang og undrer dig over, hvorfor ingenting virker.
+
+Når du begynder at læse koden og støder på en funktion du ikke genkender,
+kan du slå den op i [Guide til funktioner](guide_til_funktioner.qmd) —
+en detaljeret forklaring af alle funktioner i projektet med eksempler og analogier.
+
+---
+
+## 1. Dine første 10 minutter på DST
+
+### Trin 1 — Byg `dstDataPrep` inden alt andet
+
+`dstDataPrep` er pakken, der giver dig `load_database()`.
+Den er ikke på CRAN.
+Den ligger på DST-serveren og skal bygges manuelt.
+Dette trin er ikke valgfrit, og det er den hyppigste årsag til problemer den første dag.
+
+1. I RStudio: **File → Open Project in New Session**
+2. Naviger til: `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
+3. Når projektet er åbnet: tryk **Ctrl + Shift + B** (Build)
+4. Vent på "Done" i Build-panelet, og luk derefter den session.
+
+::: {.callout-warning}
+**DST nulstiller lokale drev jævnligt.**
+Efter en servernulstilling eller et langt ophold kan du være nødt til at genbygge `dstDataPrep`.
+Hvis du får `Error: there is no package called 'dstDataPrep'`, skal du genbygge pakken.
+:::
+
+### Trin 2 — Geninstaller `duckplyr` i starten af hver session
+
+Den version af `duckplyr`, der er forudinstalleret på DST, er forældet og mangler funktioner.
+Kør dette i starten af hver DST-session, inden du indlæser nogen biblioteker:
+
+```r
+install.packages("duckplyr")
+```
+
+Tjek hvilken version du har: `packageVersion("duckplyr")`.
+Du skal have version 1.1 eller højere.
+
+### Trin 3 — Åbn dette projekt
+
+```
+File → Open Project → naviger til din workspace-mappe
+E:/workdata/708421/workspaces/dit-navn/BSDemens/BSDemens.Rproj
+```
+
+Din outputmappe (hvor `.rds`-filer gemmes af pipeline'en) er:
+
+```
+E:/workdata/708421/workspaces/dit-navn/BSDemens/datasets/
+```
+
+### Trin 4 — Verificer at alt virker
+
+```r
+library(dstDataPrep)
+list_databases()   # bør returnere en lang liste med registernavne
+```
+
+Hvis dette kører uden fejl, er du klar.
+
+---
+
+## 2. Sådan er data faktisk gemt
+
+Onboarding-guiden bruger **syntetiske data** i en mappe, du selv opretter.
+På DST er de rigtige data allerede klargjort og klar til brug.
+Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
+
+### De to datavarehuse
+
+| Lager | Sti | Hvad er der | Sådan indlæses det |
+|---|---|---|---|
+| `parquet-registers` | `E:/workdata/708421/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
+| `parquet-external` | `E:/workdata/708421/parquet-external/` | Registre, der ikke er i parquet-registers: DBSO, psykiatrisk LPR2 | `load_database("navn")` |
+
+::: {.callout-note}
+**Du behøver ikke at samle årsfiler manuelt.**
+Onboarding-guiden viser, hvordan man gemmer og læser årspartitionerede parquet-filer.
+På DST gør `load_database()` dette allerede — den åbner alle år af BEF (eller et andet register)
+som én enkelt doven forbindelse.
+Der er intet trin, hvor du sammensætter `bef2010.parquet`, `bef2011.parquet`, osv.
+:::
+
+::: {.callout-note}
+Begge datavarehuse åbnes med `load_database()` — du behøver ikke at kende stierne direkte.
+DBSO ligger i `parquet-external/`, men indlæses stadig med `load_database("dbso")` som alle andre registre.
+:::
+
+### OSDC-diabetesfilen
+
+Open Source Diabetes Classifier er en færdigberegnet `.rds`-fil, ikke et register:
+
+```r
+dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
+```
+
+Den klassificerer alle personer i Danmark som T1D, T2D eller Ingen diabetes frem til udgangen af 2022.
+
+### Hvad er en `.rds`-fil?
+
+Pipeline-scripts sender data videre til hinanden via `.rds`-filer.
+`.rds` er R's eget gemmingsformat — hurtigere og mere kompakt end CSV,
+og det bevarer alle R-objekters egenskaber (datatyper, kolonnenavne, faktorniveauer) perfekt.
+
+| Funktion | Hvad den gør |
+|---|---|
+| `saveRDS(objekt, "sti/fil.rds")` | Gemmer et R-objekt til disk |
+| `readRDS("sti/fil.rds")` | Læser det tilbage ind i hukommelsen |
+
+Hvert script gemmer sit resultat med `saveRDS()`, og det næste script åbner det med `readRDS()`.
+Filerne er gitignored og ligger under `datasets/` i din workspace.
+
+---
+
+## 3. Det ene mønster, du vil bruge overalt
+
+Alle registerforespørgsler i dette projekt følger det samme femtrins-mønster.
+Forstår du dette mønster, kan du læse enhver linje i ethvert script.
+
+```r
+# Trin 1: åbn en doven forbindelse til registret
+lpr_adm <- load_database("lpr_adm") %>% rename_with(tolower)
+
+# Trin 2: filtrer rækker — sker i DuckDB, ingen data i R-hukommelsen endnu
+# Trin 3: vælg kolonner — reducerer hvad der trækkes over
+# (Trin 4: join — se sektion 8 for et eksempel)
+# Trin 5: collect() — HER kommer data ind i R-hukommelsen
+result <- lpr_adm %>%
+  filter(pnr %in% !!min_pnr_vektor) %>%                  # Trin 2
+  select(pnr, recnum, date_contact = d_inddto) %>%        # Trin 3
+  collect()                                               # Trin 5
+```
+
+### Hvorfor `rename_with(tolower)` på linje 1
+
+Rå kolonnenavne i DST-registre har inkonsistent store/små bogstaver.
+`lpr_adm` kan have `PNR`, `BEF` kan have `pnr`, et andet register kan have `Pnr`.
+`rename_with(tolower)` konverterer alt til små bogstaver straks efter indlæsning,
+så resten af din kode kan bruge `pnr` overalt uden at bekymre sig om bogstavsstørrelse.
+
+**Kald altid `rename_with(tolower)` på samme linje som `load_database()`.**
+
+### Hvorfor `!!` (bang-bang) optræder i hvert filter
+
+```r
+filter(pnr %in% !!min_pnr_vektor)
+```
+
+Uden `!!` ville DuckDB lede efter en kolonne kaldet `min_pnr_vektor` inde i registret.
+Den kolonne eksisterer ikke — `min_pnr_vektor` er en lokal R-vektor, du definerede tidligere.
+`!!` fortæller DuckDB: *"dette er et R-objekt, ikke et kolonnenavn — slå det op i R, og brug derefter værdierne"*.
+
+Du vil se `!!` foran næsten hver lokal variabel, der bruges inde i et `filter()`-kald.
+Det er påkrævet, når du refererer til et R-objekt (ikke en kolonne) inde i en doven forespørgsel.
+
+### Hvad sker der i de fem trin — visuelt
+
+```{mermaid}
+flowchart LR
+    P[("Parquet-fil\npå DST")]
+    L["load_database()"]
+    F["filter()\nselect()"]
+    C["collect()"]
+    R[("R-hukommelse\ndata.frame")]
+
+    P -->|"doven reference\ningenting flyttes"| L
+    L -->|"instruktioner\nstaplet op"| F
+    F -->|"send nu!"| C
+    C -->|"kun de nødvendige\nrækker + kolonner"| R
+```
+
+`load_database()`, `filter()` og `select()` er rene instruktioner — de koster næsten ingen RAM.
+`collect()` er den eneste linje, der faktisk flytter data fra parquet ind i R-hukommelsen.
+
+### Den vigtigste regel: filtrer FØR collect
+
+```r
+# KORREKT — filtrer først, derefter collect et lille resultat
+result <- stort_register %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
+  collect()
+
+# FORKERT — gør ikke dette
+result <- stort_register %>%
+  collect() %>%    # trækker millioner af rækker ind i R-hukommelsen
+  filter(pnr %in% kohort_pnrs)
+```
+
+BEF har millioner af rækker. LMDB har hundredvis af millioner.
+At kalde collect() før filter() vil crashe din session og gøre serveren langsom for alle.
+
+### Sådan tjekker du, hvilken type objekt du har
+
+```r
+class(mit_objekt)
+```
+
+- `"tbl_df" "data.frame"` — data er i R-hukommelsen (du har kaldt collect)
+- `"tbl_duckdb_connection"` — doven DuckDB-forespørgsel, endnu ikke i hukommelsen
+- `"Table" "ArrowObject"` — doven Arrow-forbindelse, endnu ikke i hukommelsen
+
+Hvis du får en uventet fejl, afslører `class()` ofte problemet.
+
+---
+
+## 4. ICD-koder: D-præfikset og LPR2 vs LPR3
+
+Dette afsnit dækker de to ting ved hospitalsregisterdata, der er specifikke for DST
+og ikke forklares i den generelle onboarding.
+
+### D-præfikset
+
+Alle ICD-10-koder gemt i DST-registre har et foranstillet `"D"`:
+`"DG30"` (Alzheimers), `"DF00"` (demens), `"DE78"` (dyslipidæmi).
+
+Dette præfiks eksisterer ikke i standard ICD-10 — det er en DST-konvention.
+**Sammenlign aldrig med koder med D-præfikset.**
+
+Fjern det med `substr()` inden sammenligning:
+
+```r
+lpr_diag  <- load_database("lpr_diag") %>% rename_with(tolower)
+pnr_liste <- unique(kohort$pnr)   # erstat 'kohort' med din kohort-data frame
+
+lpr_diag %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(c_diag) %>%
+  collect() %>%
+  mutate(
+    icd3 = substr(c_diag, 2, 4),   # 3-tegns kode: "DG30" -> "G30"
+    icd4 = substr(c_diag, 2, 5)    # 4-tegns kode: "DE101" -> "E101"
+  ) %>%
+  filter(icd3 %in% c("G30", "F00", "F01", "F02", "F03"))
+```
+
+### LPR2 vs LPR3: opdelingen i marts 2019
+
+Det Nationale Patientregister skiftede format i marts 2019.
+Ethvert studie, der dækker en periode, som spænder over denne dato (hvilket inkluderer vores: 2010–2024),
+skal forespørge begge systemer separat og kombinere resultaterne.
+
+| | LPR2 (frem til marts 2019) | LPR3 (marts 2019 og frem) |
+|---|---|---|
+| Kontakttabel | `lpr_adm` | `lpr_a_kontakt` |
+| Diagnosetabel | `lpr_diag` | `lpr_a_diagnose` |
+| Join-nøgle | `recnum` | `dw_ek_kontakt` |
+| Datokolonne | `d_inddto` | `kont_starttidspunkt` (datetime, ikke dato) |
+| Diagnosekode | `c_diag` | `diag_kode` |
+| Diagnosetype | `c_diagtype` | `diag_kode_type` |
+| Kontakttype | `c_pattype` (`"0"` = indlagt) | `kont_type` (`"ALCA00"` = indlagt) |
+
+```{mermaid}
+gantt
+    title LPR-registre og studieperiode
+    dateFormat  YYYY
+    axisFormat  %Y
+    section LPR2 somatisk
+    lpr_adm + lpr_diag               :done,   1977, 2019
+    section LPR2 psykiatrisk
+    t_psyk_adm + t_psyk_diag         :done,   1995, 2019
+    section LPR3 samlet
+    lpr_a_kontakt + lpr_a_diagnose   :active, 2019, 2025
+    section Studieperiode
+    2010-2024                         :crit,   2010, 2025
+```
+
+I LPR3 er `kont_starttidspunkt` en fuld datetime (f.eks. `"2021-03-15 14:32:00"`).
+Konverter til en almindelig dato: `as.Date(kont_starttidspunkt)`.
+
+### Det psykiatriske LPR2-register
+
+Frem til marts 2019 blev diagnoser stillet på psykiatriske afdelinger gemt i
+et **separat register** fra somatiske diagnoser.
+Det er relevant for dette projekt, fordi demens (F00–F03) hyppigt diagnosticeres
+i geropsykiatriske ambulatorier og hukommelsesklinikker.
+
+Forespørger du kun `lpr_adm`/`lpr_diag`, overser du alle demensdiagnoser
+stillet på en psykiatrisk enhed før 2019. Disse patienter vil fremstå demensfrie
+og forblive i kohorten som falske negativer.
+
+Det psykiatriske register indlæses på samme måde:
+
+```r
+psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%
+  rename(pnr = v_cpr, recnum = k_recnum)    # kolonnenavne afviger fra somatisk LPR2
+psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
+  rename(recnum = v_recnum)
+```
+
+Fra marts 2019 og frem dækker LPR3 (`lpr_a_kontakt`/`lpr_a_diagnose`) både
+somatiske og psykiatriske kontakter i én tabel — ingen separat forespørgsel er nødvendig.
+
+### Diagnosetyper: A, B og G
+
+Hver diagnoserække i LPR har en typekode:
+
+| Kode | Betydning | Hvornår inkluderes den |
+|---|---|---|
+| A | Aktionsdiagnose — den primære årsag til kontakten | Altid |
+| B | Bidiagnose — yderligere tilstand til stede | Altid |
+| G | Grundmorbus — underliggende baggrundstilstand | Kun ved comorbiditetslookback |
+
+For **udfald** (demens, DKA osv.): brug `c("A", "B")`.
+For **baseline-comorbiditet** og NMI: brug `c("A", "B", "G")` — du ønsker at fange alle tilstande personen har, ikke kun den primære årsag til hver kontakt.
+
+### Kolonnen `senere_afkraeftet` i LPR3
+
+LPR3 har en kolonne `senere_afkraeftet`, der markerer diagnoser, som efterfølgende er tilbagekaldt.
+`"Ja"` = tilbagekaldt (ekskluder), `"Nej"` = bekræftet.
+Standardfiltret er:
+
+```r
+filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
+```
+
+`is.na()`-delen er bevidst: NA-værdier beholdes frem for at blive droppet,
+fordi det er sikrere at inkludere en ukategoriseret diagnose end stiltiende at fjerne den.
+
+---
+
+## 5. DST-specifikke faldgruber
+
+Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlmeddelelser.
+
+| # | Faldgrube | Konsekvens |
+|---|---|---|
+| 1 | Brug `dodsaasg` i stedet for `dodsaars` til dødsdato | Forkerte censureringsdatoer |
+| 2 | Glem at geninstallere `duckplyr` | Mærkelige fejl fra dplyr-operationer |
+| 3 | `collect()` før `filter()` på store registre | Session crasher; server langsom for alle |
+| 4 | Glem `rename_with(tolower)` | "Column `pnr` not found" selvom kolonnen eksisterer |
+| 5 | Glem `as.Date()` på DBSO-datokolonner | Datoaritmetik fejler stille |
+| 6 | `foerstefedmeopr_dato` er NA for alle | Kolonne kan ikke bruges til datofiltrering |
+| 7 | Tro at `lpr_a_diagnose` kun har A-type diagnoser | Fejl i diagnosetypefilter |
+| 8 | Bland DBSO `koen` ("M"/"K") med BEF `koen` (1/2) | Stille mismatch ved join |
+| 9 | Brug `filter(redo_prim)` i stedet for `filter(redo_prim == 1)` | Forkert kohort |
+| 10 | Forveksle `nmi_count` med `nmi_score` | Forkert kovariat i modellen |
+
+[Se alle 10 faldgruber med kodeeksempler →](dst_faldgruber.qmd)
+
+---
+
+## 6. Registerreference for dette projekt
+
+Følgende registre bruges på tværs af de fem pipeline-scripts.
+Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
+[Se den fulde registerreference med alle bekræftede kolonnenavne →](register_reference.qmd)
+
+### Demografiske oplysninger og vitalstatus
+
+| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
+|---|---|---|---|---|
+| BEF — Befolkningsregistret | `"bef"` | Årligt befolkningssnapshot. Én række per person per år. | `pnr`, `koen` (1=mand, 2=kvinde), `foed_dag` (fødselsdato), `aar` (år), `familie_id` | Alle år |
+| DODSAARS — Dødsregistret | `"dodsaars"` | Én række per afdød person. | `pnr`, `d_dodsdto` (dødsdato) | Alle år |
+| VNDS — Migrationsregistret | `"vnds"` | Én række per migrationsbegivenhed. | `pnr`, `indud_kode` (`"U"` = udvandring, `"I"` = indvandring), `haend_dato` (begivenhedsdato) | Alle år |
+
+### Hospitalsregistre (LPR)
+
+| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
+|---|---|---|---|---|
+| LPR2 indlæggelser | `"lpr_adm"` | Somatiske hospitalskontakter, én række per besøg. | `pnr`, `recnum` (join-nøgle), `d_inddto` (dato), `c_pattype` (`"0"`=indlagt) | Frem til marts 2019 |
+| LPR2 diagnoser | `"lpr_diag"` | Diagnoser per kontakt. Join til lpr_adm på `recnum`. | `recnum`, `c_diagtype` (A/B/G), `c_diag` (ICD-kode med D-præfiks) | Frem til marts 2019 |
+| LPR2 psykiatriske indlæggelser | `"t_psyk_adm"` | Psykiatriske kontakter. Omdøb: `v_cpr` → `pnr`, `k_recnum` → `recnum`. | `pnr`, `recnum`, `d_inddto`, `c_pattype` | 1995–marts 2019 |
+| LPR2 psykiatriske diagnoser | `"t_psyk_diag"` | Psykiatriske diagnoser. Omdøb: `v_recnum` → `recnum`. | `recnum`, `c_diagtype`, `c_diag` | 1995–marts 2019 |
+| LPR3 kontakter | `"lpr_a_kontakt"` | Samlet somatiske + psykiatriske kontakter. | `pnr`, `dw_ek_kontakt` (join-nøgle), `kont_starttidspunkt` (datetime), `kont_type` (`"ALCA00"`=indlagt) | Marts 2019 og frem |
+| LPR3 diagnoser | `"lpr_a_diagnose"` | Diagnoser per kontakt. Join til lpr_a_kontakt på `dw_ek_kontakt`. | `dw_ek_kontakt`, `diag_kode_type` (A/B/G), `diag_kode` (ICD med D-præfiks), `senere_afkraeftet` | Marts 2019 og frem |
+
+### Receptregistret
+
+| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
+|---|---|---|---|---|
+| LMDB — Lægemiddelstatistikregistret | `"lmdb"` | Én række per ekspederet recept. | `pnr`, `atc` (ATC-kode), `eksd` (ekspeditionsdato) | Ca. 1994 og frem |
+
+### Socioøkonomiske registre
+
+| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
+|---|---|---|---|---|
+| UDDA — Uddannelsesregistret | `"udda"` | Én række per person per år med den højeste opnåede uddannelse det pågældende år. | `pnr`, `aar`, `hfaudd` (ISCED-uddannelseskode) | Alle år |
+| FAIK — Husstandsindkomst | `"faik"` | Husstandsækvivaleret disponibel indkomst per år. Join til BEF via `familie_id`. | `familie_id`, `aar`, `famaekvivadisp_13` | Alle år |
+| AKM — Beskæftigelsesregistret | `"akm"` | Arbejdsmarkedsklassifikation per år. | `pnr`, `aar`, `socio13` (beskæftigelseskode) | Alle år |
+
+### Eksterne data (ikke i parquet-registers)
+
+| Kilde | Sådan indlæses det | Hvad det indeholder |
+|---|---|---|
+| DBSO — Bariatrisk kirurgiregister | `load_database("dbso")` | Én række per klinikbesøg per patient. Klargjort én gang af `00_prepare_dbso.R`. Nøglekolonner: `pnr`, `datoper_prim` (operationsdato), `gastricbypass_prim`, `gastricsleeve_prim`, `redo_prim` |
+| OSDC — Diabetesklassifikator | `readRDS(sti_til_dm_pop)` | Færdigberegnet diabetesklassifikation. Kolonner (efter `tolower`): `pnr`, `diabetes_type` (1=T1D, 2=T2D), `do_dm` (debutdato). Dækker diagnoser frem til 2022. |
+
+---
+
+## 7. Pipeline'en i ét diagram {#pipeline-i-ét-diagram}
+
+De fem scripts køres i rækkefølge.
+Trin 2 og 3 kan køre parallelt — de læser begge `full_cohort.rds` uafhængigt af hinanden.
+
+```{mermaid}
+flowchart TD
+    S00["00_prepare_dbso.R\n(kun én gang)"]
+    S01["01_build_cohorts.R"]
+    S02["02_extract_outcomes_covariates.R"]
+    S03["03_extract_ses.R"]
+    S04["04_data_management_dementia.R"]
+
+    DBSO[("DBSO parquet\nparquet-external/")]
+    FC[("full_cohort.rds")]
+    EXT[("extract_demographics.rds\nextract_dementia.rds\nextract_comorbidities.rds\nextract_nmi.rds\nextract_medications.rds\nextract_diabetes.rds\nextract_weights.rds\nextract_insulin.rds\nextract_hospitals.rds\nextract_negative_controls.rds")]
+    SES[("ses_data.rds")]
+    OUT[("study1_clean.rds\n✓ klar til Cox-modeller")]
+
+    S00 --> DBSO
+    DBSO --> S01
+    S01 --> FC
+    FC --> S02
+    FC --> S03
+    S02 --> EXT
+    S03 --> SES
+    EXT --> S04
+    SES --> S04
+    S04 --> OUT
+```
+
+**Inden du kører et script:** kontroller, at variablen `path_output` øverst i hvert script
+peger på din egen workspace-mappe.
+
+---
+
+## 8. Tilføj et nyt udfald — det rå LPR-mønster
+
+Alle udtræk i projektet følger samme skabelon:
+hent diagnoser fra LPR2 og LPR3 separat, fjern D-præfikset, filtrer på kode og dato, find første forekomst per person, join til kohorten.
+
+::: {.callout-note}
+`get_lpr_diagnoses(pnr_vector, diagtypes, inpatient_only)` i `02_extract_outcomes_covariates.R` pakker LPR2/LPR3-opdelingen ind og tilføjer psykiatrisk LPR2 automatisk.
+Herunder ses det rå mønster, der ligger under den.
+:::
+
+```r
+library(dstDataPrep)
+library(dplyr)
+library(lubridate)
+
+kohort    <- readRDS("...datasets/full_cohort.rds")
+pnr_liste <- unique(kohort$pnr)
+
+# ── LPR2 somatisk (frem til marts 2019) ──────────────────────────────────
+lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
+lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+
+lpr2_dx <- lpr_adm %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, recnum, date_contact = d_inddto) %>%
+  inner_join(
+    lpr_diag %>%
+      filter(c_diagtype %in% c("A", "B")) %>%
+      select(recnum, c_diag),
+    by = "recnum"
+  ) %>%
+  collect() %>%
+  mutate(icd3 = substr(c_diag, 2, 4))
+
+# ── LPR3 (marts 2019 og frem) ────────────────────────────────────────────
+lpr3_k <- load_database("lpr_a_kontakt")  %>% rename_with(tolower)
+lpr3_d <- load_database("lpr_a_diagnose") %>% rename_with(tolower)
+
+lpr3_dx <- lpr3_k %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, dw_ek_kontakt, date_contact = kont_starttidspunkt) %>%
+  inner_join(
+    lpr3_d %>%
+      filter(diag_kode_type %in% c("A", "B"),
+             is.na(senere_afkraeftet) | senere_afkraeftet != "Ja") %>%
+      select(dw_ek_kontakt, c_diag = diag_kode),
+    by = "dw_ek_kontakt"
+  ) %>%
+  collect() %>%
+  mutate(
+    date_contact = as.Date(date_contact),
+    icd3 = substr(c_diag, 2, 4)
+  )
+
+alle_dx <- bind_rows(lpr2_dx, lpr3_dx)
+
+# ── Udtræk udfald ────────────────────────────────────────────────────────
+KODER <- c("I21")   # skift til det ønskede udfald
+
+udfald <- alle_dx %>%
+  filter(icd3 %in% KODER) %>%
+  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%
+  filter(date_contact > index_date) %>%          # post-operativt; brug < for baseline-kovariat
+  group_by(pnr) %>%
+  arrange(date_contact) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(pnr, event_date = date_contact)
+
+resultat <- kohort %>%
+  select(pnr) %>%
+  left_join(udfald, by = "pnr")                 # NA = ingen begivenhed
+
+saveRDS(resultat, "...datasets/extract_[udfald].rds")
+```
+
+Skift `KODER`, datofilter og outputfilnavn for hvert nyt udfald.
+Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtræk med samme mønster — se `get_lpr_diagnoses()` i `02_extract_outcomes_covariates.R`.
+
+---
+
+## Hurtig reference
+
+| Spørgsmål | Svar |
+|---|---|
+| Pakke ikke fundet: `dstDataPrep` | Genbyg: åbn Lukes `.Rproj` → Ctrl+Shift+B |
+| `duckplyr`-fejl | Kør `install.packages("duckplyr")` i starten af sessionen |
+| Kolonne ikke fundet: `pnr` | Du har glemt `rename_with(tolower)` efter `load_database()` |
+| Objektet ser ud som data, men opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |
+| ICD-filter matcher ingenting | Tjek D-præfikset: brug `substr(c_diag, 2, 4)` inden filtrering |
+| Manglende demenstilfælde før 2019 | Du har glemt at forespørge `t_psyk_adm`/`t_psyk_diag` |
+| Forkert eller manglende dødsdato | Brug `dodsaars` kolonne `d_dodsdto`, ikke `dodsaasg` |
+| Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(stort_objekt); gc()` efter store udtræk |
+| `!!` giver en fejl | Sørg for, at du er inde i et `dplyr`-verbum (`filter`, `mutate`) på et dovent objekt |
+| Mine resultater afviger fra et tidligere kørsel | Kontroller at `set.seed(42)` er til stede inden matching-løkkerne |
