@@ -101,7 +101,7 @@ R/
   00_prepare_dbso.R              # Engangs: SAS → parquet for DBSO
   01_build_cohorts.R             # BS-kohort + GP + fedme-sammenligning
   02_extract_outcomes_covariates.R   # LPR/LMDB/DBSO-udtræk
-  03_extract_ses.R               # Socioøkonomiske variabler
+  03_extract_ses.R               # Socioøkonomiske variabler (OBS: der arbejdes på at få fælles-steno kode til kategorisering af SES)
   04_data_management_dementia.R  # Merge, eksklusioner, analysedatasæt
   variables_dictionary.txt       # Bekræftede registerkolonner
   functions_guide.txt            # Funktionsinventar (arkiv)
