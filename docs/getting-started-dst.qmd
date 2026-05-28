@@ -41,9 +41,10 @@ Dette trin er ikke valgfrit, og det er den hyppigste årsag til problemer den f�
 4. Vent på "Done" i Build-panelet, og luk derefter den session.
 
 ::: {.callout-warning}
-**DST nulstiller lokale drev jævnligt.**
-Efter en servernulstilling eller et langt ophold kan du være nødt til at genbygge `dstDataPrep`.
-Hvis du får `Error: there is no package called 'dstDataPrep'`, skal du genbygge pakken.
+**Skal ikke genbygges ved hver session — kun når DST har nulstillet serveren.**
+DST nulstiller lokale drev med mellemrum (typisk efter et antal dages inaktivitet).
+Opdages ved at `library(dstDataPrep)` melder `Error: there is no package called 'dstDataPrep'`.
+Gør det til en vane at tjekke, hvis du ikke har logget ind i et stykke tid.
 :::
 
 ### Trin 2 — Geninstaller `duckplyr` i starten af hver session

@@ -46,7 +46,8 @@ To trin skal altid gøres, inden du åbner projektet:
 **1. Byg `dstDataPrep`**
 
 Åbn `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj` → **Ctrl + Shift + B**.
-Skal gentages efter servernulstillinger.
+Ikke nødvendigt ved hver session — kun efter DST nulstiller serveren (sker efter et antal dage).
+Opdages ved at `library(dstDataPrep)` melder *"there is no package called 'dstDataPrep'"*.
 :::
 
 ::: {.callout-important}
