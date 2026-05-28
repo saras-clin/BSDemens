@@ -44,7 +44,7 @@ Alle funktioner i R skrives med parenteser: `funktionsnavn(hvad_der_sendes_ind)`
 
 ## Røret — `%>%`
 
-Det vigtigste symbol i al koden er `%>%`, som hedder "røret" (på engelsk: "the pipe").
+Det vigtigste symbol i al koden er `%>%`, "the pipe".
 
 ```r
 lpr_adm %>%
@@ -63,8 +63,13 @@ Uden røret ville du skulle skrive det indefra og ud, som russiske dukker:
 Det er svært at læse og svært at fejlsøge.
 
 ::: {.callout-note}
-Røret `%>%` kommer fra pakken `magrittr` og er tilgængeligt, så snart du skriver `library(dplyr)`.
-Nyere R-versioner har også en indbygget version der hedder `|>`, men vi bruger `%>%` i dette projekt.
+**`%>%` og `|>` er det samme — bare to forskellige måder at skrive røret på.**
+
+`%>%` kommer fra pakken `magrittr` og er tilgængeligt via `library(dplyr)`.
+`|>` er en indbygget version introduceret i R 4.1 — den kræver ingen pakke.
+
+De to virker identisk i næsten alle situationer. Du vil se begge i R-kode på nettet.
+Projektet bruger `%>%`, men hvis du skriver `|>` er det helt fint.
 :::
 
 ---
