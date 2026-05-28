@@ -29,6 +29,7 @@
 #   Output:  datasets/study1_clean.rds  (one row per person; ready for Cox models)
 # ============================================================================
 
+library(dstDataPrep)   # load_database() — used in get_emigration_dates() for VNDS
 library(dplyr)
 library(lubridate)
 library(heaven)        # exposureMatch(), charlsonIndex(), etc.
@@ -69,15 +70,15 @@ get_emigration_dates <- function(pnr_vector) {
 # ============================================================================
 
 load_and_merge <- function() {
-  full_cohort   <- load_rds("full_cohort.rds") %>% rename(surgery_date = index_date)
-  demographics  <- load_rds("extract_demographics.rds")
-  dementia      <- load_rds("extract_dementia.rds")
-  comorbidities <- load_rds("extract_comorbidities.rds")
-  nmi           <- load_rds("extract_nmi.rds")        # weighted NMI score (Kristensen 2022): pnr + nmi_score
-  medications   <- load_rds("extract_medications.rds")
-  diabetes      <- load_rds("extract_diabetes.rds")
+  full_cohort   <- load_rds("full_cohort.rds") %>% rename(surgery_date = index_date)   # BS + GP + Obesity cohort from step 01; index_date renamed to surgery_date for consistency
+  demographics  <- load_rds("extract_demographics.rds")   # age, sex, birth date, death date, follow_up_end; from step 02
+  dementia      <- load_rds("extract_dementia.rds")        # first dementia contact dates (all-cause, Alzheimer, vascular, primary-code); from step 02
+  comorbidities <- load_rds("extract_comorbidities.rds")   # binary 0/1 flags for ~33 GMC conditions at baseline; from step 02
+  nmi           <- load_rds("extract_nmi.rds")             # weighted NMI score (Kristensen 2022): pnr + nmi_score; from step 02
+  medications   <- load_rds("extract_medications.rds")     # binary 0/1 flags for baseline medication classes (antihypertensive, lipid-lowering, etc.); from step 02
+  diabetes      <- load_rds("extract_diabetes.rds")        # diabetes classification from OSDC: No_diabetes / T1D / T2D; from step 02
   ses           <- load_rds("ses_data.rds") %>%
-    select(pnr, education_cat, income_cat, occupation_cat)   # sep_category removed: SEPLINE does not recommend a composite
+    select(pnr, education_cat, income_cat, occupation_cat)   # three SEPLINE dimensions; sep_category composite removed (SEPLINE does not recommend it)
 
   # demographics contains surgery_date and surgery_type which already exist in full_cohort —
   # drop them before joining to avoid duplicate columns.
@@ -85,15 +86,15 @@ load_and_merge <- function() {
   negative_controls <- load_rds("extract_negative_controls.rds")  # fracture and cataract dates (sensitivity 7g.6)
 
   full_cohort %>%
-    left_join(demographics  %>% select(-surgery_date, -surgery_type), by = "pnr") %>%
+    left_join(demographics  %>% select(-surgery_date, -surgery_type), by = "pnr") %>%   # drop surgery_date/surgery_type from demographics to avoid duplicate columns (already in full_cohort)
     left_join(dementia,        by = "pnr") %>%   # includes date_dementia_primary for sensitivity 7g.1
-    left_join(comorbidities,   by = "pnr") %>%
-    left_join(nmi,             by = "pnr") %>%   # adds nmi_score column
-    left_join(medications,     by = "pnr") %>%
-    left_join(diabetes,        by = "pnr") %>%
-    left_join(ses,             by = "pnr") %>%
-    left_join(weights %>% select(pnr, weight_preop, height_preop, bmi_preop), by = "pnr") %>%
-    left_join(negative_controls, by = "pnr")     # date_cataract (sensitivity 7g.6)
+    left_join(comorbidities,   by = "pnr") %>%   # binary condition flags: mi, stroke, diabetes, etc.
+    left_join(nmi,             by = "pnr") %>%   # adds nmi_score (Kristensen weighted index)
+    left_join(medications,     by = "pnr") %>%   # baseline medication flags: antihypertensive, lipid_lowering, etc.
+    left_join(diabetes,        by = "pnr") %>%   # diabetes_type from OSDC: No_diabetes / T1D / T2D
+    left_join(ses,             by = "pnr") %>%   # education_cat, income_cat, occupation_cat from SEPLINE algorithm
+    left_join(weights %>% select(pnr, weight_preop, height_preop, bmi_preop), by = "pnr") %>%   # pre-op weight/height/BMI from DBSO (BS cohort only; comparators get NA)
+    left_join(negative_controls, by = "pnr")     # date_cataract and date_oa (sensitivity 7g.6)
 }
 
 # ============================================================================

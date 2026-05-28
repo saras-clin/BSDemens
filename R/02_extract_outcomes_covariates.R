@@ -73,7 +73,7 @@ path_dm_pop      <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_po
 #      Geropsychiatric departments recorded F00-F03 dementia in a SEPARATE register before 2019.
 #      Without this source, all F-code dementia from pre-2019 memory clinics would be missed.
 #      Register names confirmed from archive/other peoples code/psyc2021.R.
-#      Confirmed: accessible via arrow::open_dataset(path_psyk_adm) — see path_psyk_adm above.
+#      Confirmed: accessible via load_database("t_psyk_adm") / load_database("t_psyk_diag") (2026-05-15).
 #   LPR3 unified:      "kontakter" + "diagnoser"       (March 2019 onwards)
 #      LPR3 is a unified register covering BOTH somatic and psychiatric — no separate psych
 #      table needed post-2019.
@@ -88,12 +88,12 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   # Set TRUE when calling from extract_hospital_contacts() — the protocol specifies acute admissions.
 
   # LPR2 somatic (up to March 2019) ----
-  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
-  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)   # LPR2 admissions: one row per hospital visit (somatic contacts, up to March 2019)
+  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)   # LPR2 diagnoses: one row per diagnosis per visit; linked to lpr_adm via recnum
 
   lpr2_adm_filtered <- lpr_adm %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum, date_contact = d_inddto, c_pattype)
+    filter(pnr %in% !!pnr_vector) %>%                              # keep only persons in our cohort; !! unquotes the local R vector so arrow can use it as a filter
+    select(pnr, recnum, date_contact = d_inddto, c_pattype)        # recnum = contact key (used to join diagnoses); d_inddto = admission date; c_pattype = contact type
 
   if (inpatient_only) {
     lpr2_adm_filtered <- lpr2_adm_filtered %>%
@@ -109,11 +109,11 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
         ) %>%
         mutate(icd3 = substr(c_diag, 2, 4),   # D + letter + 2 digits -> e.g. DF00 -> F00
                icd4 = substr(c_diag, 2, 5)) %>%  # D + letter + 3 digits -> e.g. DF003 -> F003
-        select(recnum, icd3, icd4),
-      by = "recnum"
+        select(recnum, icd3, icd4),              # keep only the join key and derived code columns; icd3/icd4 are what callers use
+      by = "recnum"                              # recnum links each row in lpr_adm to its corresponding rows in lpr_diag
     ) %>%
-    select(pnr, date_contact, icd3, icd4) %>%
-    collect()
+    select(pnr, date_contact, icd3, icd4) %>%   # drop recnum and c_pattype; callers only need person ID, date, and ICD code columns
+    collect()                                    # pull the filtered and joined result from parquet into R memory
 
   # LPR2 psychiatric (1995-March 2019) ----
   # Psychiatric contacts before March 2019 are in a SEPARATE register (not in lpr_adm/lpr_diag).
@@ -127,8 +127,8 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
     rename(recnum = v_recnum)                                                       # v_recnum -> recnum to match join key used in psyk_adm
 
   lpr2_psyk_adm_filtered <- psyk_adm %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, recnum, date_contact = d_inddto, c_pattype)
+    filter(pnr %in% !!pnr_vector) %>%                               # restrict to cohort members before loading data into R memory
+    select(pnr, recnum, date_contact = d_inddto, c_pattype)         # same columns as somatic LPR2; recnum links admissions to diagnosis rows
 
   if (inpatient_only) {
     lpr2_psyk_adm_filtered <- lpr2_psyk_adm_filtered %>%
@@ -138,14 +138,14 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   lpr2_psyk <- lpr2_psyk_adm_filtered %>%
     inner_join(
       psyk_diag %>%
-        filter(c_diagtype %in% diagtypes) %>%
-        mutate(icd3 = substr(c_diag, 2, 4),
-               icd4 = substr(c_diag, 2, 5)) %>%
-        select(recnum, icd3, icd4),
-      by = "recnum"
+        filter(c_diagtype %in% diagtypes) %>%                       # restrict to requested diagnosis types (A/B for outcomes; A/B/G for comorbidities)
+        mutate(icd3 = substr(c_diag, 2, 4),                         # strip "D" prefix; 3-char code (no ICD-8 records exist in t_psyk_diag)
+               icd4 = substr(c_diag, 2, 5)) %>%                    # 4-char code for finer precision where needed
+        select(recnum, icd3, icd4),                                  # keep only the join key and derived code columns
+      by = "recnum"                                                   # recnum links each psychiatric admission row to its diagnosis rows
     ) %>%
-    select(pnr, date_contact, icd3, icd4) %>%
-    collect()
+    select(pnr, date_contact, icd3, icd4) %>%                       # drop recnum and c_pattype; callers only need person ID, date, and code columns
+    collect()                                                         # pull result from parquet into R memory
 
   # LPR3 (from March 2019) ----
   # Abbreviated register names confirmed working on DST (full names "lpr3f_kontakter"/
@@ -158,8 +158,8 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
   # diagnoser columns: dw_ek_kontakt, diag_kode, diag_kode_type, senere_afkraeftet (CONFIRM-3b: not yet checked)
 
   lpr3_kontakter_filtered <- kontakter %>%
-    filter(pnr %in% !!pnr_vector) %>%
-    select(pnr, dw_ek_kontakt, kont_starttidspunkt, kont_type)   # confirmed column names
+    filter(pnr %in% !!pnr_vector) %>%                              # restrict to cohort members before loading data
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt, kont_type)    # dw_ek_kontakt = LPR3 contact key (replaces recnum from LPR2); confirmed column names
 
   if (inpatient_only) {
     lpr3_kontakter_filtered <- lpr3_kontakter_filtered %>%
@@ -170,20 +170,20 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
     inner_join(
       diagnoser %>%
         filter(
-          diag_kode_type %in% diagtypes,
+          diag_kode_type %in% diagtypes,                            # LPR3 uses diag_kode_type instead of c_diagtype (the LPR2 column name)
           # senere_afkraeftet: "Ja" = diagnosis later retracted; "Nej" = confirmed.
           # Current filter keeps NAs (defensive: if NAs exist, we include rather than drop).
           # OSDC uses == "Nej" (drops NAs). Verify whether NAs occur in real data before changing.
-          is.na(senere_afkraeftet) | senere_afkraeftet != "Ja"
+          is.na(senere_afkraeftet) | senere_afkraeftet != "Ja"      # exclude retracted diagnoses; NAs kept defensively
         ) %>%
-        mutate(icd3 = substr(diag_kode, 2, 4),
-               icd4 = substr(diag_kode, 2, 5)) %>%
-        select(dw_ek_kontakt, icd3, icd4),
-      by = "dw_ek_kontakt"
+        mutate(icd3 = substr(diag_kode, 2, 4),                     # diag_kode is LPR3 equivalent of c_diag; strip "D" prefix for 3-char code
+               icd4 = substr(diag_kode, 2, 5)) %>%                 # 4-char code for conditions requiring sub-code precision (e.g. E101 for T1D DKA)
+        select(dw_ek_kontakt, icd3, icd4),                          # keep only the LPR3 contact key and derived code columns
+      by = "dw_ek_kontakt"                                          # dw_ek_kontakt links each LPR3 contact row to its diagnosis rows (equivalent of recnum in LPR2)
     ) %>%
-    collect() %>%
-    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%   # kont_starttidspunkt is datetime; as.Date() extracts date
-    select(pnr, date_contact, icd3, icd4)
+    collect() %>%                                                    # pull result from parquet into R memory before date conversion
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%          # kont_starttidspunkt is a datetime column; as.Date() extracts the date part only
+    select(pnr, date_contact, icd3, icd4)                           # drop contact key and raw timestamp; callers only need person ID, date, and code columns
 
   bind_rows(lpr2, lpr2_psyk, lpr3)
 }
@@ -222,22 +222,22 @@ extract_demographics <- function(bs_cohort) {
   #            (arrange desc(aar), slice(1)) to get current koen and foed_dag.
   bef <- load_database("bef") %>% rename_with(tolower)
   bef_person <- bef %>%
-    filter(pnr %in% !!pnrs) %>%
-    select(pnr, koen, foed_dag, aar) %>%
-    group_by(pnr) %>%
-    arrange(desc(aar)) %>%  # most recent year first
-    slice(1) %>%            # keep only the most recent record per person
-    ungroup() %>%
-    select(pnr, koen, foed_dag) %>%
-    collect()
+    filter(pnr %in% !!pnrs) %>%           # restrict to cohort members before loading into memory
+    select(pnr, koen, foed_dag, aar) %>%   # keep person ID, sex, birth date, and register year; reduces data transferred
+    group_by(pnr) %>%                      # group by person so we can deduplicate to one row per person
+    arrange(desc(aar)) %>%                 # most recent year first
+    slice(1) %>%                           # keep only the most recent BEF record; BEF has one row per person per registration year
+    ungroup() %>%                          # release grouping after deduplication
+    select(pnr, koen, foed_dag) %>%        # drop aar; no longer needed after deduplication
+    collect()                              # pull deduplicated result from parquet into R memory
 
   # dod: Danish Death Register (Doedsaarsagsregisteret).
   # One row per deceased person. d_dodsdto = date of death (confirmed column name).
   dod <- load_database("dodsaars") %>% rename_with(tolower)
   dod_person <- dod %>%
-    filter(pnr %in% !!pnrs) %>%
-    select(pnr, death_date = d_dodsdto) %>%
-    collect()
+    filter(pnr %in% !!pnrs) %>%                     # restrict to cohort members before loading into memory
+    select(pnr, death_date = d_dodsdto) %>%          # d_dodsdto = confirmed death date column; rename to death_date for clarity
+    collect()                                         # pull death records into R memory; persons absent from dodsaars are alive
 
   # Emigration censoring is handled in 04_data_management_dementia.R via get_emigration_dates().
   # VNDS register confirmed: indud_kode == "U", haend_dato = emigration date.

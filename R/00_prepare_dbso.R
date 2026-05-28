@@ -12,7 +12,7 @@
 #
 #   Input:   E:/rawdata/708421/Eksterne data/dfr_2025_10_31.sas7bdat
 #   Output:  parquet-external/dbso/part-0.parquet
-#            (read via arrow::open_dataset() in 02_extract_outcomes_covariates.R)
+#            (read via load_database("dbso") in 02_extract_outcomes_covariates.R)
 # ============================================================================
 
 library(haven)      # read_sas()

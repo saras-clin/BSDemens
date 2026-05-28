@@ -65,11 +65,11 @@ load_full_cohort <- function() {
 extract_ses <- function(bs_cohort) {
   # Add baseline year (year before surgery)
   cohort_years <- bs_cohort %>%
-    dplyr::mutate(index_year = lubridate::year(surgery_date) - 1L) %>%
-    dplyr::select(pnr, index_year)
+    dplyr::mutate(index_year = lubridate::year(surgery_date) - 1L) %>%   # index_year = the calendar year before surgery; used as the SEP reference year for all three dimensions
+    dplyr::select(pnr, index_year)                                         # keep only person ID and reference year; all downstream SEP extractions join on these
 
-  unique_years <- unique(cohort_years$index_year)
-  pnrs         <- unique(cohort_years$pnr)
+  unique_years <- unique(cohort_years$index_year)   # distinct reference years across the cohort; used to filter registers lazily before pulling into memory
+  pnrs         <- unique(cohort_years$pnr)           # distinct person IDs; used to restrict all register queries to cohort members only
 
   # --------------------------------------------------------------------------
   # 3.1 Education: HFAUDD from UDDA
@@ -86,7 +86,7 @@ extract_ses <- function(bs_cohort) {
   #   "80" = PhD programs                             -> Long
   #   "90" = Unknown/imputed/missing                  -> Unknown
   # --------------------------------------------------------------------------
-  udda <- load_database("udda") %>% rename_with(tolower)
+  udda <- load_database("udda") %>% rename_with(tolower)   # UDDA: education register; one row per person per year when highest education changes; key columns: pnr, aar, hfaudd
 
   # [FIX] UDDA is an event-based register — a row appears only when a person's highest
   # education changes. Filtering aar == index_year misses persons whose last education
@@ -268,7 +268,7 @@ extract_ses <- function(bs_cohort) {
         TRUE                          ~ "Unknown"   # NA income or no FAIK record -> Unknown
       )
     ) %>%
-    dplyr::select(pnr, famaekvivadisp_13 = income_3yr_avg, income_quintile, income_cat)   # rename 3yr avg to famaekvivadisp_13 for downstream compatibility
+    dplyr::select(pnr, income_3yr_avg, income_quintile, income_cat)   # keep descriptive name; raw FAIK column is famaekvivadisp_13
 
   # --------------------------------------------------------------------------
   # 3.3 Occupation: SOCIO13 from AKM

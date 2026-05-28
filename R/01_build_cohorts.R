@@ -41,17 +41,26 @@
 #   1.2  GP comparator block (sequential)
 #   1.3  Obesity comparator block (sequential)
 #   1.4  Assemble and save full cohort
+#
+#   HOW TO RUN:
+#     Source the entire file: source("R/01_build_cohorts.R")
+#     Or run each numbered block (1.0 → 1.1 → 1.2 → 1.3 → 1.4) in order
+#     in the RStudio console — the blocks are sequential, not functions.
+#     Pre-requisite: 00_prepare_dbso.R must have been run at least once.
+#     Estimated runtime on DST: 30–60 minutes (three matching loops over
+#     large BEF pool; parquet I/O is the main cost).
+#     Output: datasets/full_cohort.rds (one row per person, used in steps 2–4).
 # ============================================================================
 
 # Packages ----
 library(dstDataPrep)   # load_database() and rename helpers for DST parquet registers
-library(arrow)         # open_dataset() for parquet-external registers not covered by load_database
+library(arrow)         # write_parquet() used in 00_prepare_dbso.R; loaded here for session consistency
 library(dplyr)         # data manipulation throughout
 library(lubridate)     # year(), as.Date(), date arithmetic
 library(heaven)        # exposureMatch(), findCondition(), charlsonIndex(), edu_code, etc.
 
 # Paths ----
-path_output    <- "E:/workdata/708421/workspaces/saraschwartz/BSDemens/data"   # where .rds outputs are written
+path_output    <- "E:/workdata/708421/workspaces/SaraSchwartz/BS_demens/datasets"   # where .rds outputs are written
 path_dm_pop    <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"   # OSDC diabetes file used in 02
 # t_psyk_adm and t_psyk_diag: confirmed accessible via load_database() (2026-05-15)
 # DBSO accessed via load_database("dbso") — parquet prepared once by 00_prepare_dbso.R (already run)
@@ -706,7 +715,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
   ob_cohort     <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)       # remove obesity controls with pre-index dementia
 
-  cat(sprintf("OB  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%%d)\n",
+  cat(sprintf("OB  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%d)\n",
       nrow(ob_cohort), length(dementia_pnrs)))   # attrition step 2
 
   # Exclusion: emigrated before index date (protocol criterion 3)
@@ -725,7 +734,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
     pull(pnr)                                                          # plain vector of pnrs to exclude
   ob_cohort <- ob_cohort %>% filter(!pnr %in% emigrated_ob_pnrs)      # remove pre-index emigrants
 
-  cat(sprintf("OB  after emigration before index date:              %d  (-%%d)\n",
+  cat(sprintf("OB  after emigration before index date:              %d  (-%d)\n",
       nrow(ob_cohort), length(emigrated_ob_pnrs)))   # attrition step 3
 
   # Exclude obesity comparators with pre-index N06D dispensing; lmdb already loaded in BS block.
@@ -746,7 +755,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
 
   ob_cohort <- ob_cohort %>% filter(!pnr %in% n06d_pnrs_ob)           # remove obesity controls with pre-index antidementia medication
 
-  cat(sprintf("OB  after pre-index N06D prescriptions:              %d  (-%%d)\n",
+  cat(sprintf("OB  after pre-index N06D prescriptions:              %d  (-%d)\n",
       nrow(ob_cohort), length(n06d_pnrs_ob)))   # attrition step 4
   cat(sprintf("OB COHORT FINAL:                                     %d\n\n", nrow(ob_cohort)))
 
