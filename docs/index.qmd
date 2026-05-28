@@ -11,7 +11,7 @@ Dette website er en kodevejledning til registerbaserede kohortestudier på DST (
 De to hyppigste indgreb er *Roux-en-Y gastric bypass* (RYGB) og *sleeve gastrektomi* (SG).
 Begge reducerer mavsækkens volumen og ændrer tarmens hormonmiljø, hvilket fører til vedvarende vægttab og metaboliske forandringer.
 
-**Et registerbaseret kohortestudie** følger en gruppe mennesker over tid ved at sammenkoble oplysninger fra nationalt dækkende administrative registre: hospitalsdiagnoser, recepter, socioøkonomiske data og vitalstatus.
+**Et registerbaseret kohortestudie** følger en gruppe mennesker over tid ved at sammenkoble oplysninger fra nationalt dækkende administrative registre: hospitalsdiagnoser, recepter, socioøkonomiske data og dødsfald.
 I stedet for at rekruttere deltagere og indsamle data prospektivt udnytter man data, der allerede er registreret af sundhedsvæsenet.
 Studiedesignet giver stor statistisk styrke, men kræver omhyggelig håndtering af confounding, censurering og registerspecifikke quirks.
 Kodebasen er skrevet generelt — andre studier kan bruge den samme infrastruktur med andre inklusionskriterier og andre udfaldsvariabler.

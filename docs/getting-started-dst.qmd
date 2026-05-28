@@ -368,7 +368,7 @@ Følgende registre bruges på tværs af de fem pipeline-scripts.
 Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
 [Se den fulde registerreference med alle bekræftede kolonnenavne →](register_reference.qmd)
 
-### Demografiske oplysninger og vitalstatus
+### Demografiske oplysninger og dødsfald
 
 | Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
 |---|---|---|---|---|

@@ -70,7 +70,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 
 ---
 
-## 1. Demografi og vitalstatus
+## 1. Demografi og dødsfald
 
 ### BEF — Befolkningsregistret
 
