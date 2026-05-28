@@ -417,17 +417,17 @@ Trin 2 og 3 kan køre parallelt — de læser begge `full_cohort.rds` uafhængig
 
 ```{mermaid}
 flowchart TD
-    S00["00_prepare_dbso.R\n(kun én gang)"]
+    S00["00_prepare_dbso.R (én gang)"]
     S01["01_build_cohorts.R"]
     S02["02_extract_outcomes_covariates.R"]
     S03["03_extract_ses.R"]
     S04["04_data_management_dementia.R"]
 
-    DBSO[("DBSO parquet\nparquet-external/")]
+    DBSO[("DBSO parquet")]
     FC[("full_cohort.rds")]
-    EXT[("extract_demographics.rds\nextract_dementia.rds\nextract_comorbidities.rds\nextract_nmi.rds\nextract_medications.rds\nextract_diabetes.rds\nextract_weights.rds\nextract_insulin.rds\nextract_hospitals.rds\nextract_negative_controls.rds")]
+    EXT[("extract_*.rds (10 filer)")]
     SES[("ses_data.rds")]
-    OUT[("study1_clean.rds\n✓ klar til Cox-modeller")]
+    OUT[("study1_clean.rds — klar til Cox")]
 
     S00 --> DBSO
     DBSO --> S01
@@ -440,6 +440,8 @@ flowchart TD
     SES --> S04
     S04 --> OUT
 ```
+
+De 10 `extract_*.rds`-filer er: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi`, `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls`.
 
 **Inden du kører et script:** kontroller, at variablen `path_output` øverst i hvert script
 peger på din egen workspace-mappe.
