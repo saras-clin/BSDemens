@@ -82,7 +82,7 @@ Resten af dine kommandoer (filter, select) tilføjer yderligere instruktioner ti
 
 ```r
 bef <- load_database("bef") %>% rename_with(tolower)
-# bef er nu en doven reference -- ingen data i hukommelsen endnu
+# bef er nu en doven forbindelse -- ingen data i hukommelsen endnu
 ```
 
 Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lmdb`, `dodsaars`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `dbso` (ligger i parquet-external, men åbnes stadig med `load_database()`).

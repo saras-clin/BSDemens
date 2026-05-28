@@ -186,7 +186,7 @@ flowchart TD
     C["collect()"]
     R[("R-hukommelse · data.frame")]
 
-    P -->|"doven reference — ingenting flyttes til R"| L
+    P -->|"doven forbindelse — ingenting flyttes til R"| L
     L -->|"instruktioner staplet op i DuckDB"| F
     F -->|"send nu!"| C
     C -->|"kun nødvendige rækker + kolonner"| R
