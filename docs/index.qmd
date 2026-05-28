@@ -86,7 +86,7 @@ Nøglekolonner fremhævet. Særlige quirks markeret med advarsler.
 
 ::: {.g-col-6}
 ### [Faldgruber](dst_faldgruber.qmd)
-12 DST-specifikke fejl der koster tid og giver uinformative fejlmeddelelser —
+10 DST-specifikke fejl der koster tid og giver uinformative fejlmeddelelser —
 fra `dodsaars` vs `dodsaasg` til DBSO-datoformater og NMI-score vs NMI-count.
 :::
 
