@@ -40,7 +40,18 @@ Trin 2 og 3 kan køre parallelt. Se den fulde pipeline med Mermaid-diagram på s
 
 ## Inden du starter
 
-To trin skal altid gøres, inden du åbner projektet:
+To trin skal altid gøres, inden du åbner projektet.
+
+::: {.callout-note}
+**Mac-brugere: sæt tastaturet til Unicode-tilstand**
+
+Specialtegn som `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Microsoft Remote Desktop som standard, fordi Mac'ens Option-tast sender scancodes, som Windows fortolker forkert.
+
+**Løsning (gøres én gang pr. forbindelse):** Skift til Unicode-tilstand:
+
+- Via menuen: **Connections → Keyboard Mode → Unicode**
+- Via genvej inde i Remote Desktop-vinduet: **⌃⌘U** (Ctrl + Cmd + U)
+:::
 
 ::: {.callout-important}
 **1. Byg `dstDataPrep`**
