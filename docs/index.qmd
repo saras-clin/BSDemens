@@ -110,18 +110,19 @@ fra `dodsaars` vs `dodsaasg` til DBSO-datoformater og NMI-score vs NMI-count.
 
 ```
 R/
-  00_prepare_dbso.R              # Engangs: SAS → parquet for DBSO
-  01_build_cohorts.R             # BS-kohort + GP + fedme-sammenligning
-  02_extract_outcomes_covariates.R   # LPR/LMDB/DBSO-udtræk
-  03_extract_ses.R               # Socioøkonomiske variabler (OBS: der arbejdes på at få fælles-steno kode til kategorisering af SES)
-  04_data_management_dementia.R  # Merge, eksklusioner, analysedatasæt
-  variables_dictionary.txt       # Bekræftede registerkolonner
-  functions_guide.txt            # Funktionsinventar (arkiv)
+  00_prepare_dbso.R                    # Engangs: SAS → parquet for DBSO
+  01_build_cohorts.R                   # BS-kohort + GP + fedme-sammenligning
+  02_extract_outcomes_covariates.R     # LPR/LMDB/DBSO-udtræk
+  03_extract_ses.R                     # Socioøkonomiske variabler
+                                       # OBS: fælles-steno SES-kode under udvikling
+  04_data_management_dementia.R        # Merge, eksklusioner, analysedatasæt
+  variables_dictionary.txt             # Bekræftede registerkolonner
+  functions_guide.txt                  # Funktionsinventar (arkiv)
 docs/
-  index.qmd                      # Denne side
-  getting-started-dst.qmd        # Kom i gang på DST
-  guide_til_funktioner.qmd       # Funktionsforklaringer
-  register_reference.qmd         # Registerkolonner
-  dst_faldgruber.qmd             # Faldgruber
-datasets/                        # gitignored: .rds-outputfiler
+  index.qmd                            # Denne side
+  getting-started-dst.qmd             # Kom i gang på DST
+  guide_til_funktioner.qmd            # Funktionsforklaringer
+  register_reference.qmd              # Registerkolonner
+  dst_faldgruber.qmd                  # Faldgruber
+datasets/                              # gitignored: .rds-outputfiler
 ```
