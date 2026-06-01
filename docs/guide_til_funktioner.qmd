@@ -90,7 +90,8 @@ bef <- load_database("bef") %>% rename_with(tolower)
 # bef er nu en doven forbindelse -- ingen data i hukommelsen endnu
 ```
 
-Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lmdb`, `dodsaars`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `dbso` (ligger i parquet-external, men åbnes stadig med `load_database()`).
+Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`, `dbso`.
+Alle åbnes med `load_database()`, uanset om de ligger i `parquet-registers` eller `parquet-external`.
 
 ::: {.callout-note}
 `load_database()` kommer fra pakken `dstDataPrep`, som skal bygges manuelt på DST-serveren.
@@ -114,7 +115,7 @@ resultat <- stort_register %>%
 ```
 
 ::: {.callout-note}
-Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt i Steno-onboarding-guiden.
+Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt i Stenos DST-onboarding-guide, som du modtager fra Steno ved projektstart.
 Læs den for den fulde forklaring med eksempler på syntetisk data.
 :::
 
@@ -341,8 +342,8 @@ Det svarer til `function(x) coalesce(x, 0L)` — men kortere.
 
 Bruges to steder:
 
-1. **NMI-score**: summerer produktet af flag-kolonner og deres individuelle vægte på tværs af kolonner → én vægtet score per person.
-2. **Multimorbiditetstælling**: summerer alle 0/1-flag → antal tilstande per person.
+1. **NMI-score** (Nordic Multimorbidity Index): summerer produktet af 0/1-flag-kolonner og deres individuelle vægte → én vægtet comorbiditetsscore per person. En patient med hjertekarsygdom og cancer scorer højere end en patient med to mildere tilstande.
+2. **Multimorbiditetstælling**: summerer alle 0/1-flag → simpel optælling af antal tilstande per person.
 
 ---
 
@@ -461,7 +462,7 @@ group_by(pnr) %>%
 
 ::: {.callout-warning}
 Bruges **ikke** til indkomstkvintiler i dette projekt.
-Indkomstkvintiler beregnes ved at sammenligne hver persons 3-årsgennemsnit med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80), stratificeret på køn × 5-årsaldersgruppe × referenceår — i overensstemmelse med SEPLINE-retningslinjerne.
+Indkomstkvintiler beregnes i overensstemmelse med SEPLINE-retningslinjerne (en standardiseret metode til socioøkonomisk positionering i epidemiologisk forskning): hver persons 3-årsgennemsnit sammenlignes med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80), stratificeret på køn × 5-årsaldersgruppe × referenceår.
 :::
 
 ---
@@ -555,7 +556,7 @@ Normalt skriver du et fast kolonnenavn til venstre for `=` i `mutate()`:
 mutate(mi = 1L)   # opretter altid en kolonne der hedder "mi"
 ```
 
-Men i NMI-løkken kører vi over en liste af tilstande (`"mi"`, `"stroke"`, `"diabetes"`, ...) og vil oprette én kolonne per tilstand. Kolonnens navn er derfor gemt i en variabel:
+Men i NMI-beregningen (Nordic Multimorbidity Index) kører vi i en løkke over en liste af kroniske tilstande (`"mi"`, `"stroke"`, `"diabetes"`, ...) og vil oprette én kolonne per tilstand. Kolonnens navn er derfor gemt i en variabel:
 ```r
 tilstandsnavn <- "mi"   # variablen indeholder navnet som en tekststreng
 
@@ -632,7 +633,7 @@ toupper(c_opr)   # sikrer at operationskoder matcher uanset bogstavsstørrelse
 grepl("^C34", icd4)   # TRUE for "C340", "C341", "C342", osv.
 ```
 
-Bruges i `extract_nmi()` til at matche ICD-koder mod de 29 NMI-mønstre.
+Bruges i `extract_nmi()` til at matche ICD-koder mod de 29 diagnosemønstre i NMI-indekset (Nordic Multimorbidity Index — et vægtet comorbiditetsmål med 50 prediktorer).
 
 ---
 

@@ -5,7 +5,9 @@ subtitle: "Kodevejledning til registerbaseret kohortestudie"
 
 ## Om projektet
 
-Kodevejledning til registerbaserede kohortestudier på DST (særligt til projekt 708421, DARTER).
+Kodevejledning til registerbaserede kohortestudier på DST (Statistics Denmark) — særligt til projekt 708421.
+
+Projektet hedder DARTER (Danish Register-Based Study of Bariatric Surgery and Type 2 Diabetes and Dementia Risk) og undersøger, om fedmekirurgi (bariatrisk kirurgi) reducerer risikoen for demens og forbedrer blodsukkerregulering hos personer med type 1-diabetes.
 
 ---
 
@@ -71,7 +73,7 @@ Med analogier til hverdagen og de 7 vigtigste funktioner fremhævet øverst.
 
 ::: {.g-col-6}
 ### [Registerreference](register_reference.qmd)
-Fulde kolonnenavne for alle 14 registre, bekræftet på DST 2026-05-15.
+Fulde kolonnenavne for alle 16 registre, bekræftet på DST 2026-05-15.
 Nøglekolonner fremhævet. Særlige quirks markeret med advarsler.
 :::
 
@@ -94,7 +96,7 @@ Data flyttes fra råregistre til analysedata i fem trin:
 01_build_cohorts.R  →  full_cohort.rds
 02_extract_*.R      →  extract_dementia.rds, extract_comorbidities.rds, ...
 03_extract_ses.R    →  ses_data.rds
-04_data_mgmt.R      →  study1_clean.rds  (klar til Cox-modeller)
+04_data_mgmt.R      →  study1_clean.rds  (klar til overlevelsesanalyse)
 ```
 
 Trin 2 og 3 kan køre parallelt. Se den fulde pipeline med Mermaid-diagram på siden [Kom i gang](getting-started-dst.qmd#pipeline-i-ét-diagram).

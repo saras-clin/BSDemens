@@ -14,8 +14,8 @@ format:
 
 ## Inden du læser dette
 
-Denne side bygger ovenpå Steno-onboarding-guiden.
-Læs den først.
+Denne side bygger ovenpå Stenos DST-onboarding-guide — en introduktion til R, parquet-filer og doven evaluering på DST-serveren, som du modtager fra Steno når du starter.
+Læs den første inden du fortsætter her, da vi bygger videre på begreberne derfra.
 
 Når du begynder at læse koden og støder på en funktion du ikke genkender,
 kan du slå den op i [Guide til funktioner](guide_til_funktioner.qmd) —
@@ -32,7 +32,8 @@ Den er ikke på CRAN.
 Den ligger på DST-serveren og skal bygges manuelt.
 
 1. I RStudio: **File → Open Project in New Session**
-2. Naviger til: `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
+2. Naviger til: `E:/workdata/708421/workspaces/saraschwartz/dstDataPrep/dstDataPrep.Rproj`
+   *(erstat `saraschwartz` med dit eget mappenavn i workspaces)*
 3. Når projektet er åbnet: tryk **Ctrl + Shift + B** (Build)
 
    ::: {.callout-note}
@@ -95,17 +96,14 @@ Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
 
 | Lager | Sti | Hvad er der | Sådan indlæses det |
 |---|---|---|---|
-| `parquet-registers` | `E:/workdata/708421/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
-| `parquet-external` | `E:/workdata/708421/parquet-external/` | Registre, der ikke er i parquet-registers: DBSO, psykiatrisk LPR2 | `load_database("navn")` |
+| `parquet-registers` | `E:/workdata/708421/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
+| `parquet-external` | `E:/workdata/708421/cleaned-data/parquet-external/` | Registre, der ikke er i parquet-registers: DBSO, SKS-procedurekoder (LPR3) | `load_database("navn")` |
 
 ::: {.callout-note}
 **Du behøver ikke at samle årsfiler manuelt.**
-Onboarding-guiden viser, hvordan man gemmer og læser årspartitionerede parquet-filer.
-På DST gør `load_database()` dette allerede — den åbner alle år af BEF (eller et andet register)
-som én enkelt "doven" forbindelse — dvs. data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()`.
-Der er intet trin, hvor du sammensætter `bef2010.parquet`, `bef2011.parquet`, osv.
-
-Konceptet forklares grundigt i Steno-onboarding-guiden — læs det afsnit, hvis du ikke er bekendt med doven evaluering.
+Hvert register er gemt som mange separate filer — én per år.
+`load_database()` samler dem automatisk til én tabel, som du kan forespørge som helhed.
+Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret i Stenos onboarding-guide samt i [Guide til funktioner](guide_til_funktioner.qmd).
 :::
 
 ::: {.callout-note}
@@ -474,7 +472,7 @@ flowchart TD
     S04 --> OUT
 ```
 
-De 10 `extract_*.rds`-filer er: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi`, `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls`.
+De 10 `extract_*.rds`-filer er: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi` (multimorbiditetsscore), `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls` (negative kontrol-udfald til sensitivitetsanalyse).
 
 **Inden du kører et script:** kontroller, at variablen `path_output` øverst i hvert script
 peger på din egen workspace-mappe.
@@ -579,7 +577,7 @@ Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtr�
 
 | Spørgsmål | Svar |
 |---|---|
-| Pakke ikke fundet: `dstDataPrep` | Genbyg: åbn Lukes `.Rproj` → Ctrl+Shift+B |
+| Pakke ikke fundet: `dstDataPrep` | Genbyg: åbn `dstDataPrep.Rproj` i workspaces-mappen → Ctrl+Shift+B |
 | `duckplyr`-fejl | Kør `install.packages("duckplyr")` i starten af sessionen |
 | Kolonne ikke fundet: `pnr` | Du har glemt `rename_with(tolower)` efter `load_database()` |
 | Objektet ser ud som data, men opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |

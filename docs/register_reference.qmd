@@ -2,6 +2,7 @@
 title: "Registerreference"
 subtitle: "Bekræftede kolonnenavne for alle 16 registre — projekt 708421"
 date: last-modified
+date: last-modified
 format:
   html:
     toc: true
@@ -263,7 +264,10 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 
 ## 5. LPR — SKS-procedurekoder
 
-SKS-koder (operationer og procedurer) er splittet over to registre afhængigt af periode.
+SKS (Sundhedsvæsenets Klassifikations System) er det danske klassifikationssystem for operationer og procedurer — svarende til NOMESCO-koderne brugt i de øvrige nordiske lande.
+Bariatrisk kirurgi har f.eks. koderne `KJDF10` (RYGB) og `KJDF40` (sleeve gastrektomi).
+
+SKS-koder er splittet over to registre afhængigt af periode.
 Til en fuld dækning skal begge forespørges og resultatet bindes sammen.
 
 ::: {.callout-note}
