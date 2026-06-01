@@ -181,10 +181,9 @@ Merges all extract_*.rds and ses_data.rds into one analysis-ready dataset.
    under-captured by hospital codes alone
 4. NMI count — counts how many of 33 GMC conditions each person has (for Table 1
    descriptives); distinct from nmi_score (the weighted Kristensen 2022 score)
-5. Emigration censoring — get_emigration_dates() is called to add emigration_date;
-   currently a stub returning NA for all persons (register name not yet confirmed with
-   data manager — see CRITICAL-4 in TODO.txt). Wire-in is complete; replace stub once
-   register is confirmed.
+5. Emigration censoring — get_emigration_dates() queries VNDS (indud_kode == "U",
+   haend_dato), returns earliest emigration date per person; wired into pmin() in
+   format_variables().
 6. Format variables — factors with reference levels, censor_date (includes emigration),
    outcome event flags, follow-up time in days, age categories, calendar period
 
@@ -226,13 +225,8 @@ study1 <- main_data_management()
 
 ## Open issues before first run (see TODO.txt)
 
-- **CONFIRM-2:** RESOLVED — death date column is `d_dodsdto` (not doddato). Fixed in all scripts.
 - **CONFIRM-3:** Verify diabetes_type values in OSDC file
   (`table(dm$diabetes_type)` — code assumes "T1D" / "T2D" string labels)
-- **CRITICAL-4:** Emigration date register not yet wired up — confirm with data manager
-  which register to use: VNDS, BEF-derived (gap in annual snapshots), or CPR Registeret
-  (RVNDS). Once confirmed, replace stub in get_emigration_dates() (see CRITICAL-4 in
-  TODO.txt for full detail). No other code changes needed — pmin() is already wired.
 - **MINOR-8:** Confirm `aar` column name in UDDA, FAIK, AKM
 
 ---

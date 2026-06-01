@@ -5,10 +5,7 @@ subtitle: "Kodevejledning til registerbaseret kohortestudie"
 
 ## Om projektet
 
-Kodevejledning til registerbaserede kohortestudier på DST (Statistics Denmark) — særligt til projekt 708421.
-
-Projektet hedder DARTER (Danish Register-Based Study of Bariatric Surgery and Type 2 Diabetes and Dementia Risk) og undersøger, om fedmekirurgi (bariatrisk kirurgi) reducerer risikoen for demens og forbedrer blodsukkerregulering hos personer med type 1-diabetes.
-
+Kodevejledning til registerbaserede kohortestudier på DST — særligt til projekt 708421 (DARTER).
 ---
 
 ## Inden du starter

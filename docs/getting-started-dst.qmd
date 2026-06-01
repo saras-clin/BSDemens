@@ -14,7 +14,7 @@ format:
 
 ## Inden du læser dette
 
-Denne side bygger ovenpå Stenos DST-onboarding-guide — en introduktion til R, parquet-filer og doven evaluering på DST-serveren, som du modtager fra Steno når du starter.
+Denne side bygger ovenpå Stenos DST-onboarding-guide — en introduktion til R, parquet-filer og doven ("lazy") evaluering på DST-serveren, som du modtager fra Steno når du starter.
 Læs den første inden du fortsætter her, da vi bygger videre på begreberne derfra.
 
 Når du begynder at læse koden og støder på en funktion du ikke genkender,
@@ -103,7 +103,7 @@ Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
 **Du behøver ikke at samle årsfiler manuelt.**
 Hvert register er gemt som mange separate filer — én per år.
 `load_database()` samler dem automatisk til én tabel, som du kan forespørge som helhed.
-Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret i Stenos onboarding-guide samt i [Guide til funktioner](guide_til_funktioner.qmd).
+Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven (engelsk: "lazy") evaluering og er forklaret i Stenos onboarding-guide samt i [Guide til funktioner](guide_til_funktioner.qmd).
 :::
 
 ::: {.callout-note}
