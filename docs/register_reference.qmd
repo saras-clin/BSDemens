@@ -2,7 +2,6 @@
 title: "Registerreference"
 subtitle: "Bekræftede kolonnenavne for alle 16 registre — projekt 708421"
 date: last-modified
-date: last-modified
 format:
   html:
     toc: true
