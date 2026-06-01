@@ -1,6 +1,6 @@
 ---
 title: "Registerreference"
-subtitle: "Bekræftede kolonnenavne for alle 14 registre — projekt 708421"
+subtitle: "Bekræftede kolonnenavne for alle 16 registre — projekt 708421"
 date: last-modified
 format:
   html:
@@ -15,7 +15,7 @@ Alle kolonnenavne på denne side er bekræftet på DST 2026-05-15 via `colnames(
 De vises **efter** `rename_with(tolower)` er kaldt.
 Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
 
-Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ved hvert register.
+Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
 
 ---
 
@@ -38,12 +38,15 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | Beskæftigelsesstatus | AKM | `socio13`, `aar` |
 | Dato for bariatrisk operation | DBSO | `datoper_prim` |
 | Diabetestype og debutdato | OSDC | `diabetes_type`, `do_dm` |
+| En operationsprocedure / SKS-kode (frem til 2018) | lpr_sksopr | `c_opr`, `recnum` |
+| En operationsprocedure / SKS-kode (2018 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_kontakt` |
 
 ::: {.callout-note}
 **Join-nøgler:**
 BEF, DODSAARS, VNDS, LMDB, UDDA, AKM, DBSO og OSDC joines alle på `pnr`.
 FAIK joines via `familie_id` — hent den fra BEF.
 LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
+`lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_kontakt` (efter `rename_with(tolower)`).
 :::
 
 ---
@@ -57,10 +60,12 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | VNDS | `"vnds"` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
 | LPR2 kontakter | `"lpr_adm"` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
 | LPR2 diagnoser | `"lpr_diag"` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |
+| LPR2 SKS-procedurer | `"lpr_sksopr"` | `recnum` | Frem til 2018 | `c_opr`, `d_odto` |
 | LPR2 psyk kontakter | `"t_psyk_adm"` | `k_recnum` → `recnum` | 1995–marts 2019 | `v_cpr` → `pnr` |
 | LPR2 psyk diagnoser | `"t_psyk_diag"` | `v_recnum` → `recnum` | 1995–marts 2019 | `c_diag`, `c_diagtype` |
 | LPR3 kontakter | `"lpr_a_kontakt"` | `dw_ek_kontakt` | Marts 2019+ | `kont_starttidspunkt` (datetime) |
 | LPR3 diagnoser | `"lpr_a_diagnose"` | `dw_ek_kontakt` | Marts 2019+ | `diag_kode`, `diag_kode_type`, `senere_afkraeftet` |
+| LPR3 SKS-procedurer | `"procedurer_kirurgi"` | `DW_EK_KONTAKT` | 2018+ | `procedurekode`, `dato_start` |
 | LMDB | `"lmdb"` | `pnr` | Ca. 1994+ | `atc`, `eksd` |
 | UDDA | `"udda"` | `pnr` | Alle år | `hfaudd`, `aar` |
 | FAIK | `"faik"` | `familie_id` | Alle år | `famaekvivadisp_13` |
@@ -256,7 +261,99 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 
 ---
 
-## 5. LMDB — Lægemiddelstatistikregistret
+## 5. LPR — SKS-procedurekoder
+
+SKS-koder (operationer og procedurer) er splittet over to registre afhængigt af periode.
+Til en fuld dækning skal begge forespørges og resultatet bindes sammen.
+
+::: {.callout-note}
+**Ingen `pnr` i proceduretabellerne.**
+`pnr` hentes via join til henholdsvis `lpr_adm` (LPR2) eller `lpr_a_kontakt` (LPR3).
+:::
+
+### lpr_sksopr — LPR2 SKS-procedurer (frem til 2018)
+
+Placering: `parquet-registers/lpr_sksopr`
+
+```r
+lpr_sksopr <- load_database("lpr_sksopr") %>%
+  rename_with(tolower)
+```
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`recnum`** | character | Join-nøgle til `lpr_adm` |
+| **`c_opr`** | character | SKS-procedurekode — brug denne til matching (f.eks. `"KJDF10"`) |
+| **`d_odto`** | Date | Operationsdato |
+| `c_oprart` | character | Procedureart-kode |
+| `c_osgh` | character | Opererende sygehus |
+| `c_tilopr` | character | Supplerende procedurekode |
+| `year` | integer | År (partitionskolonne) |
+
+### procedurer_kirurgi — LPR3 SKS-procedurer (2018 og frem)
+
+Placering: `parquet-external/procedurer_kirurgi`
+
+```r
+proc_kirurgi <- load_database("procedurer_kirurgi") %>%
+  rename_with(tolower)
+```
+
+| Kolonne (efter tolower) | Type | Indhold |
+|---|---|---|
+| **`dw_ek_kontakt`** | character | Join-nøgle til `lpr_a_kontakt` |
+| **`procedurekode`** | character | SKS-procedurekode — brug denne til matching (f.eks. `"KJDF10"`) |
+| **`dato_start`** | Date | Proceduredato |
+| `proceduretype` | character | Proceduretype-kode |
+| `procedurekode_parent` | character | Overordnet procedurekode |
+| `proceduretype_parent` | character | Overordnet proceduretype |
+| `tidspunkt_start` | datetime | Proceduretidspunkt |
+| `dato_slut` | Date | Procedureslutdato |
+| `tidspunkt_slut` | datetime | Proceduresluttidspunkt |
+| `lprindberetningssystem` | character | LPR-indberetningssystem |
+| `sorenhed_pro` | character | SOR-enhed for proceduren |
+| `procedureregistrering_id` | character | Internt registrerings-ID |
+
+::: {.callout-warning}
+Kolonnenavnene i `procedurer_kirurgi` er blandet store/små bogstaver i rådata. Kald `rename_with(tolower)` umiddelbart efter load — ellers fejler joins.
+:::
+
+### Kombination over hele perioden
+
+```r
+# SKS fra LPR2 (frem til 2018)
+opr_lpr2 <- load_database("lpr_sksopr") %>%
+  rename_with(tolower) %>%
+  filter(toupper(c_opr) %in% SKS_KODER) %>%    # filtrer på relevante SKS-koder
+  left_join(
+    load_database("lpr_adm") %>%
+      rename_with(tolower) %>%
+      select(recnum, pnr, d_inddto),
+    by = "recnum"
+  ) %>%
+  select(pnr, opr_dato = d_odto, opr_kode = c_opr) %>%
+  collect()
+
+# SKS fra LPR3 (2018 og frem)
+opr_lpr3 <- load_database("procedurer_kirurgi") %>%
+  rename_with(tolower) %>%
+  filter(toupper(procedurekode) %in% SKS_KODER) %>%
+  left_join(
+    load_database("lpr_a_kontakt") %>%
+      rename_with(tolower) %>%
+      select(dw_ek_kontakt, pnr),
+    by = "dw_ek_kontakt"
+  ) %>%
+  select(pnr, opr_dato = dato_start, opr_kode = procedurekode) %>%
+  collect()
+
+# Samlet
+opr_alle <- bind_rows(opr_lpr2, opr_lpr3)
+```
+
+---
+
+## 7. LMDB — Lægemiddelstatistikregistret
 
 Én række per ekspederet recept. Dækker ca. 1994 og frem.
 
@@ -281,7 +378,7 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 
 ---
 
-## 6. Socioøkonomiske registre
+## 8. Socioøkonomiske registre
 
 Alle tre registre bruges til SEP-udtræk i `03_extract_ses.R` efter SEPLINE-retningslinjerne
 (Hjorth et al. 2025). Ingen samlet SEP-variabel beregnes — tre separate dimensioner.
@@ -336,7 +433,7 @@ SEPLINE-kategorisering af `socio13`:
 
 ---
 
-## 7. Eksterne registre
+## 9. Eksterne registre
 
 ### DBSO — Bariatrisk kirurgiregister
 

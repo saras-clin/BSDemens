@@ -66,14 +66,16 @@ Når hukommelsesbjælken i RStudio bliver rød, oplever alle på serveren langso
 
 ```r
 # Filtrer tidligt — aldrig collect() først
-result <- lmdb %>%
-  filter(pnr %in% !!kohort_pnrs, substr(atc, 1, 4) == "N06D") %>%
-  select(pnr, atc, eksd) %>%
-  collect()
+lmdb <- load_database("lmdb") %>% rename_with(tolower)   # doven forbindelse — ingen RAM brugt endnu
 
-# Frigør, når du er færdig
-rm(lmdb, result_intermediate)
-gc()   # frigiver hukommelse tilbage til operativsystemet
+result <- lmdb %>%
+  filter(pnr %in% !!kohort_pnrs, substr(atc, 1, 4) == "N06D") %>%   # filtrer inden collect
+  select(pnr, atc, eksd) %>%
+  collect()                                                            # kun nu flyttes data til R
+
+# Frigør store objekter, når du er færdig med dem
+rm(lmdb)   # slet den dovne forbindelse — den fylder ikke meget, men det er god vane
+gc()       # frigiver hukommelse tilbage til operativsystemet
 ```
 
 ---

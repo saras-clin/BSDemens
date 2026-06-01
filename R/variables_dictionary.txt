@@ -257,23 +257,26 @@
 #
 # OVERVIEW TABLE — all confirmed via colnames() on DST server 2026-05-15
 # ─────────────────────────────────────────────────────────────────────────────
-# Register           │ load_database() name   │ Join key        │ Period
-# ───────────────────┼────────────────────────┼─────────────────┼────────────────
-# BEF                │ "bef"                  │ pnr             │ annual snapshots
-# DODSAARS           │ "dodsaars"             │ pnr             │ all years
-# LPR2 contacts      │ "lpr_adm"              │ recnum          │ up to Mar 2019
-# LPR2 diagnoses     │ "lpr_diag"             │ recnum          │ up to Mar 2019
-# LPR3 contacts      │ "lpr_a_kontakt"        │ dw_ek_kontakt   │ Mar 2019+
-# LPR3 diagnoses     │ "lpr_a_diagnose"       │ dw_ek_kontakt   │ Mar 2019+
-# Psych LPR2 admiss  │ "t_psyk_adm"           │ k_recnum→recnum │ to Mar 2019
-# Psych LPR2 diag    │ "t_psyk_diag"          │ v_recnum→recnum │ to Mar 2019
-# LMDB               │ "lmdb"                 │ pnr             │ 1994+
-# VNDS               │ "vnds"                 │ pnr             │ all years
-# DBSO               │ "dbso"                 │ pnr (col: cpr)  │ 2010+
-# FAIK               │ "faik"                 │ familie_id      │ annual
-# AKM                │ "akm"                  │ pnr             │ annual
-# UDDA               │ "udda"                 │ pnr             │ annual
+# Register                │ access method                          │ Join key        │ Period
+# ───────────────────────┼────────────────────────────────────────┼─────────────────┼────────────────
+# BEF                    │ load_database("bef")                   │ pnr             │ annual snapshots
+# DODSAARS               │ load_database("dodsaars")              │ pnr             │ all years
+# LPR2 contacts          │ load_database("lpr_adm")               │ recnum          │ up to Mar 2019
+# LPR2 diagnoses         │ load_database("lpr_diag")              │ recnum          │ up to Mar 2019
+# LPR2 SKS procedures    │ load_database("lpr_sksopr")            │ recnum          │ up to 2018
+# LPR3 contacts          │ load_database("lpr_a_kontakt")         │ dw_ek_kontakt   │ Mar 2019+
+# LPR3 diagnoses         │ load_database("lpr_a_diagnose")        │ dw_ek_kontakt   │ Mar 2019+
+# LPR3 SKS procedures    │ load_database("procedurer_kirurgi")    │ DW_EK_KONTAKT   │ 2018+
+# Psych LPR2 admiss      │ load_database("t_psyk_adm")            │ k_recnum→recnum │ to Mar 2019
+# Psych LPR2 diag        │ load_database("t_psyk_diag")           │ v_recnum→recnum │ to Mar 2019
+# LMDB                   │ load_database("lmdb")                  │ pnr             │ 1994+
+# VNDS                   │ load_database("vnds")                  │ pnr             │ all years
+# DBSO                   │ load_database("dbso")                  │ pnr (col: cpr)  │ 2010+
+# FAIK                   │ load_database("faik")                  │ familie_id      │ annual
+# AKM                    │ load_database("akm")                   │ pnr             │ annual
+# UDDA                   │ load_database("udda")                  │ pnr             │ annual
 # ─────────────────────────────────────────────────────────────────────────────
+# NOTE: lpr_sksopr is in parquet-registers; procedurer_kirurgi is in parquet-external.
 # NOTE: "lpr_a_diagnose" — the "a" means "analysis model" (LPR_A series, 2025).
 #       It does NOT mean A-type diagnoses only. Contains all types: A, B, G.
 # NOTE: t_psyk_adm and t_psyk_diag are accessible via load_database() (confirmed
@@ -434,6 +437,48 @@
 #     diagnosekode       →  diag_kode
 #     diagnosetype       →  diag_kode_type
 #     senare_afkraeftet  →  senere_afkraeftet
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# lpr_sksopr - LPR2 SKS procedure codes (up to 2018)
+# ─────────────────────────────────────────────────────────────────────────────
+#   DST folder: parquet-registers/lpr_sksopr  (accessed via load_database("lpr_sksopr"))
+#   One row per procedure per contact.
+#   Join: lpr_adm LEFT JOIN lpr_sksopr ON recnum
+#   Confirmed column names (rename_with(tolower) applied; confirmed 2026-05-28):
+#     recnum       contact key — join to lpr_adm on this
+#     c_opr        SKS procedure code — USE THIS for procedure matching (e.g. "KJDF10")
+#     c_oprart     procedure type/art code
+#     c_osgh       operating hospital code
+#     c_tilopr     supplementary procedure code
+#     d_odto       procedure date — USE THIS as procedure date
+#     year         year (partition column)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# procedurer_kirurgi - LPR3 SKS procedure codes (2018+)
+# ─────────────────────────────────────────────────────────────────────────────
+#   DST folder: parquet-external/procedurer_kirurgi  (accessed via load_database("procedurer_kirurgi"))
+#   One row per procedure per contact.
+#   Join: lpr_a_kontakt LEFT JOIN procedurer_kirurgi ON dw_ek_kontakt (note: uppercase in this table)
+#   Confirmed column names (confirmed via colnames() 2026-05-28):
+#     DW_EK_KONTAKT              contact key — join to lpr_a_kontakt on this
+#     DW_EK_FORLOEB              episode key
+#     procedurekode              SKS procedure code — USE THIS for procedure matching (e.g. "KJDF10")
+#     proceduretype              procedure type code
+#     procedurekode_parent       parent procedure code
+#     proceduretype_parent       parent procedure type code
+#     dato_start                 procedure start date — USE THIS as procedure date
+#     tidspunkt_start            procedure start time
+#     dato_slut                  procedure end date
+#     tidspunkt_slut             procedure end time
+#     lprindberetningssystem     LPR reporting system identifier
+#     SORENHED_PRO               SOR unit responsible for the procedure
+#     PROCEDUREREGISTRERING_ID   internal procedure registration ID
+#   NOTE: column names are mixed case (not all lowercase) — apply rename_with(tolower) after loading
+#   NOTE: no pnr in this table — must join via DW_EK_KONTAKT to get pnr from lpr_a_kontakt
+#
+# Combining LPR2 + LPR3 SKS procedures:
+#   LPR2: load_database("lpr_sksopr") — filter/join via recnum, SKS code in c_opr, date in d_odto
+#   LPR3: load_database("procedurer_kirurgi") — filter/join via DW_EK_KONTAKT, SKS code in procedurekode, date in dato_start
 #
 # Psychiatric LPR contacts
 #   For LPR3: fully unified — psychiatric contacts included in lpr_a_kontakt/lpr_a_diagnose;

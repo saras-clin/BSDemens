@@ -217,17 +217,41 @@ result <- stort_register %>%
 BEF har millioner af rækker. LMDB har hundredvis af millioner.
 At kalde collect() før filter() vil crashe din session og gøre serveren langsom for alle.
 
-### Sådan tjekker du, hvilken type objekt du har
+### Sådan tjekker du, om du har husket `collect()`
+
+Mange fejl opstår, fordi man tror, man har data i R — men i virkeligheden har man stadig bare en instruktion til DuckDB.
+Kald `class()` for at se, hvad du faktisk har:
 
 ```r
 class(mit_objekt)
 ```
 
-- `"tbl_df" "data.frame"` — data er i R-hukommelsen (du har kaldt collect)
-- `"tbl_duckdb_connection"` — doven DuckDB-forespørgsel, endnu ikke i hukommelsen
-- `"Table" "ArrowObject"` — doven Arrow-forbindelse, endnu ikke i hukommelsen
+| Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
+|---|---|---|
+| `"tbl_df" "data.frame"` | Data er i R. Du kan bruge det normalt. | Ingenting — du er klar. |
+| `"tbl_duckdb_connection"` | Stadig en usendt forespørgsel til DuckDB. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
+| `"Table" "ArrowObject"` | Stadig en usendt forespørgsel til Arrow. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
 
-Hvis du får en uventet fejl, afslører `class()` ofte problemet.
+**Eksempel på problemet:**
+
+```r
+# Du har skrevet dette:
+mine_patienter <- load_database("lpr_adm") %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  rename_with(tolower)
+
+nrow(mine_patienter)   # fejl — nrow() virker ikke på en DuckDB-forespørgsel
+```
+
+```r
+# Fix: tilføj collect()
+mine_patienter <- load_database("lpr_adm") %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  rename_with(tolower) %>%
+  collect()            # nu er data i R
+
+nrow(mine_patienter)   # virker
+```
 
 ---
 
