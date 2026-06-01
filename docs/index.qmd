@@ -6,6 +6,7 @@ subtitle: "Kodevejledning til registerbaseret kohortestudie"
 ## Om projektet
 
 Kodevejledning til registerbaserede kohortestudier på DST — særligt til projekt 708421 (DARTER).
+
 ---
 
 ## Inden du starter
