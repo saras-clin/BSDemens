@@ -264,98 +264,17 @@ Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlme
 
 ---
 
-## 6. Registerreference for dette projekt
+## 6. Registerreference
 
-Følgende registre bruges på tværs af de fem pipeline-scripts.
-Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
-[Se den fulde registerreference med alle bekræftede kolonnenavne →](register_reference.qmd)
-
-### Demografiske oplysninger og dødsfald
-
-| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
-|---|---|---|---|---|
-| BEF — Befolkningsregistret | `"bef"` | Årligt befolkningssnapshot. Én række per person per år. | `pnr`, `koen` (1=mand, 2=kvinde), `foed_dag` (fødselsdato), `aar` (år), `familie_id` | Alle år |
-| DODSAARS — Dødsregistret | `"dodsaars"` | Én række per afdød person. | `pnr`, `d_dodsdto` (dødsdato) | ~1970–2001 |
-| DOD — Dødsfald | *ikke i cleaned-data endnu* | Dækker ~2001–2024 — kræver udtræk fra rå SAS | `pnr`, `doddato` | ~2001–2024 |
-| VNDS — Migrationsregistret | `"vnds"` | Én række per migrationsbegivenhed. | `pnr`, `indud_kode` (`"U"` = udvandring, `"I"` = indvandring), `haend_dato` (begivenhedsdato) | Alle år |
-
-### Hospitalsregistre (LPR)
-
-| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
-|---|---|---|---|---|
-| LPR2 indlæggelser | `"lpr_adm"` | Somatiske hospitalskontakter, én række per besøg. | `pnr`, `recnum` (join-nøgle), `d_inddto` (dato), `c_pattype` (`"0"`=indlagt) | Frem til marts 2019 |
-| LPR2 diagnoser | `"lpr_diag"` | Diagnoser per kontakt. Join til lpr_adm på `recnum`. | `recnum`, `c_diagtype` (A/B/G), `c_diag` (ICD-kode med D-præfiks) | Frem til marts 2019 |
-| LPR2 psykiatriske indlæggelser | `"t_psyk_adm"` | Psykiatriske kontakter. Omdøb: `v_cpr` → `pnr`, `k_recnum` → `recnum`. | `pnr`, `recnum`, `d_inddto`, `c_pattype` | 1995–marts 2019 |
-| LPR2 psykiatriske diagnoser | `"t_psyk_diag"` | Psykiatriske diagnoser. Omdøb: `v_recnum` → `recnum`. | `recnum`, `c_diagtype`, `c_diag` | 1995–marts 2019 |
-| LPR3 kontakter | `"lpr_a_kontakt"` | Samlet somatiske + psykiatriske kontakter. | `pnr`, `dw_ek_kontakt` (join-nøgle), `kont_starttidspunkt` (datetime), `kont_type` (`"ALCA00"`=indlagt) | Marts 2019 og frem |
-| LPR3 diagnoser | `"lpr_a_diagnose"` | Diagnoser per kontakt. Join til lpr_a_kontakt på `dw_ek_kontakt`. | `dw_ek_kontakt`, `diag_kode_type` (A/B/G), `diag_kode` (ICD med D-præfiks), `senere_afkraeftet` | Marts 2019 og frem |
-
-### Receptregistret
-
-| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
-|---|---|---|---|---|
-| LMDB — Lægemiddelstatistikregistret | `"lmdb"` | Én række per ekspederet recept. | `pnr`, `atc` (ATC-kode), `eksd` (ekspeditionsdato) | Ca. 1994 og frem |
-
-### Socioøkonomiske registre
-
-| Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
-|---|---|---|---|---|
-| UDDA — Uddannelsesregistret | `"udda"` | Én række per person per år med den højeste opnåede uddannelse det pågældende år. | `pnr`, `aar`, `hfaudd` (ISCED-uddannelseskode) | Alle år |
-| FAIK — Husstandsindkomst | `"faik"` | Husstandsækvivaleret disponibel indkomst per år. Join til BEF via `familie_id`. | `familie_id`, `aar`, `famaekvivadisp_13` | Alle år |
-| AKM — Beskæftigelsesregistret | `"akm"` | Arbejdsmarkedsklassifikation per år. | `pnr`, `aar`, `socio13` (beskæftigelseskode) | Alle år |
+Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](register_reference.qmd).
 
 ::: {.callout-tip}
-**Projekt-specifikke registre**
-Mange projekter har adgang til registre ud over standardlisten — fx kvalitetsregistre eller færdigberegnede klassifikationsfiler.
-Disse er projekt-specifikke og ikke tilgængelige i alle projekter.
-[Arbejder du på DARTER? Se projektets registeroversigt →](darter/registersti-datastores.qmd)
+**Arbejder du på DARTER?** Se den projektspecifikke registeroversigt med bekræftede stier: [Registersti og datastores →](darter/registersti-datastores.qmd)
 :::
 
 ---
 
-## 7. Pipeline'en i ét diagram {#pipeline-i-ét-diagram}
-
-Diagrammet herunder viser, hvordan jeg har struktureret dette projekt.
-Det er ikke den eneste måde at gøre det på — men det er en måde, der virker til et registerbaseret kohortestudie på DST.
-Du kan bruge det som inspiration og tilpasse antallet af scripts, hvilke udtræk du har brug for, og hvad dit endelige analysedatasæt skal indeholde.
-
-De fem scripts køres i rækkefølge.
-Trin 2 og 3 kan køre parallelt — de læser begge `full_cohort.rds` uafhængigt af hinanden.
-
-```{mermaid}
-flowchart TD
-    S00["00_prepare_dbso.R (én gang)"]
-    S01["01_build_cohorts.R"]
-    S02["02_extract_outcomes_covariates.R"]
-    S03["03_extract_ses.R"]
-    S04["04_data_management_dementia.R"]
-
-    DBSO[("DBSO parquet")]
-    FC[("full_cohort.rds")]
-    EXT[("extract_*.rds (10 filer)")]
-    SES[("ses_data.rds")]
-    OUT[("study1_clean.rds — klar til Cox")]
-
-    S00 --> DBSO
-    DBSO --> S01
-    S01 --> FC
-    FC --> S02
-    FC --> S03
-    S02 --> EXT
-    S03 --> SES
-    EXT --> S04
-    SES --> S04
-    S04 --> OUT
-```
-
-De 10 `extract_*.rds`-filer er: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi` (multimorbiditetsscore), `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls` (negative kontrol-udfald til sensitivitetsanalyse).
-
-**Inden du kører et script:** kontroller, at variablen `path_output` øverst i hvert script
-peger på din egen workspace-mappe.
-
----
-
-## 8. Tilføj et nyt udfald — det rå LPR-mønster
+## 7. Tilføj et nyt udfald — det rå LPR-mønster
 
 Alle udtræk i projektet følger samme to-fase strategi:
 
@@ -372,22 +291,15 @@ Personer uden udfaldet får `NA` — de er i risiko, men hændelsen skete ikke i
 
 Den eneste linje, du skal skifte for et nyt udfald, er `KODER <- c(...)`.
 
-::: {.callout-note}
-`get_lpr_diagnoses(pnr_vector, diagtypes, inpatient_only)` i `02_extract_outcomes_covariates.R` pakker LPR2/LPR3-opdelingen ind og tilføjer psykiatrisk LPR2 automatisk.
-Herunder ses det rå mønster, der ligger under den.
-:::
-
 ```r
-library(dstDataPrep)
 library(dplyr)
-library(lubridate)
+library(arrow)
 
-kohort    <- readRDS("...datasets/full_cohort.rds")
-pnr_liste <- unique(kohort$pnr)
+pnr_liste <- unique(kohort$pnr)   # vektor af pnr'er fra din kohorte
 
 # ── LPR2 somatisk (frem til marts 2019) ──────────────────────────────────
-lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
-lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+lpr_adm  <- open_dataset("sti/til/lpr_adm")  %>% rename_with(tolower)
+lpr_diag <- open_dataset("sti/til/lpr_diag") %>% rename_with(tolower)
 
 lpr2_dx <- lpr_adm %>%
   filter(pnr %in% !!pnr_liste) %>%
@@ -402,8 +314,8 @@ lpr2_dx <- lpr_adm %>%
   mutate(icd3 = substr(c_diag, 2, 4))
 
 # ── LPR3 (marts 2019 og frem) ────────────────────────────────────────────
-lpr3_k <- load_database("lpr_a_kontakt")  %>% rename_with(tolower)
-lpr3_d <- load_database("lpr_a_diagnose") %>% rename_with(tolower)
+lpr3_k <- open_dataset("sti/til/lpr_a_kontakt")  %>% rename_with(tolower)
+lpr3_d <- open_dataset("sti/til/lpr_a_diagnose") %>% rename_with(tolower)
 
 lpr3_dx <- lpr3_k %>%
   filter(pnr %in% !!pnr_liste) %>%
@@ -445,7 +357,11 @@ saveRDS(resultat, "...datasets/extract_[udfald].rds")
 ```
 
 Skift `KODER`, datofilter og outputfilnavn for hvert nyt udfald.
-Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtræk med samme mønster — se `get_lpr_diagnoses()` i `02_extract_outcomes_covariates.R`.
+Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) tilføjes som et tredje udtræk med samme mønster — se [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) for det komplette eksempel.
+
+::: {.callout-tip}
+**Arbejder du på DARTER?** `get_lpr_diagnoses()` i `02_extract_outcomes_covariates.R` pakker hele dette mønster ind inkl. psykiatrisk LPR2. Se [DARTER — pipeline →](darter/index.qmd)
+:::
 
 ---
 
@@ -453,12 +369,12 @@ Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtr�
 
 | Spørgsmål | Svar |
 |---|---|
-| Pakke ikke fundet: `dstDataPrep` | Genbyg: åbn `dstDataPrep.Rproj` i workspaces-mappen → Ctrl+Shift+B |
 | `duckplyr`-fejl | Kør `install.packages("duckplyr")` i starten af sessionen |
-| Kolonne ikke fundet: `pnr` | Du har glemt `rename_with(tolower)` efter `load_database()` |
-| Objektet ser ud som data, men opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |
+| Kolonne ikke fundet: `pnr` | Du har glemt `rename_with(tolower)` |
+| Objektet opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |
 | ICD-filter matcher ingenting | Tjek D-præfikset: brug `substr(c_diag, 2, 4)` inden filtrering |
-| Manglende demenstilfælde før 2019 | Du har glemt at forespørge `t_psyk_adm`/`t_psyk_diag` |
-| Forkert eller manglende dødsdato | Brug `dodsaars` (`d_dodsdto`, ~1970–2001) via `load_database()` — aldrig `dodsaasg`. Post-2001 dødsfald kræver DOD-udtræk (ikke i cleaned-data endnu) |
-| Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(stort_objekt); gc()` efter store udtræk |
-| `!!` giver en fejl | Sørg for, at du er inde i et `dplyr`-verbum (`filter`, `mutate`) på et dovent objekt |
+| Manglende diagnoser før 2019 | Du har glemt at forespørge `t_psyk_adm`/`t_psyk_diag` |
+| Forkert censureringsdato | Brug `dodsaars` (`d_dodsdto`) — aldrig `dodsaasg` |
+| Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(objekt); gc()` efter store udtræk |
+| `!!` giver en fejl | Sørg for at du er inde i et `dplyr`-verbum på et dovent objekt |
+| DARTER: pakke ikke fundet: `dstDataPrep` | Se [DARTER-setup →](darter/index.qmd) |

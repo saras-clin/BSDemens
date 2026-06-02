@@ -44,17 +44,52 @@ install.packages("duckplyr")   # kør inden library() — nulstilles ved logout
 
 ## Pipeline-oversigt
 
-Data flyttes fra råregistre til analyseklar datasæt i fem trin:
-
-```
-00_prepare_dbso.R   →  DBSO parquet (kun én gang)
-01_build_cohorts.R  →  full_cohort.rds
-02_extract_*.R      →  extract_dementia.rds, extract_comorbidities.rds, ...
-03_extract_ses.R    →  ses_data.rds
-04_data_mgmt.R      →  study1_clean.rds  (klar til overlevelsesanalyse)
-```
-
+Data flyttes fra råregistre til analyseklar datasæt i fem trin.
 Trin 2 og 3 kan køres parallelt — de læser begge `full_cohort.rds` uafhængigt.
+
+```{mermaid}
+flowchart TD
+    S00["00_prepare_dbso.R (én gang)"]
+    S01["01_build_cohorts.R"]
+    S02["02_extract_outcomes_covariates.R"]
+    S03["03_extract_ses.R"]
+    S04["04_data_management_dementia.R"]
+
+    DBSO[("DBSO parquet")]
+    FC[("full_cohort.rds")]
+    EXT[("extract_*.rds (10 filer)")]
+    SES[("ses_data.rds")]
+    OUT[("study1_clean.rds — klar til Cox")]
+
+    S00 --> DBSO
+    DBSO --> S01
+    S01 --> FC
+    FC --> S02
+    FC --> S03
+    S02 --> EXT
+    S03 --> SES
+    EXT --> S04
+    SES --> S04
+    S04 --> OUT
+```
+
+De 10 `extract_*.rds`-filer: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi`, `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls`.
+
+**Inden du kører et script:** kontroller at `path_output` øverst i hvert script peger på din workspace-mappe.
+
+### Hjælpefunktionen `get_lpr_diagnoses()`
+
+`02_extract_outcomes_covariates.R` indeholder en hjælpefunktion der pakker det komplette LPR-udtræk ind:
+
+```r
+get_lpr_diagnoses(
+  pnr_vector    = kohort$pnr,      # hvem
+  diagtypes     = c("A", "B"),     # diagnosetype-filter
+  inpatient_only = FALSE           # TRUE = kun indlæggelser
+)
+```
+
+Returnerer én samlet tabel med LPR2 somatisk + LPR2 psykiatrisk + LPR3, D-præfiks fjernet, klar til `filter(icd3 %in% KODER)`.
 
 ---
 

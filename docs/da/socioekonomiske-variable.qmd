@@ -16,7 +16,7 @@ Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
 :::
 
 ::: {.callout-warning}
-Alle tre registre er **årsbaserede**. Hent variablen for **året inden index-dato** (ikke index-årstal), da registerdata for et givet år typisk beskriver status ved årets udgang.
+Alle tre registre er **årsbaserede**. Hent variablen for **året inden index-dato** (din kohortes indgangsdato — fx operationsdatoen eller diagnosedatoen), da registerdata for et givet år typisk beskriver status ved årets udgang.
 :::
 
 ---

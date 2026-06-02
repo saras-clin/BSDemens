@@ -12,6 +12,26 @@ format:
     highlight-style: github
 ---
 
+*Kender du funktionens navn? Brug **Ctrl+F** (Windows) eller **Cmd+F** (Mac) og søg direkte på siden.*
+
+::: {.callout-note}
+## Spring direkte til
+
+| Emne | Sektion |
+|---|---|
+| Røret `%>%` | [Røret](#røret) |
+| Indlæs register / åbn parquet-fil | [Dataindlæsning](#dataindlæsning) |
+| Filtrer rækker | [Rækker: filtrer og deduplikér](#rækker-filtrer-og-deduplikér) |
+| Vælg eller tilføj kolonner | [Kolonner: vælg, tilføj, omdan](#kolonner-vælg-tilføj-omdan) |
+| Omdøb kolonner | [Kolonnenavne](#kolonnenavne) |
+| Grupper, tæl og aggregér | [Grupper og aggregering](#grupper-og-aggregering) |
+| Join to tabeller | [Join — sammensæt tabeller](#join-sammensæt-tabeller) |
+| Pivot (bredt ↔ langt format) | [Omformning](#omformning) |
+| `collect()` og doven evaluering | [Doven forespørgsel](#doven-forespørgsel) |
+| Datoer og tekst | [Tekstoperationer](#tekstoperationer) · [Tal og datoer](#tal-og-datoer) |
+| Fejlsøgning | [Diagnostik og fejlsøgning](#diagnostik-og-fejlsøgning) |
+:::
+
 ::: {.callout-tip}
 ## De 7 vigtigste funktioner — start her
 
