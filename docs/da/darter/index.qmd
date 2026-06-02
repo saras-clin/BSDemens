@@ -42,82 +42,76 @@ install.packages("duckplyr")   # kør inden library() — nulstilles ved logout
 
 ---
 
-## Pipeline-oversigt
-
-Data flyttes fra råregistre til analyseklar datasæt i fem trin.
-Trin 2 og 3 kan køres parallelt — de læser begge `full_cohort.rds` uafhængigt.
-
-```{mermaid}
-flowchart TD
-    S00["00_prepare_dbso.R (én gang)"]
-    S01["01_build_cohorts.R"]
-    S02["02_extract_outcomes_covariates.R"]
-    S03["03_extract_ses.R"]
-    S04["04_data_management_dementia.R"]
-
-    DBSO[("DBSO parquet")]
-    FC[("full_cohort.rds")]
-    EXT[("extract_*.rds (10 filer)")]
-    SES[("ses_data.rds")]
-    OUT[("study1_clean.rds — klar til Cox")]
-
-    S00 --> DBSO
-    DBSO --> S01
-    S01 --> FC
-    FC --> S02
-    FC --> S03
-    S02 --> EXT
-    S03 --> SES
-    EXT --> S04
-    SES --> S04
-    S04 --> OUT
-```
-
-De 10 `extract_*.rds`-filer: `extract_demographics`, `extract_dementia`, `extract_comorbidities`, `extract_nmi`, `extract_medications`, `extract_diabetes`, `extract_weights`, `extract_insulin`, `extract_hospitals`, `extract_negative_controls`.
-
 **Inden du kører et script:** kontroller at `path_output` øverst i hvert script peger på din workspace-mappe.
 
 ### Hjælpefunktionen `get_lpr_diagnoses()`
 
-`02_extract_outcomes_covariates.R` indeholder en hjælpefunktion der pakker det komplette LPR-udtræk ind:
+Pakker det komplette LPR-udtræk ind: LPR2 somatisk + LPR2 psykiatrisk + LPR3 kombineret, D-præfiks fjernet.
+
+**Parametre:**
+
+| Parameter | Type | Beskrivelse |
+|---|---|---|
+| `pnr_vector` | character vector | Kohortens pnr'er |
+| `diagtypes` | character vector | Diagnosetyper: `c("A","B")` til udfald, `c("A","B","G")` til komorbiditet |
+| `inpatient_only` | logical | `FALSE` = alle kontakter; `TRUE` = kun indlæggelser |
+
+**Eksempel — udtræk alle diagnoser for kohorten:**
 
 ```r
-get_lpr_diagnoses(
-  pnr_vector    = kohort$pnr,      # hvem
-  diagtypes     = c("A", "B"),     # diagnosetype-filter
-  inpatient_only = FALSE           # TRUE = kun indlæggelser
+library(dstDataPrep)
+library(dplyr)
+
+kohort    <- readRDS("datasets/full_cohort.rds")   # bygget af 01_build_cohorts.R
+pnr_liste <- unique(kohort$pnr)                    # vektor af alle kohortens pnr'er
+
+# Hent alle diagnoser — ét kald dækker LPR2 + LPR2 psyk + LPR3
+alle_dx <- get_lpr_diagnoses(
+  pnr_vector    = pnr_liste,
+  diagtypes     = c("A", "B"),   # aktions- og bidiagnoser
+  inpatient_only = FALSE          # ambulante kontakter inkluderet
 )
+# Returnerer: pnr | date_contact | c_diag | icd3 (D-præfiks fjernet)
 ```
 
-Returnerer én samlet tabel med LPR2 somatisk + LPR2 psykiatrisk + LPR3, D-præfiks fjernet, klar til `filter(icd3 %in% KODER)`.
+**Eksempel — udtræk specifikt udfald (demens):**
 
----
+```r
+# Skift kun KODER for hvert nyt udfald
+KODER <- c("F00", "F01", "F02", "F03", "G30", "G31")   # demens
 
-## Studieoversigt
+demens <- alle_dx %>%
+  filter(icd3 %in% KODER) %>%
+  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%
+  filter(date_contact > index_date) %>%   # kun post-operativt; brug < for baseline
+  group_by(pnr) %>%
+  arrange(date_contact) %>%
+  slice(1) %>%                             # første forekomst per person
+  ungroup() %>%
+  select(pnr, demens_dato = date_contact)
 
-**Studie 1:** Bariatrisk kirurgi og risiko for demens
-- Eksponering: Bariatrisk kirurgi (RYGB eller sleeve gastrektomi), 2010–2024
-- Udfald: Incident demens (ICD-10: F00–F03, G30–G31)
-- Komparatorer: GP (1:25) og fedme-kohort (1:5), matchet på køn og fødselsår ±1
+# Join til kohort — NA = ingen demens i studieperioden
+resultat <- kohort %>%
+  select(pnr) %>%
+  left_join(demens, by = "pnr")
 
-**Studie 2:** Bariatrisk kirurgi ved type 1-diabetes — glykæmiske og hospitalsmæssige udfald
-- Population: T1D-patienter opereret bariatrisk
-
----
-
-## Mappestruktur
-
+saveRDS(resultat, "datasets/extract_dementia.rds")
 ```
-R/
-  00_prepare_dbso.R                    # Engangs: SAS → parquet for DBSO
-  01_build_cohorts.R                   # BS-kohort + GP + fedme-komparatorer
-  02_extract_outcomes_covariates.R     # LPR/LMDB/DBSO-udtræk
-  03_extract_ses.R                     # Socioøkonomiske variable
-  04_data_management_dementia.R        # Merge, eksklusioner, analysedatasæt
-  variables_dictionary.txt             # Bekræftede registerkolonner
-docs/
-  da/                                  # Dansk vejledning (denne side)
-datasets/                              # gitignored: .rds-outputfiler
+
+**Eksempel — komorbiditet ved baseline (NMI-input):**
+
+```r
+# For baseline-komorbiditet: brug G-diagnoser og filtrer INDEN index-dato
+alle_dx_G <- get_lpr_diagnoses(
+  pnr_vector    = pnr_liste,
+  diagtypes     = c("A", "B", "G"),   # G inkluderet til baggrundstilstande
+  inpatient_only = FALSE
+)
+
+baseline_dx <- alle_dx_G %>%
+  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%
+  filter(date_contact < index_date,                          # kun historik
+         date_contact >= index_date - 365.25 * 10)           # 10-års lookback
 ```
 
 ---
