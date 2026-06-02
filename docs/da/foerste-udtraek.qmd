@@ -109,7 +109,7 @@ Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for en detaljeret forkla
 
 ---
 
-## Trin 3 — Berig data
+## Trin 3 — Byg analysevariable
 
 Tilføj variabler med `mutate()` *efter* `collect()` — nu er du i R og kan bruge alle funktioner.
 

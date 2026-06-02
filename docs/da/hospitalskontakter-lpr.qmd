@@ -206,7 +206,86 @@ alle_dx <- bind_rows(lpr2_dx, lpr2_psyk_dx, lpr3_dx)
 
 ---
 
+<details>
+<summary>Prøv det selv — kørbart eksempel med syntetiske data</summary>
+
+::: {.callout-important}
+Dette eksempel kræver **RStudio installeret lokalt på din computer** — ikke DST-serveren.
+Det syntetiske datasæt (`fakeregs`) er ikke tilgængeligt på DST.
+Download R: [cran.r-project.org](https://cran.r-project.org/) · Download RStudio: [posit.co/download/rstudio-desktop](https://posit.co/download/rstudio-desktop/)
+:::
+
+Eksemplet trækker CVD-diagnoser (iskæmisk hjertesygdom, ICD-10 I20–I25) fra LPR2 og LPR3
+kombineret — det komplette mønster fra teoriafsnittet ovenfor, men kørbart.
+
+Tilpasset fra Anders Aasted Isaksens
+[`dev/common_tasks_datatable.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/dev/common_tasks_datatable.qmd)
+i [`fakeregs`](https://github.com/steno-aarhus/fakeregs) (MIT-licens, Steno Diabetes Center Aarhus).
+Omskrevet til dplyr + arrow og tilpasset denne vejlednings mønster.
+
+```r
+# Installer fakeregs første gang:
+# install.packages("pak"); pak::pak("steno-aarhus/fakeregs")
+
+library(fakeregs)   # syntetiske DST-registerdata — reg_sti() fra Anders Aasted Isaksen (SDCA)
+library(dplyr)
+library(arrow)
+
+# De ICD-koder vi søger — skift disse til dit eget udfald
+CVD_KODER <- c("I20", "I21", "I22", "I23", "I24", "I25")   # iskæmisk hjertesygdom
+
+# ── LPR2 somatisk (frem til marts 2019) ──────────────────────────────────
+lpr_adm  <- open_dataset(reg_sti("lpr_adm"))  %>% rename_with(tolower)
+lpr_diag <- open_dataset(reg_sti("lpr_diag")) %>% rename_with(tolower)
+
+lpr2_cvd <- lpr_adm %>%
+  select(pnr, recnum, date_contact = d_inddto) %>%           # vælg kun nødvendige kolonner
+  inner_join(
+    lpr_diag %>%
+      filter(c_diagtype %in% c("A", "B"),                    # kun aktions- og bidiagnoser
+             substr(c_diag, 2, 4) %in% CVD_KODER) %>%        # strip D-præfiks inden sammenligning
+      select(recnum, c_diag),
+    by = "recnum"                                             # join-nøgle i LPR2
+  ) %>%
+  collect() %>%                                              # HER hentes data ind i R
+  mutate(icd3 = substr(c_diag, 2, 4))                        # gem renset kode som ny kolonne
+
+# ── LPR3 (marts 2019 og frem) ─────────────────────────────────────────────
+lpr3_k <- open_dataset(reg_sti("lpr_a_kontakt"))  %>% rename_with(tolower)
+lpr3_d <- open_dataset(reg_sti("lpr_a_diagnose")) %>% rename_with(tolower)
+
+lpr3_cvd <- lpr3_k %>%
+  select(pnr, dw_ek_kontakt, date_contact = kont_starttidspunkt) %>%
+  inner_join(
+    lpr3_d %>%
+      filter(diag_kode_type %in% c("A", "B"),
+             is.na(senere_afkraeftet) | senere_afkraeftet != "Ja",  # ekskluder tilbagekaldte
+             substr(diag_kode, 2, 4) %in% CVD_KODER) %>%
+      select(dw_ek_kontakt, c_diag = diag_kode),
+    by = "dw_ek_kontakt"                                     # join-nøgle i LPR3
+  ) %>%
+  collect() %>%
+  mutate(
+    date_contact = as.Date(date_contact),                    # datetime → dato
+    icd3         = substr(c_diag, 2, 4)
+  )
+
+# ── Kombiner og gem ────────────────────────────────────────────────────────
+alle_cvd <- bind_rows(lpr2_cvd, lpr3_cvd)                   # sæt LPR2 og LPR3 sammen
+
+nrow(alle_cvd)                                               # tjek: antal diagnoserækker
+length(unique(alle_cvd$pnr))                                 # tjek: antal unikke personer
+table(alle_cvd$icd3)                                         # fordeling på koder
+
+saveRDS(alle_cvd, "datasets/extract_cvd.rds")                # gem — skift sti til din egen mappe
+```
+
+</details>
+
+---
+
 ## Se også
 
 - [Registerreference](register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
 - [Faldgruber](dst_faldgruber.qmd) — kendte problemer med LPR på DST
+- [Første udtræk](foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS
