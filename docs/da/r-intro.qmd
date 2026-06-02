@@ -120,6 +120,13 @@ De pakker du vil bruge mest:
 | `arrow` | Indlæsning af parquet-filer |
 | `duckplyr` | Hurtig forespørgsel på store datasæt via DuckDB |
 
+::: {.callout-tip}
+**Arbejder du på DARTER / projekt 708421?**
+Projektet bruger pakken `dstDataPrep`, som giver adgang til `load_database()` og alle registerdata.
+Den er ikke på CRAN og skal bygges manuelt inden du kan bruge den.
+[Se trin-for-trin vejledning → DARTER oversigt og pipeline](darter/index.qmd)
+:::
+
 ::: {.callout-important}
 **Særligt for DST: pakker er forældede og skal opdateres**
 
