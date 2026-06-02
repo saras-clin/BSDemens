@@ -113,6 +113,108 @@ Ellers: `install.packages("heaven")`.
 
 ---
 
+**`EpiForsk` — registerdata-hjælpefunktioner fra SSI**
+Kode-delingspakke fra Statens Serum Institut med dansk-kalibrerede funktioner til LPR-data. Særligt nyttigt: `flatten_date_intervals()` der smelter overlappende hospitalskontakter til sammenhængende perioder — nødvendigt inden comorbiditetslookback. Dansk Charlson-score inkluderet. Også på CRAN.
+[github.com/Laksafoss/EpiForsk](https://github.com/Laksafoss/EpiForsk)
+
+<details>
+<summary>Vigtigste funktioner og hvornår du bruger dem</summary>
+
+**`flatten_date_intervals()` — overlappende kontakter**
+
+En person kan have to indlæggelser der overlapper i LPR (fx en overflytning). Inden du beregner comorbiditetslookback, skal overlappende perioder smeltes:
+
+```r
+library(EpiForsk)
+
+# LPR-kontakter: pnr, start_dato, slut_dato
+lpr_flat <- flatten_date_intervals(
+  data       = lpr_kontakter,
+  id         = "pnr",
+  start_date = "d_inddto",
+  end_date   = "d_uddto"
+)
+# Overlappende perioder er nu smeltet til én sammenhængende periode
+```
+
+---
+
+**`charlson_score()` — dansk-kalibreret comorbiditetsscore**
+
+Beregner Charlson-score fra ICD-10 diagnoser inkl. D-præfiks — kalibreret til dansk LPR-data:
+
+```r
+charlson <- charlson_score(
+  data      = lpr_diag_data,
+  id        = "pnr",
+  icd_codes = "c_diag"    # kolonnen med ICD-koder (med D-præfiks)
+)
+# Returnerer: pnr | charlson_score
+```
+
+::: {.callout-note}
+**Er `EpiForsk` på DST-serveren?** Sandsynligvis ja (CRAN-pakke fra SSI, bredt brugt).
+Kør `find.package("EpiForsk")` for at tjekke. Ellers: `install.packages("EpiForsk")`.
+:::
+
+</details>
+
+---
+
+**`icdR` — slå danske ICD-10 og SKS-koder op programmatisk**
+R-interface til det danske SKS-browser. Returnerer ICD-10-koder, NOMESCO-procedurekoder, dansk diagnosetekst og gyldighedsperiode siden 1995. Bruges *inden* DST-login til at bygge og verificere kodelister.
+[github.com/evpatora/icdR](https://github.com/evpatora/icdR)
+
+<details>
+<summary>Hvad icdR løser — og hvornår du bruger det</summary>
+
+**Problem 1: Du vil finde alle koder for en diagnose**
+
+I stedet for at browse SKS-hjemmesiden manuelt kan du søge i R:
+
+```r
+library(icdR)
+
+# Søg på dansk diagnosetekst
+atrieflimren <- search_sks("atrieflimren")
+#   code    | description               | valid_from | valid_to
+#   DI48    | Atrieflimren og -flagren  | 1994-01-01 | NA
+#   DI480   | Paroxysmal atrieflimren   | ...
+
+# Hent alle underkoder til en kode
+alle_I48 <- get_children("DI48")
+```
+
+---
+
+**Problem 2: Var min kode gyldig i studieperioden?**
+
+ICD-koder ændres over tid — en kode kan være indført, ændret eller udgået:
+
+```r
+# Tjek gyldighedsperiode
+kode_info <- get_sks_code("DI484")
+# valid_from: 2019-01-01 → koden fandtes ikke i studier der slutter før 2019
+```
+
+---
+
+**Problem 3: Byg en procedurekode-liste til lpr_sksopr**
+
+```r
+# Søg NOMESCO-procedurekoder (bruges i lpr_sksopr og procedurer_kirurgi)
+bypass_koder <- search_sks("bypass", type = "procedure")
+```
+
+::: {.callout-warning}
+**`icdR` kræver internetadgang** og bruges lokalt på din computer *inden* DST-login.
+Brug den til at forberede og verificere dine kodelister, og gem dem som en vektor i dit script.
+:::
+
+</details>
+
+---
+
 ### Syntetiske data og testmiljø
 
 **`fakeregs` — syntetiske danske registerdata**
