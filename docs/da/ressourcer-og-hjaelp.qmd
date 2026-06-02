@@ -81,17 +81,86 @@ Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
 
 ## R-pakker specifikke til registerbaseret forskning
 
-To pakker der løser problemer specifikke for DST-miljøet:
+Disse pakker løser problemer der er særlige for DST-miljøet eller dansk registerdata.
+
+---
 
 **`osdc` — Open Source Diabetes Classifier**
-Klassificerer T1D og T2D fra LPR og LMDB med en valideret algoritme (PPV 87–94%). Også på CRAN.
-[github.com/steno-aarhus/osdc](https://github.com/steno-aarhus/osdc)
+Klassificerer alle personer som T1D, T2D eller ingen diabetes ud fra LPR og LMDB med en valideret algoritme (PPV 87–94%). Også på CRAN.
+[github.com/steno-aarhus/osdc](https://github.com/steno-aarhus/osdc) · [Fuld dokumentation →](osdc.qmd)
 
-**`pubmedciteR` — referencer uden internet**
-DST-serveren har ingen internetadgang. `pubmedciteR` lader dig hente og formatere PubMed-referencer *fra* en lukket server — læs DOI-listen ind, og pakken formaterer referencerne til Word eller tekst.
-[github.com/Aastedet/pubmedciteR](https://github.com/Aastedet/pubmedciteR)
+<details>
+<summary>Installation og hurtig brug</summary>
 
-Se den fulde liste over open source-pakker relevante for registerbaseret forskning under [OSS-listen i TODO.txt](../doc/TODO.txt) — gennemgås løbende for hvad der inkluderes i vejledningen.
+```r
+install.packages("osdc")   # fra CRAN
+library(osdc)
+
+# Klassificér din population
+# Input: lpr_adm, lpr_diag, lmdb — alle som data frames med rename_with(tolower)
+dm_status <- classify_diabetes(
+  lpr_diag = lpr_diag_data,
+  lmdb     = lmdb_data
+)
+# Output: pnr | diabetes_type | date_of_diagnosis
+```
+
+Se [OSDC-siden](osdc.qmd) for komplet vejledning og parametre.
+</details>
+
+---
+
+**`fakeregs` — syntetiske danske registerdata**
+Genererer opdigtede, men strukturelt realistiske data for ni DST-registre (BEF, LPR2, LPR3, LMDB, UDDA, FAIK, AKM m.fl.). Bruges til at øve sig og teste kode *uden* at have adgang til DST.
+[github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs) — af Anders Aasted Isaksen, Steno Diabetes Center Aarhus (MIT-licens)
+
+<details>
+<summary>Installation og hurtig brug</summary>
+
+```r
+# Installer fra GitHub (ikke på CRAN)
+install.packages("pak")
+pak::pak("steno-aarhus/fakeregs")
+
+library(fakeregs)
+library(arrow)
+library(dplyr)
+
+# Åbn et syntetisk register — samme mønster som på DST
+bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
+bef %>% filter(year == 2015) %>% collect() %>% head()
+```
+
+Se [Første udtræk](foerste-udtraek.qmd) for et komplet gennemgående eksempel med fakeregs.
+</details>
+
+---
+
+**`pubmedciteR` — referencer fra lukkede servere**
+DST-serveren har ingen internetadgang. `pubmedciteR` lader dig hente og formatere PubMed-referencer direkte fra en lukket server — giv den en liste af DOI'er, og den returnerer formaterede referencer til Word eller tekst.
+[github.com/Aastedet/pubmedciteR](https://github.com/Aastedet/pubmedciteR) — af Anders Aasted Isaksen, Steno Diabetes Center Aarhus
+
+<details>
+<summary>Installation og hurtig brug</summary>
+
+```r
+# Installer fra GitHub
+pak::pak("Aastedet/pubmedciteR")
+
+library(pubmedciteR)
+
+# Definer dine DOI'er
+dois <- c("10.2147/CLEP.S407019", "10.2147/CLEP.S353398")
+
+# Hent og formatér (kræver internet — kør INDEN du logger på DST)
+referencer <- fetch_references(dois)
+write_references(referencer, "mine_referencer.docx")
+```
+
+::: {.callout-tip}
+Kør `fetch_references()` og gem `.docx`-filen på din computer **inden** du logger på DST-serveren, eller send filen til serveren via DST's filoverførsel.
+:::
+</details>
 
 ---
 
