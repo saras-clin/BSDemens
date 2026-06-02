@@ -161,7 +161,7 @@ Specialtegn som `$`, `{`, `}`, `\` og `|` virker ikke korrekt på Mac i Remote D
 | **Ctrl+Enter** | Kør markeret linje/kode |
 | **Ctrl+S** | Gem filen |
 | **Alt + –** | Skriv tildelingsoperatoren `<-` (Mac: **Option + –**) |
-| **Ctrl+Shift+M** | Skriv pipe-tegnet `\|>` |
+| **Ctrl+Shift+M** | Skriv pipe-tegnet `\|>` — [`%>%` virker også, men kræver en pakke](guide_til_funktioner.qmd#røret) |
 | **Ctrl+Shift+R** | Indsæt script-sektion (overskrift i kode) |
 | **Ctrl+Shift+A** | Formater/indenter kode automatisk |
 | **Ctrl+Z / Ctrl+Shift+Z** | Fortryd / Gentag |
