@@ -105,17 +105,21 @@ Det er præcis hvad `open_dataset()` gør: det fortæller computeren *hvad* du v
 Resten af dine kommandoer (`filter`, `select`) tilføjer yderligere instruktioner, inden du til sidst siger "send dem nu" — det er `collect()`.
 
 ```r
-bef <- open_dataset("sti/til/bef") %>% rename_with(tolower)
-# bef er nu en doven forbindelse — ingen data i hukommelsen endnu
+# På DST-serveren — erstat med den faktiske sti til registret:
+bef <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/bef/") %>%
+  rename_with(tolower)
+
+# Lokalt med syntetiske data (fakeregs — se Første udtræk):
+bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
 ```
 
 Bruges til alle registre der er gemt som parquet-filer på DST-serveren:
 `bef`, `lpr_adm`, `lpr_diag`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`,
 `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose` med flere.
+De bekræftede stier til dit projekt finder du i [Registerreference](register_reference.qmd).
 
 ::: {.callout-tip}
-**DARTER-projektet:** `load_database("navn")` fra `dstDataPrep` er en genvej der finder stien automatisk.
-Den gør det samme som `open_dataset("sti/til/register")` — du behøver ikke kende den fulde sti.
+**DARTER-projektet:** `load_database("navn")` fra `dstDataPrep` er en genvej der finder stien automatisk — du behøver ikke kende den fulde sti.
 Se [DARTER — setup →](darter/index.qmd) for installation af `dstDataPrep`.
 :::
 
