@@ -8,8 +8,15 @@ Denne side viser det komplette forløb fra et råt register til et gemt datasæt
 Du vil se det mønster, der går igen i næsten alle registerudtræk.
 
 ::: {.callout-note}
-**Eksemplerne bruger syntetiske data fra pakken `fakeregs`** (MIT-licens, lavet af Anders Aasted Isaksen, Steno Diabetes Center Aarhus) — et træningsdatasæt der afspejler de rigtige DST-registres struktur og kolonnenavne, men udelukkende indeholder opdigtede personer.
-På DST-serveren peger du `reg_sti("lmdb")` til den rigtige sti i stedet.
+**Eksemplerne bruger syntetiske data fra pakken [`fakeregs`](https://github.com/steno-aarhus/fakeregs)** (MIT-licens, Anders Aasted Isaksen, Steno Diabetes Center Aarhus) — et træningsdatasæt der afspejler de rigtige DST-registres struktur og kolonnenavne, men udelukkende indeholder opdigtede personer.
+Funktionen `reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
+:::
+
+::: {.callout-tip}
+**Arbejder du på DARTER?**
+Erstat `open_dataset(reg_sti("lmdb"))` med `load_database("lmdb")` efter at have installeret `dstDataPrep`.
+Alle øvrige linjer på siden er identiske.
+Se [DARTER — oversigt og pipeline](darter/index.qmd) for setup-vejledning.
 :::
 
 ---
@@ -187,3 +194,13 @@ mit_reg <- open_dataset(parq_sti) |> rename_with(tolower)
 - [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
 - [Joins og pivots](joins-og-pivots.qmd) — kobl to udtræk sammen
 - [Funktioner — oversigt](guide_til_funktioner.qmd) — alle funktioner brugt på denne side
+
+---
+
+## Kilde og tilpasning
+
+Trin 1 (kohorte-opbygning fra BEF) er tilpasset fra Anders Aasted Isaksens vignette
+[`common_tasks_dplyr.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/vignettes/common_tasks_dplyr.qmd)
+i `fakeregs`-pakken (MIT-licens, Steno Diabetes Center Aarhus).
+Funktionen `reg_sti()` er uændret fra `fakeregs`.
+Trin 2–4, tjeklisten og SAS→Parquet-sektionen er skrevet til denne vejledning.
