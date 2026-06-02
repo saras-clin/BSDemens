@@ -26,6 +26,7 @@ Alle tre registre er **årsbaserede**. Hent variablen for **året inden index-da
 ```r
 library(dstDataPrep)
 library(dplyr)
+library(lubridate)   # year() til at trække årstal ud af datoer
 
 akm <- load_database("akm") %>% rename_with(tolower)
 

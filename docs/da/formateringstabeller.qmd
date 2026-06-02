@@ -4,6 +4,11 @@ subtitle: "Oversæt koder til tekst med DST's SAS-formateringsfiler"
 date: last-modified
 ---
 
+::: {.callout-note}
+**Forudsætning:** Denne side bruger `left_join()` til at koble formateringstabeller på dine data.
+Kender du ikke joins endnu, læs [Joins og pivots](joins-og-pivots.qmd) først.
+:::
+
 Mange variable i DST-registre er gemt som koder — kommunenumre, uddannelseskoder, beskæftigelseskoder.
 For at give dem meningsfulde labels bruger du DST's **formateringstabeller**: SAS-filer på serveren der oversætter koder til tekst.
 

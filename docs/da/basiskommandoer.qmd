@@ -7,6 +7,8 @@ date: last-modified
 Inden du begynder at filtrere og analysere, skal du forstå hvad du har.
 Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine data.
 
+`$`-tegnet bruges overalt til at tilgå én kolonne i en tabel: `data$koen` betyder "kolonnen `koen` i tabellen `data`".
+
 ---
 
 ## Se hvad du har

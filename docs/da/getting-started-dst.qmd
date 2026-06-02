@@ -154,7 +154,9 @@ så resten af din kode kan bruge `pnr` overalt uden at bekymre sig om bogstavsst
 
 **Kald altid `rename_with(tolower)` på samme linje som `load_database()`.**
 
-### Hvorfor `!!` (bang-bang) optræder i hvert filter 
+### Hvorfor `!!` (bang-bang) optræder i hvert filter
+
+Forespørgsler via `open_dataset()` udføres af **DuckDB** — et hurtigt databasesystem der kører *adskilt* fra R. Det betyder at DuckDB ikke automatisk kender dine lokale R-variabler.
 
 ```r
 filter(pnr %in% !!min_pnr_vektor)
