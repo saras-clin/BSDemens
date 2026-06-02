@@ -45,3 +45,25 @@ details > summary:hover {
 .panel-tabset .nav-link {
   font-size: 0.9rem;
 }
+
+/* Back-to-top knap */
+#quarto-back-to-top {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 999;
+  background-color: #1558b0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+#quarto-back-to-top:hover {
+  opacity: 1;
+  background-color: #0d3d7a;
+}

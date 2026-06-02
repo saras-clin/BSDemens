@@ -80,8 +80,6 @@ website:
       contents:
         - en/index.qmd
 
-  back-to-top-btn: true
-
   page-footer:
     center: "Steno Diabetes Center Aarhus"
 
