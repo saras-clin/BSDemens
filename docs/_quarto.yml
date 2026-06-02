@@ -41,6 +41,7 @@ website:
           contents:
             - da/getting-started-dst.qmd
             - da/parquet-arrow-duckdb.qmd
+            - da/foerste-udtraek.qmd
 
         - section: "Kode og data"
           contents:

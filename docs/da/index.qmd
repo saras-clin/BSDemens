@@ -61,6 +61,7 @@ Særlige setup-trin og projekspecifik vejledning.
 
 - [Kom i gang på DST](getting-started-dst.qmd) — de første 10 minutter, det universelle mønster
 - [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) — doven evaluering, collect(), RAM
+- [Første udtræk](foerste-udtraek.qmd) — trin-for-trin fra register til gemt datasæt
 
 **Kode og data**
 

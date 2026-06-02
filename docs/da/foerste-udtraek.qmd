@@ -1,0 +1,189 @@
+---
+title: "Første udtræk"
+subtitle: "Fra register til analyseklar data — trin for trin"
+date: last-modified
+---
+
+Denne side viser det komplette forløb fra et råt register til et gemt datasæt klar til analyse.
+Du vil se det mønster, der går igen i næsten alle registerudtræk.
+
+::: {.callout-note}
+**Eksemplerne bruger syntetiske data fra pakken `fakeregs`** (MIT-licens, lavet af Anders Aasted Isaksen, Steno Diabetes Center Aarhus) — et træningsdatasæt der afspejler de rigtige DST-registres struktur og kolonnenavne, men udelukkende indeholder opdigtede personer.
+På DST-serveren peger du `reg_sti("lmdb")` til den rigtige sti i stedet.
+:::
+
+---
+
+## Forberedelse: installer fakeregs
+
+`fakeregs` er ikke på CRAN — installer direkte fra GitHub:
+
+```r
+install.packages("pak")             # kun første gang
+pak::pak("steno-aarhus/fakeregs")   # installer fakeregs
+```
+
+```r
+library(fakeregs)    # syntetiske DST-registerdata
+library(dplyr)       # filter, select, mutate, collect
+library(arrow)       # open_dataset — doven forbindelse til parquet
+```
+
+---
+
+## Trin 1 — Definer din kohort
+
+Ethvert udtræk starter med en liste af pnr'er — de personer du ønsker data for.
+I praksis kommer den fra dit kohorte-script. Her bygger vi en lille øvelseskohort
+direkte fra BEF-registret.
+
+```r
+# Åbn BEF — doven forbindelse, ingen data i R endnu
+bef <- open_dataset(reg_sti("bef")) |>
+  rename_with(tolower)
+
+# Hent 200 tilfældige pnr'er som din kohort
+kohort_pnrs <- bef |>
+  filter(year == 2015) |>                # tag ét snapshotår
+  select(pnr) |>
+  collect() |>                           # HER hentes data ind i R
+  slice_sample(n = 200) |>
+  pull(pnr)
+
+length(kohort_pnrs)                      # tjek: bør returnere 200
+```
+
+::: {.callout-tip}
+I et rigtigt projekt er `kohort_pnrs` en vektor du har bygget i et tidligere script
+og genlæser med `readRDS("datasets/full_cohort.rds") |> pull(pnr)`.
+:::
+
+---
+
+## Trin 2 — Udtræk data fra et register
+
+Nu trækker vi receptdata fra LMDB for vores kohort.
+Mønstret er altid det samme: **åbn → filtrer → vælg kolonner → collect**.
+
+```r
+# Åbn LMDB — doven forbindelse
+lmdb <- open_dataset(reg_sti("lmdb")) |>
+  rename_with(tolower)
+
+# Udtræk: filter FØR collect — ellers crasher sessionen
+recepter <- lmdb |>
+  filter(pnr %in% !!kohort_pnrs) |>         # kun vores kohort
+  select(pnr, atc, eksd) |>                  # kun de kolonner vi bruger
+  collect()                                  # HER flyttes data ind i R
+
+nrow(recepter)                               # hvor mange receptrækker?
+head(recepter)                               # de første seks rækker
+```
+
+**Hvad skete der?**
+
+- `open_dataset()` åbnede en doven forbindelse — ingen data i R endnu
+- `filter()` og `select()` sendte instruktioner til Arrow/DuckDB — stadig ingen data i R
+- `collect()` udførte forespørgslen og hentede kun de nødvendige rækker ind i R
+
+Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for en detaljeret forklaring af doven evaluering.
+
+---
+
+## Trin 3 — Berig data
+
+Tilføj variabler med `mutate()` *efter* `collect()` — nu er du i R og kan bruge alle funktioner.
+
+```r
+recepter <- recepter |>
+  mutate(
+    aar          = as.integer(format(as.Date(eksd), "%Y")),   # udtrækker år fra dato
+    atc3         = substr(atc, 1, 3),                          # 3-tegns ATC-gruppe
+    er_metformin = atc3 == "A10"                               # TRUE for metformin-gruppen
+  )
+```
+
+---
+
+## Trin 4 — Gem og genindlæs
+
+Gem med `saveRDS()` så næste script kan genindlæse det uden at køre hele udtrækkene igen.
+
+```r
+saveRDS(recepter, "datasets/extract_recepter.rds")   # gem til disk
+
+# Genindlæs i næste script:
+recepter <- readRDS("datasets/extract_recepter.rds")
+```
+
+::: {.callout-warning}
+**`datasets/`-mappen er gitignored** — resultater gemmes lokalt på DST-serveren
+og hjemsends separat via outputkontrol. De må ikke pushes til GitHub.
+:::
+
+---
+
+## Tjekliste: hvad du altid bør gøre efter et udtræk
+
+```r
+nrow(recepter)                      # antal rækker — som forventet?
+length(unique(recepter$pnr))        # hvor mange unikke personer?
+colSums(is.na(recepter))            # manglende værdier per kolonne
+table(recepter$aar)                 # fordeling over år — huller?
+class(recepter$eksd)                # er datokolonnen Date? (ikke character)
+```
+
+---
+
+## SAS → Parquet: konvertér projektspecifikke filer én gang
+
+Mange projekter modtager supplerende SAS-filer (`.sas7bdat`) fra registerholdere —
+fx et kvalitetsregister der ikke allerede ligger i `cleaned-data/` som parquet.
+Det betaler sig at konvertere dem til Parquet én gang og derefter bruge dem
+som alle andre registre.
+
+**Hvorfor Parquet er det værd:**
+
+| | SAS (.sas7bdat) | Parquet |
+|---|---|---|
+| Læsetid (1M rækker) | ~30–120 sek | ~1–3 sek |
+| Diskplads | Stor | 3–10× mindre |
+| Kræver pakke | `haven` | `arrow` |
+| Doven evaluering | Nej — alt ind i RAM | Ja — filter FØR collect |
+
+**Konverteringen gøres én gang:**
+
+```r
+library(haven)    # læs SAS-fil
+library(arrow)    # skriv Parquet
+
+sas_fil  <- "E:/workdata/[projektnummer]/raw/mit_register.sas7bdat"
+parq_sti <- "E:/workdata/[projektnummer]/cleaned-data/parquet-external/mit_register/"
+
+# 1. Læs SAS-filen ind i R
+df <- read_sas(sas_fil)            # hele filen ind i RAM — kun gjort denne ene gang
+
+# 2. Standardisér kolonnenavne
+df <- df |> rename_with(tolower)
+
+# 3. Skriv som Parquet
+dir.create(parq_sti, recursive = TRUE, showWarnings = FALSE)
+write_parquet(df, file.path(parq_sti, "mit_register.parquet"))
+
+# 4. Verificér
+open_dataset(parq_sti) |> glimpse()
+```
+
+Herefter kan du bruge registret dovent med `open_dataset()` ligesom alle andre:
+
+```r
+mit_reg <- open_dataset(parq_sti) |> rename_with(tolower)
+```
+
+---
+
+## Næste skridt
+
+- [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
+- [Joins og pivots](joins-og-pivots.qmd) — kobl to udtræk sammen
+- [Funktioner — oversigt](guide_til_funktioner.qmd) — alle funktioner brugt på denne side
