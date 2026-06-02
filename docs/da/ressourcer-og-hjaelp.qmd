@@ -75,7 +75,7 @@ Inde på DST-serveren: den stjerne-genvej på Windows-skrivebordet åbner DST's 
 Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
 
 **Steno GitHub: Quick guide til GitHub**
-[SDCA Research — GitHub start](https://sdca-research.dk/quick-guide-to-using-github)
+[SDCA Research — GitHub start](https://steno-aarhus.github.io/research/CONTRIBUTING.html)
 
 ---
 
