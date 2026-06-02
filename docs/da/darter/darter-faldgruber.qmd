@@ -28,10 +28,17 @@ deaths <- dod %>%
 
 ---
 
-## 2. `procedurer_kirurgi` — join via `dw_ek_forloeb`, ikke `dw_ek_kontakt`
+## 2. Kirurgi og procedurer
 
-`dw_ek_kontakt` er **NA for alle rækker** i `procedurer_kirurgi` på DST (bekræftet 2026-06-02).
-Brug `dw_ek_forloeb` til at hente `pnr` fra `lpr_a_kontakt`.
+Procedurekoder er opdelt i to registre efter periode:
+
+- **`lpr_sksopr`** (parquet-registers) — procedurer og kirurgi 1996–2018, joines til `lpr_adm` via `recnum`
+- **`procedurer_kirurgi`** (parquet-external) — 2018 og frem, joines til `lpr_a_kontakt` via `dw_ek_forloeb`
+
+::: {.callout-warning}
+**`dw_ek_kontakt` er NA for alle rækker i `procedurer_kirurgi`** (bekræftet 2026-06-02).
+Brug `dw_ek_forloeb` — ikke `dw_ek_kontakt` — til at hente `pnr` fra `lpr_a_kontakt`.
+:::
 
 ```r
 # FORKERT — dw_ek_kontakt er NA:
@@ -50,74 +57,7 @@ proc <- load_database("procedurer_kirurgi") %>%
 
 ---
 
-## 3. DBSO: alle datokolonner er character-strenge
-
-`datoper_prim`, `datopre`, `datofol` mv. i DBSO er gemt som character i parquet-formatet,
-format `"YYYY-MM-DD"`. Du skal konvertere med `as.Date()` inden datoberegninger.
-
-```r
-# FORKERT — datoaritmetik på character fejler stille:
-dbso %>% mutate(alder_ved_op = datoper_prim - foed_dag)
-
-# KORREKT:
-dbso %>% mutate(
-  datoper_prim = as.Date(datoper_prim),
-  alder_ved_op = as.numeric(datoper_prim - as.Date(foed_dag)) / 365.25
-)
-```
-
-**Undtagelse:** `foerstefedmeopr_dato` er et numerisk SAS-datoheltal (dage siden 1. januar 1960):
-```r
-as.Date(foerstefedmeopr_dato, origin = "1960-01-01")
-```
-
----
-
-## 4. DBSO kirurgi-flag: 1 = ja, 2 = nej (ikke 0/1)
-
-DBSO bruger dansk SAS-konvention: **1 = ja, 2 = nej**, ikke booleans.
-
-```r
-# FORKERT — fortolker 2 (= nej) som sandt:
-filter(redo_prim)
-
-# KORREKT:
-filter(redo_prim != 1)   # beholder 2 (primær) og dropper NA (ukendt)
-filter(redo_prim == 1)   # kun revisionsoperationer
-```
-
----
-
-## 5. DBSO `koen` vs BEF `koen`
-
-DBSO: `koen` = `"M"` (mand) / `"K"` (kvinde) — character.
-BEF: `koen` = `1` (mand) / `2` (kvinde) — numeric.
-
-Join på køn uden recoding giver stille mismatch.
-
-```r
-# Recode DBSO til BEF-konventionen:
-dbso <- dbso %>%
-  mutate(koen = if_else(koen == "M", 1L, 2L))
-```
-
----
-
-## 6. OSDC-sti bruger bindestreg, ikke underscore
-
-Stien til OSDC-filen på projekt 708421 bruger bindestreg:
-
-```r
-# KORREKT:
-path_dm_pop <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"
-
-# FORKERT (underscore):
-path_dm_pop <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
-```
-
----
-
-## 7. `lpr_a_diagnose` — "a" betyder ikke A-type diagnoser
+## 3. `lpr_a_diagnose` — "a" betyder ikke A-type diagnoser
 
 Tabellen hedder `lpr_a_diagnose` — "a" refererer til analysemodel-betegnelsen (LPR_A-serien).
 Det er **ikke** et filter på A-type diagnoser. Tabellen indeholder A, B og G.
@@ -125,7 +65,7 @@ Du skal stadig filtrere på `diag_kode_type`.
 
 ---
 
-## 8. `nmi_count` ≠ `nmi_score`
+## 4. `nmi_count` ≠ `nmi_score`
 
 | Variabel | Hvad den er |
 |---|---|
