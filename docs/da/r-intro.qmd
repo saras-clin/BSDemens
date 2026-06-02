@@ -120,10 +120,12 @@ De pakker du vil bruge mest:
 | `arrow` | Indlæsning af parquet-filer |
 | `duckplyr` | Hurtig forespørgsel på store datasæt via DuckDB |
 
-<details>
-<summary>Særligt for DST: duckplyr skal geninstalleres hver session</summary>
+::: {.callout-important}
+**Særligt for DST: pakker er forældede og skal opdateres**
 
-På DST er den forudinstallerede version af `duckplyr` forældet.
+DST har forudinstalleret et ældre snapshot af alle R-pakker på CRAN.
+Det betyder, at mange pakker — særligt `duckplyr` — er i forældede versioner der mangler funktioner.
+
 Kør dette **allerførst** i starten af hver DST-session, inden du indlæser andre pakker:
 
 ```r
@@ -132,18 +134,26 @@ library(dplyr)                 # duckplyr aktiveres automatisk via dplyr
 ```
 
 Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
-
-</details>
+Hvis du oplever mærkelige fejl fra dplyr-operationer, er en forældet `duckplyr` den hyppigste årsag.
+:::
 
 ---
 
 ## 5. Nyttige genveje
 
-| Genvej | Hvad den gør |
+Alle genveje nedenfor er **Windows-genveje** — de gælder også for Mac-brugere der arbejder på DST via Remote Desktop, fordi RStudio kører på Windows-serveren.
+
+::: {.callout-note}
+**Mac-brugere: sæt tastaturet til Unicode-tilstand først**
+Specialtegn som `$`, `{`, `}`, `\` og `|` virker ikke korrekt på Mac i Remote Desktop uden et ekstra trin.
+[Se løsningen på siden "Kom i gang på DST" →](getting-started-dst.qmd)
+:::
+
+| Genvej (Windows/Mac i Remote Desktop) | Hvad den gør |
 |---|---|
 | **Ctrl+Enter** | Kør markeret linje/kode |
 | **Ctrl+S** | Gem filen |
-| **Alt + –** | Skriv tildelingsoperatoren `<-` |
+| **Alt + –** | Skriv tildelingsoperatoren `<-` (Mac: **Option + –**) |
 | **Ctrl+Shift+M** | Skriv pipe-tegnet `\|>` |
 | **Ctrl+Shift+R** | Indsæt script-sektion (overskrift i kode) |
 | **Ctrl+Shift+A** | Formater/indenter kode automatisk |
