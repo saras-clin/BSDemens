@@ -33,21 +33,20 @@ format:
 :::
 
 ::: {.callout-tip}
-## De 7 vigtigste funktioner — start her
+## De vigtigste funktioner — start her
 
-Hele kodebasen er bygget på syv byggeklodser. Forstår du disse, kan du læse de fleste linjer.
+Forstår du de 6 funktioner herunder, kan du læse de fleste linjer registerdata-kode.
 
 | Funktion | Hvad den gør |
 |---|---|
-| `%>%` | Sender resultatet fra én funktion videre til den næste |
-| `load_database("navn")` | Åbner en doven forbindelse til et DST-register |
+| `open_dataset("sti")` | Åbner en doven forbindelse til et register (i DARTER: `load_database("navn")`) |
 | `filter(betingelse)` | Beholder kun de rækker, der opfylder betingelsen |
 | `select(kol1, kol2)` | Beholder kun de angivne kolonner |
 | `mutate(ny_kol = ...)` | Tilføjer eller ændrer en kolonne |
 | `left_join(anden_df, by = "nøgle")` | Joiner to tabeller på en fælles nøgle |
 | `collect()` | Henter data fra parquet ind i R-hukommelsen |
 
-Rækkefølgen er intentionel: `load_database` → `filter` → `select` → `collect` er det mønster, der optræder i næsten hvert script.
+Rækkefølgen er intentionel: `open_dataset` → `filter` → `select` → `collect` er det mønster, der optræder i næsten hvert script.
 :::
 
 ---
@@ -96,28 +95,28 @@ Projektet bruger `%>%`, men hvis du skriver `|>` er det helt fint.
 
 ## Dataindlæsning
 
-### `load_database("navn")` <small>— `dstDataPrep`</small>
+### `open_dataset("sti")` <small>— `arrow`</small>
 
-**Hvad det gør:** åbner en doven forbindelse til et DST-register.
+**Hvad det gør:** åbner en doven forbindelse til en parquet-fil eller -mappe.
 
 **Anekdote:** Forestil dig at du ringer til biblioteket og beder dem om at finde alle bøger om hjertekirurgi fra 1990 til 2020.
 Bibliotekaren siger "ja, dem finder jeg" — men de er ikke ankommet endnu.
-Det er præcis, hvad `load_database()` gør: det fortæller computeren, *hvad* du vil have, men data er ikke hentet ind i hukommelsen endnu.
-Resten af dine kommandoer (filter, select) tilføjer yderligere instruktioner til bibliotekaren, inden du til sidst siger: "send dem nu" — det er `collect()`.
+Det er præcis hvad `open_dataset()` gør: det fortæller computeren *hvad* du vil have, men data er ikke hentet ind i hukommelsen endnu.
+Resten af dine kommandoer (`filter`, `select`) tilføjer yderligere instruktioner, inden du til sidst siger "send dem nu" — det er `collect()`.
 
 ```r
-bef <- load_database("bef") %>% rename_with(tolower)
-# bef er nu en doven forbindelse -- ingen data i hukommelsen endnu
+bef <- open_dataset("sti/til/bef") %>% rename_with(tolower)
+# bef er nu en doven forbindelse — ingen data i hukommelsen endnu
 ```
 
-Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`.
-Alle åbnes med `load_database()`, uanset om de ligger i `parquet-registers` eller `parquet-external`.
-`dod` (~2001–2024) er endnu ikke i cleaned-data og kræver udtræk fra rå SAS-fil.
-Projekt-specifikke registre (fx DBSO på DARTER) åbnes med samme funktion — se din projektvejledning for registernavne.
+Bruges til alle registre der er gemt som parquet-filer på DST-serveren:
+`bef`, `lpr_adm`, `lpr_diag`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`,
+`t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose` med flere.
 
-::: {.callout-note}
-`load_database()` kommer fra pakken `dstDataPrep`, som skal bygges manuelt på DST-serveren.
-Hvordan du gør det, og hvad pakken ellers kan, er beskrevet i Steno-onboarding-guiden.
+::: {.callout-tip}
+**DARTER-projektet:** `load_database("navn")` fra `dstDataPrep` er en genvej der finder stien automatisk.
+Den gør det samme som `open_dataset("sti/til/register")` — du behøver ikke kende den fulde sti.
+Se [DARTER — setup →](darter/index.qmd) for installation af `dstDataPrep`.
 :::
 
 ---
@@ -225,11 +224,11 @@ Det er det samme — men computeren behandler dem som tre helt forskellige ting.
 `rename_with(tolower)` fikser det på ét sekund: alle navne bliver ensartede.
 
 ```r
-bef <- load_database("bef") %>% rename_with(tolower)
+bef <- open_dataset("sti/til/bef") %>% rename_with(tolower)
 # Alle kolonner er nu i lowercase: pnr, koen, foed_dag, ...
 ```
 
-**Vigtigt:** kald det altid på samme linje som `load_database()`.
+**Vigtigt:** kald det altid på samme linje som `open_dataset()` (eller `load_database()` i DARTER).
 Glemmer du det, vil `filter(pnr %in% ...)` fejle, fordi kolonnen måske hedder `PNR`.
 
 ---
@@ -482,8 +481,9 @@ group_by(pnr) %>%
 **Hvad det gør:** inddeler rækker i `n` lige store grupper (kvantiler).
 
 ::: {.callout-warning}
-Bruges **ikke** til indkomstkvintiler i dette projekt.
-Indkomstkvintiler beregnes i overensstemmelse med SEPLINE-retningslinjerne (en standardiseret metode til socioøkonomisk positionering i epidemiologisk forskning): hver persons 3-årsgennemsnit sammenlignes med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80), stratificeret på køn × 5-årsaldersgruppe × referenceår.
+Bruges **ikke** til indkomstkvintiler i registerbaserede studier der følger SEPLINE-retningslinjerne.
+SEPLINE anbefaler at sammenligne med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80) stratificeret på køn × 5-årsaldersgruppe × referenceår — ikke `ntile()` på din kohort alene.
+Se [SEPLINE](sepline.qmd).
 :::
 
 ---
@@ -529,7 +529,7 @@ full_cohort %>%
 **Hvad det gør:** stakker data frames ovenpå hinanden (samme kolonner, flere rækker).
 
 **Anekdote:** Som at tage tre bunker papir og lægge dem i én stak.
-Bruges til at kombinere LPR2 + psykiatrisk LPR2 + LPR3 til én tabel, og til at kombinere BS-kohort + GP-sammenligning + fedme-sammenligning til `full_cohort`.
+Bruges fx til at kombinere LPR2 + psykiatrisk LPR2 + LPR3 til én samlet diagnosetabel.
 
 ```r
 bind_rows(lpr2_resultater, lpr2_psyk_resultater, lpr3_resultater)
@@ -654,7 +654,7 @@ toupper(c_opr)   # sikrer at operationskoder matcher uanset bogstavsstørrelse
 grepl("^C34", icd4)   # TRUE for "C340", "C341", "C342", osv.
 ```
 
-Bruges i `extract_nmi()` til at matche ICD-koder mod de 29 diagnosemønstre i NMI-indekset (Nordic Multimorbidity Index — et vægtet comorbiditetsmål med 50 prediktorer).
+Bruges fx til at matche ICD-koder mod diagnosemønstre i comorbiditetsmål som NMI (Nordic Multimorbidity Index).
 
 ---
 
@@ -744,7 +744,7 @@ filter(!is.na(date_dementia)) # fjern rækker uden demensdato
 **Anekdote:** Forestil dig at du blander et kortspil.
 Uden `set.seed()` vil du blande forskelligt hver gang.
 Med `set.seed(42)` blander du altid på den samme måde — og kan dermed reproducere dine resultater præcist.
-Kald det altid inden matching-løkkerne i `01_build_cohorts.R`.
+Kald det altid inden matching-løkker for at sikre reproducerbarhed.
 
 ```r
 set.seed(42)
@@ -757,7 +757,7 @@ sample(pool_pnrs, size = 5)   # vælger altid de samme 5 tilfældige pnrs
 
 **Hvad det gør:** trækker tilfældige elementer fra en vektor.
 
-Bruges i matchning-løkkerne til at udvælge tilfældige kontrolpersoner til hver BS-patient.
+Bruges i matchningslogik til at udvælge tilfældige kontrolpersoner fra en pool.
 
 ---
 
@@ -855,7 +855,7 @@ Se [Registerreference](register_reference.qmd) for bekræftede kolonnenavne på 
 
 | Pakke | Hvad den leverer |
 |---|---|
-| `dstDataPrep` | `load_database()` — DST-specifik parquet-forbinder |
+| `dstDataPrep` | `load_database()` — DST-specifik parquet-forbinder *(kun DARTER-projektet)* |
 | `dplyr` | `%>%`, `filter`, `select`, `mutate`, `join`, `group_by`, `arrange`, osv. |
 | `tidyr` | `pivot_wider()` — omformning fra langt til bredt format |
 | `lubridate` | `year()`, `as.Date()`, datoberegninger |
