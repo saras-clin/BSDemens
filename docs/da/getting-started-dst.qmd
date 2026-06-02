@@ -1,6 +1,6 @@
 ---
 title: "Kom i gang på DST"
-subtitle: "En praktisk vejledning til BS & Demens-projektet (708421)"
+subtitle: "De første trin på Danmarks Statistiks forskningsserver"
 date: last-modified
 format:
   html:
@@ -12,14 +12,50 @@ format:
     highlight-style: github
 ---
 
-## Inden du læser dette
+Denne side guider dig igennem de første ting, du skal have styr på, når du logger ind på DST-serveren for første gang.
 
-Denne side bygger ovenpå Stenos DST-onboarding-guide — en introduktion til R, parquet-filer og doven ("lazy") evaluering på DST-serveren, som du modtager fra Steno når du starter.
-Læs den første inden du fortsætter her, da vi bygger videre på begreberne derfra.
+::: {.callout-note}
+**Mac-brugere: sæt tastaturet til Unicode-tilstand ved hver forbindelse**
 
-Når du begynder at læse koden og støder på en funktion du ikke genkender,
-kan du slå den op i [Guide til funktioner](guide_til_funktioner.qmd) —
-en detaljeret forklaring af alle funktioner i projektet med eksempler og analogier.
+Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Microsoft Remote Desktop som standard, fordi Mac'ens Option-tast sender scancodes, som Windows fortolker forkert.
+
+**Løsning (gøres én gang pr. forbindelse):** Skift til Unicode-tilstand:
+
+- Via menuen: **Connections → Keyboard Mode → Unicode**
+- Via genvej inde i Remote Desktop-vinduet: **⌃⌘U** (Ctrl + Cmd + U)
+
+I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter — RStudio kører på Windows-serveren).
+
+| Tegn | Mac-genvej |
+|---|---|
+| Pipe `\|` | Option + i |
+| `[` | Option + 8 |
+| `]` | Option + 9 |
+| `{` | Option + Shift + 8 |
+| `}` | Option + Shift + 9 |
+:::
+
+::: {.callout-important}
+**Geninstaller `duckplyr` i starten af hver session**
+
+Den forudinstallerede version på DST er forældet og mangler funktioner.
+Kør dette **allerførst**, inden du indlæser andre pakker:
+
+```r
+install.packages("duckplyr")   # skal køres inden library()
+```
+
+Installationen nulstilles ved logout. Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
+:::
+
+Støder du på en funktion du ikke genkender?
+Slå den op i [Funktioner — oversigt](guide_til_funktioner.qmd).
+
+::: {.callout-tip}
+**Arbejder du på DARTER / projekt 708421?**
+Der er ekstra setup-trin (dstDataPrep-pakken skal bygges) specifikke til projektet.
+[Gå til DARTER — oversigt og pipeline →](darter/index.qmd)
+:::
 
 ---
 

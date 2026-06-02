@@ -25,8 +25,14 @@ Forholdet er som mellem en motor og en bil: R er motoren, RStudio er bilen du si
 
 På DST's servere er begge allerede installeret — du behøver ikke installere noget selv.
 
-<details>
-<summary>De fire vinduer i RStudio</summary>
+Sådan ser RStudio ud, første gang du åbner det:
+
+<!-- SCREENSHOT: Indsæt et screenshot af RStudio-interfacet her.
+     Tag det fra din DST-session eller hent et fra https://posit.co/products/open-source/rstudio/
+     Gem billedet i docs/da/images/rstudio-interface.png og fjern denne kommentar.
+
+![RStudio's fire paneler](images/rstudio-interface.png){fig-alt="RStudio med script-editor øverst til venstre, konsol nederst til venstre, environment øverst til højre og files/plots nederst til højre"}
+-->
 
 RStudio er opdelt i fire paneler:
 
@@ -39,8 +45,6 @@ RStudio er opdelt i fire paneler:
 
 Kør en enkelt linje kode: placer cursoren på linjen og tryk **Ctrl+Enter**.
 Kør en markering: marker flere linjer og tryk **Ctrl+Enter**.
-
-</details>
 
 ---
 
