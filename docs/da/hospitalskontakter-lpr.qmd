@@ -107,6 +107,11 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 
 Dette er det fundamentale mønster til enhver diagnosebaseret udtræk — LPR2 + LPR3 kombineret.
 
+::: {.callout-note}
+Kodeeksemplet bruger `load_database()` fra `dstDataPrep`-pakken, som kræver særligt projektsetup.
+Vil du køre koden lokalt med syntetiske data? Se fold-ud'en **Prøv det selv** nedenfor — den bruger `open_dataset()` og virker uden `dstDataPrep`.
+:::
+
 ```r
 library(dstDataPrep)
 library(dplyr)
