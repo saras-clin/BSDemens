@@ -1,6 +1,6 @@
 ---
-title: "BS & Demens — Projekt 708421"
-subtitle: "Kodevejledning til registerbaseret kohortestudie"
+title: "Registerbaseret forskning på DST"
+subtitle: "Fra første login til klar analysepipeline"
 page-layout: full
 sidebar: false
 ---
@@ -10,7 +10,7 @@ sidebar: false
 ::: {.g-col-6}
 ### Dansk
 
-Kodevejledning til registerbaserede kohortestudier på DST — særligt til projekt 708421 (DARTER).
+Vejledning til registerbaseret forskning på Danmarks Statistik (DST) — for begyndere.
 
 [Gå til dansk vejledning →](da/index.qmd){.btn .btn-primary}
 :::

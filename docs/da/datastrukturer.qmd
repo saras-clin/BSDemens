@@ -13,7 +13,7 @@ Registerdata er næsten altid i langt format — men det er ikke altid det forma
 
 Forestil dig, at vi har tre personer med målinger af vægt ved to tidspunkter.
 
-**Bredt format** — én række per person, én kolonne per tidspunkt:
+**Bredt (wide) format** — én række per person, én kolonne per tidspunkt:
 
 | pnr | vaegt_baseline | vaegt_6mdr |
 |---|---|---|
@@ -21,7 +21,7 @@ Forestil dig, at vi har tre personer med målinger af vægt ved to tidspunkter.
 | 002 | 105 | 88 |
 | 003 | 98 | 80 |
 
-**Langt format** — én række per observation, én kolonne til tidspunkt og én til værdi:
+**Langt (long) format** — én række per observation, én kolonne til tidspunkt og én til værdi:
 
 | pnr | tidspunkt | vaegt |
 |---|---|---|
@@ -36,17 +36,17 @@ Begge formater indeholder **de samme oplysninger** — de er bare arrangeret for
 
 ---
 
-## Hvornår ser du hvert format?
+## Hvor er der hvilke formater?
 
 | Register | Format | Hvorfor |
 |---|---|---|
 | BEF | Langt | Én række per person **per år** — samme person optræder 30 gange |
 | LPR (lpr_adm + lpr_diag) | Langt | Én række per **diagnose per kontakt** — en indlæggelse kan have 10 diagnoser |
-| LMDB | Langt | Én række per **ekspederet recept** |
-| DBSO | Langt | Én række per **klinikbesøg** (pre-op, operation, opfølgning) |
+| LMDB | Langt | Én række per **ekspederet recept** — samme person kan have hundredvis |
+| DODSAARS | Bredt | Én række per **afdød person** — allerede én-per-person |
 | Dit analysedatasæt | Bredt | Én række per person — én kolonne per kovariat |
 
-**Registre er altid lange. Dit analysedatasæt skal typisk være bredt.**
+**Registre er oftest i langt format. Dit analysedatasæt skal typisk være i bredt formatu**
 
 ---
 

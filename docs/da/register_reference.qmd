@@ -1,6 +1,6 @@
 ---
 title: "Registerreference"
-subtitle: "Bekræftede kolonnenavne for alle 16 registre — projekt 708421"
+subtitle: "Bekræftede kolonnenavne for de hyppigst brugte DST-registre"
 date: last-modified
 format:
   html:
@@ -52,14 +52,13 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | Uddannelsesniveau | UDDA | `hfaudd`, `aar` |
 | Husstandsindkomst | FAIK | `famaekvivadisp_13`, `familie_id` |
 | Beskæftigelsesstatus | AKM | `socio13`, `aar` |
-| Dato for bariatrisk operation | DBSO | `datoper_prim` |
-| Diabetestype og debutdato | OSDC | `diabetes_type`, `do_dm` |
+| Projekt-specifik klinisk variabel (fx operationsdato) | Dit projekts kvalitetsregister | Se projektvejledning |
 | En operationsprocedure / SKS-kode (frem til 2018) | lpr_sksopr | `c_opr`, `recnum` |
 | En operationsprocedure / SKS-kode (2019 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_forloeb` |
 
 ::: {.callout-note}
 **Join-nøgler:**
-BEF, DODSAARS, VNDS, LMDB, UDDA, AKM, DBSO og OSDC joines alle på `pnr`.
+BEF, DODSAARS, VNDS, LMDB, UDDA, AKM joines alle på `pnr`.
 FAIK joines via `familie_id` — hent den fra BEF.
 LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 `lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_forloeb` — **`dw_ek_kontakt` er NA for alle rækker på DST og kan ikke bruges som join-nøgle**.
@@ -87,8 +86,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | UDDA | `"udda"` | `pnr` | Alle år | `hfaudd`, `aar` |
 | FAIK | `"faik"` | `familie_id` | Alle år | `famaekvivadisp_13` |
 | AKM | `"akm"` | `pnr` | Alle år | `socio13`, `aar` |
-| DBSO | `load_database("dbso")` | `pnr` | 2010+ | `datoper_prim`, kirurgi-flag |
-| OSDC | `readRDS(sti)` | `pnr` (hedder `PNR` — rename) | 1977–2022 | `diabetes_type`, `do_dm` |
+| Projekt-specifikke registre | Se projektvejledning | `pnr` | Varierer | [DARTER: se registersti →](darter/registersti-datastores.qmd) |
 
 ---
 
@@ -475,87 +473,15 @@ SEPLINE-kategorisering af `socio13`:
 
 ---
 
-## 9. Eksterne registre
+## 9. Projekt-specifikke registre
 
-### DBSO — Bariatrisk kirurgiregister
+Mange projekter har adgang til registre ud over standardlisten ovenfor — fx kvalitetsregistre fra kliniske databaser eller færdigberegnede klassifikationsfiler.
 
-Leveret som SAS-fil fra SunDK, konverteret én gang af `00_prepare_dbso.R`.
-Langt format: **én række per klinikbesøg per patient** (PRE = præoperativt, PER = operationsdag, FOL = opfølgning).
+Disse er **projekt-specifikke** og ikke tilgængelige i alle projekter på DST.
 
-::: {.callout-warning}
-**Tre DBSO-specifikke quirks:**
-
-1. **`kontaktstartdato` og `kontaktslutdato` er character-strenge** — kræver `as.Date()`. Øvrige datokolonner (`datoper_prim`, `datopre`, `datofol`, `cprstatusdato`) er Date-objekter.
-2. **`foerstefedmeopr_dato` er et SAS-heltal** — brug `as.Date(x, origin = "1960-01-01")`.
-3. **`koen` bruger "M"/"K"**, ikke 1/2 som BEF.
-4. **Kirurgi-flag bruger 1 = ja, 2 = nej** — ikke 0/1 booleans.
+::: {.callout-tip}
+**Arbejder du på DARTER / projekt 708421?**
+Projektet bruger bl.a. DBSO (Databasen for Behandling af Svær Overvægt) og OSDC (Open Source Diabetes Classifier).
+Se den fulde registeroversigt med bekræftede kolonnenavne og stier:
+[DARTER — Registersti og datastores →](darter/registersti-datastores.qmd)
 :::
-
-#### Nøglekolonner
-
-| Kolonne | Type | Indhold |
-|---|---|---|
-| **`pnr`** | character | Personidentifikator (omdøbt fra `cpr` i 00_prepare_dbso.R) |
-| **`datoper_prim`** | Date | **Operationsdato** (primær BS) |
-| **`gastricbypass_prim`** | numeric | 1 = RYGB, 2 = nej, NA = ukendt |
-| **`gastricsleeve_prim`** | numeric | 1 = SG, 2 = nej, NA = ukendt |
-| **`redo_prim`** | numeric | 1 = revisionsoperation, 2 = primær, NA = ukendt |
-| `koen` | character | Køn: **`"M"` = mand, `"K"` = kvinde** (ikke 1/2) |
-| `datopre` | Date | Præoperativt besøg |
-| `datofol` | Date | Opfølgningsbesøg |
-| `kontaktstartdato` | character | Besøgsstartdato — konverter med `as.Date()` |
-| `kontaktslutdato` | character | Besøgsslutdato — konverter med `as.Date()` |
-| `foerstefedmeopr_dato` | numeric | Første fedmeoperation nogensinde (SAS-heltal) |
-
-#### Vægt og højde
-
-| Kolonne | Type | Indhold |
-|---|---|---|
-| **`udgangsvaegtpre_prim`** | numeric | Vægt (kg) ved præoperativt besøg |
-| **`hoejde`** | numeric | Højde (cm) — konstant per patient |
-| `vaegtper_prim` | numeric | Vægt (kg) på operationsdagen |
-| `vaegtfol` | numeric | Vægt (kg) ved dette opfølgningsbesøg |
-| `udgangsvaegt` | numeric | Vægt (kg) ved programindtræden |
-
-`bmi_pre` beregnes i pipeline: `udgangsvaegtpre_prim / (hoejde/100)^2`.
-
-#### DBSO-kliniske udfald (Study 2)
-
-| Kolonne | Indhold |
-|---|---|
-| `akutgenindlaeggelse30d` | 1 = akut genindlæggelse inden 30 dage |
-| `reop30d_3` | 1 = reoperation inden 30 dage |
-| `reoplaar_3` | 1 = reoperation inden 1 år |
-| `reop5aar_2` | 1 = reoperation inden 5 år |
-| `medkomplikdiarre` | 1 = diarré som komplikation |
-| `medkomplikdumpingsymptomer` | 1 = dumping-syndrom |
-| `medkomplikhypoglyksymptomer` | 1 = hypoglykæmisymptomer |
-
-#### Opfølgningsvinduer
-
-| Kolonne | Indhold |
-|---|---|
-| `fumellem6mdr1aar` | 1 = dette besøg falder i 6–12-måneders vinduet |
-| `fumellem1_5aar2_5aar` | 1 = dette besøg falder i 1,5–2,5-årsvinduet |
-| `id_funaermest2aar` | Hvilket opfølgningsbesøg er nærmest 2 år (`"F1"`–`"F4"`) |
-
----
-
-### OSDC — Open Source Diabetes Classifier
-
-Færdigberegnet `.rds`-fil — ikke et parquetregister.
-
-```r
-dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
-names(dm_pop)   # bekræft kolonnenavne ved første kørsel
-```
-
-| Kolonne (rå) | Type | Indhold |
-|---|---|---|
-| **`PNR`** | character | Personidentifikator — **rename til `pnr`** (rå er uppercase) |
-| **`diabetes_type`** | numeric | 1 = T1D, 2 = T2D (rekodet til `"T1D"`/`"T2D"` i pipeline) |
-| **`do_dm`** | Date | Dato for diabetesklassifikation (renamed til `date_diabetes`) |
-| `age_at_onset` | numeric | Alder ved diabetesdebut |
-
-Dækker diagnoser frem til 2022.
-Klassificerer alle personer i Danmark — ikke begrænset til kohortmedlemmer.

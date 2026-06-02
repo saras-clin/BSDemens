@@ -61,30 +61,7 @@ Der er ekstra setup-trin (dstDataPrep-pakken skal bygges) specifikke til projekt
 
 ## 1. Dine første 10 minutter på DST
 
-### Trin 1 — Byg `dstDataPrep` inden alt andet
-
-`dstDataPrep` er pakken, der giver dig `load_database()`.
-Den er ikke på CRAN.
-Den ligger på DST-serveren og skal bygges manuelt.
-
-1. I RStudio: **File → Open Project in New Session**
-2. Naviger til: `E:/workdata/708421/workspaces/saraschwartz/dstDataPrep/dstDataPrep.Rproj`
-   *(erstat `saraschwartz` med dit eget mappenavn i workspaces)*
-3. Når projektet er åbnet: tryk **Ctrl + Shift + B** (Build)
-
-   ::: {.callout-note}
-   **Mac-brugere:** Ctrl + Shift + B virker ikke altid i Remote Desktop. Brug i stedet RStudios menulinje: **Build → Install Package**.
-   :::
-4. Vent på "Done" i Build-panelet, og luk derefter den session.
-
-::: {.callout-warning}
-**Skal ikke genbygges ved hver session — kun når DST har nulstillet serveren.**
-DST nulstiller lokale drev med mellemrum (typisk efter et antal dages inaktivitet).
-Opdages ved at `library(dstDataPrep)` melder `Error: there is no package called 'dstDataPrep'`.
-Gør det til en vane at tjekke, hvis du ikke har logget ind i et stykke tid.
-:::
-
-### Trin 2 — Geninstaller `duckplyr` i starten af hver session
+### Trin 1 — Geninstaller `duckplyr` i starten af hver session
 
 Den version af `duckplyr`, der er forudinstalleret på DST, er forældet og mangler funktioner.
 Kør dette i starten af hver DST-session, inden du indlæser nogen biblioteker:
@@ -96,22 +73,16 @@ install.packages("duckplyr")
 Tjek hvilken version du har: `packageVersion("duckplyr")`.
 Du skal have version 1.1 eller højere.
 
-### Trin 3 — Åbn dette projekt
+### Trin 2 — Åbn dit projekt
 
 ```
 File → Open Project → naviger til din workspace-mappe
-E:/workdata/708421/workspaces/dit-navn/BSDemens/BSDemens.Rproj
+E:/workdata/[projektnummer]/workspaces/[ditNavn]/[projektmappe]/[projekt].Rproj
 ```
 
-Din outputmappe (hvor `.rds`-filer gemmes af pipelinen) er:
+Opret en `datasets/`-mappe i projektmappen til mellemregninger, hvis den ikke eksisterer.
 
-```
-E:/workdata/708421/workspaces/dit-navn/BSDemens/datasets/
-```
-
-Denne mappe eksisterer ikke automatisk — du skal oprette den selv inden du kører scripts.
-
-### Trin 4 — Verificer at alt virker
+### Trin 3 — Verificer at alt virker
 
 ```r
 library(dstDataPrep)
@@ -130,32 +101,17 @@ Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
 
 ### De to datavarehuse
 
-| Lager | Sti | Hvad er der | Sådan indlæses det |
+| Lager | Sti (eksempel) | Hvad er der | Sådan indlæses det |
 |---|---|---|---|
-| `parquet-registers` | `E:/workdata/708421/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
-| `parquet-external` | `E:/workdata/708421/cleaned-data/parquet-external/` | Registre, der ikke er i parquet-registers: DBSO, SKS-procedurekoder (LPR3) | `load_database("navn")` |
+| `parquet-registers` | `E:/workdata/[proj]/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
+| `parquet-external` | `E:/workdata/[proj]/cleaned-data/parquet-external/` | Registre der ikke er i parquet-registers, fx SKS-procedurekoder (LPR3) | `load_database("navn")` |
 
 ::: {.callout-note}
 **Du behøver ikke at samle årsfiler manuelt.**
 Hvert register er gemt som mange separate filer — én per år.
 `load_database()` samler dem automatisk til én tabel, som du kan forespørge som helhed.
-Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven (engelsk: "lazy") evaluering og er forklaret i Stenos onboarding-guide samt i [Guide til funktioner](guide_til_funktioner.qmd).
+Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret på siden [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
 :::
-
-::: {.callout-note}
-Begge datavarehuse åbnes med `load_database()` — du behøver ikke at kende stierne direkte.
-DBSO ligger i `parquet-external/`, men indlæses stadig med `load_database("dbso")` som alle andre registre.
-:::
-
-### OSDC-diabetesfilen
-
-Open Source Diabetes Classifier er en færdigberegnet `.rds`-fil, ikke et register:
-
-```r
-dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
-```
-
-Den klassificerer alle personer i Danmark som T1D, T2D eller Ingen diabetes frem til udgangen af 2022.
 
 ### Hvad er en `.rds`-fil?
 
@@ -465,12 +421,12 @@ Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
 | FAIK — Husstandsindkomst | `"faik"` | Husstandsækvivaleret disponibel indkomst per år. Join til BEF via `familie_id`. | `familie_id`, `aar`, `famaekvivadisp_13` | Alle år |
 | AKM — Beskæftigelsesregistret | `"akm"` | Arbejdsmarkedsklassifikation per år. | `pnr`, `aar`, `socio13` (beskæftigelseskode) | Alle år |
 
-### Eksterne data (ikke i parquet-registers)
-
-| Kilde | Sådan indlæses det | Hvad det indeholder |
-|---|---|---|
-| DBSO — Bariatrisk kirurgiregister | `load_database("dbso")` | Én række per klinikbesøg per patient. Klargjort én gang af `00_prepare_dbso.R`. Nøglekolonner: `pnr`, `datoper_prim` (operationsdato), `gastricbypass_prim`, `gastricsleeve_prim`, `redo_prim` |
-| OSDC — Diabetesklassifikator | `readRDS(sti_til_dm_pop)` | Færdigberegnet diabetesklassifikation. Kolonner (efter `tolower`): `pnr`, `diabetes_type` (1=T1D, 2=T2D), `do_dm` (debutdato). Dækker diagnoser frem til 2022. |
+::: {.callout-tip}
+**Projekt-specifikke registre**
+Mange projekter har adgang til registre ud over standardlisten — fx kvalitetsregistre eller færdigberegnede klassifikationsfiler.
+Disse er projekt-specifikke og ikke tilgængelige i alle projekter.
+[Arbejder du på DARTER? Se projektets registeroversigt →](darter/registersti-datastores.qmd)
+:::
 
 ---
 

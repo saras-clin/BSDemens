@@ -90,9 +90,10 @@ bef <- load_database("bef") %>% rename_with(tolower)
 # bef er nu en doven forbindelse -- ingen data i hukommelsen endnu
 ```
 
-Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`, `dbso`.
+Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`.
 Alle åbnes med `load_database()`, uanset om de ligger i `parquet-registers` eller `parquet-external`.
 `dod` (~2001–2024) er endnu ikke i cleaned-data og kræver udtræk fra rå SAS-fil.
+Projekt-specifikke registre (fx DBSO på DARTER) åbnes med samme funktion — se din projektvejledning for registernavne.
 
 ::: {.callout-note}
 `load_database()` kommer fra pakken `dstDataPrep`, som skal bygges manuelt på DST-serveren.
@@ -116,8 +117,7 @@ resultat <- stort_register %>%
 ```
 
 ::: {.callout-note}
-Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt i Stenos DST-onboarding-guide, som du modtager fra Steno ved projektstart.
-Læs den for den fulde forklaring med eksempler på syntetisk data.
+Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt på siden [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
 :::
 
 ---
@@ -153,8 +153,8 @@ saveRDS(full_cohort, "datasets/full_cohort.rds")
 
 **Hvad det gør:** læser en SAS-datafil ind i R.
 
-Bruges kun ét sted: i `00_prepare_dbso.R`, der konverterer DBSO fra SAS-format (som SunDK leverede) til parquet-format, som pipeline'en bruger.
-Du behøver aldrig at køre dette igen.
+Bruges til at indlæse SAS-filer — fx DST's formateringstabeller eller registre der ikke er konverteret til parquet.
+Se [Filformater](filformater.qmd) og [Formateringstabeller](formateringstabeller.qmd) for praktiske eksempler.
 
 ---
 
@@ -163,7 +163,7 @@ Du behøver aldrig at køre dette igen.
 **Hvad det gør:** gemmer en data frame som en parquet-fil.
 
 Parquet er et særligt effektivt filformat til store datasæt — det er langt hurtigere at læse end CSV.
-Bruges kun i `00_prepare_dbso.R`.
+Bruges når du vil gemme et R-datasæt som parquet-fil, fx til brug med `open_dataset()` eller `load_database()` i et andet script.
 
 ---
 

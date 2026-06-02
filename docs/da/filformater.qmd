@@ -33,7 +33,7 @@ Rådata på DST leveres som SAS-filer. Bruges til at indlæse formateringstabell
 
 ```r
 library(haven)
-df <- read_sas("E:/rawdata/708421/lpr_adm2018.sas7bdat")
+df <- read_sas("E:/rawdata/[projektnummer]/lpr_adm2018.sas7bdat")
 ```
 
 ::: {.callout-note}
