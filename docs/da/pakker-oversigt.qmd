@@ -1,16 +1,16 @@
 ---
 title: "Pakker og algoritmer"
-subtitle: "Færdige redskaber til klassifikation og komorbiditet i registerdata"
+subtitle: "Færdige redskaber til registerbaseret forskning"
 date: last-modified
 ---
 
-Registerbaseret forskning har nogle tilbagevendende opgaver — klassificere diabetes, beregne komorbiditetsbyrde, definere socioøkonomisk position.
-I stedet for at kode disse fra bunden kan du bruge validerede, publicerede algoritmer.
-Denne sektion beskriver de tre, vi bruger oftest.
+Denne side samler to typer redskaber: **validerede algoritmer** med publicerede metoder til klinisk klassifikation og komorbiditet, og **R-pakker** der løser praktiske problemer specifikke for dansk registerdata og DST-miljøet.
 
 ---
 
-## Oversigt
+## Validerede algoritmer
+
+Disse algoritmer er publicerede, peer-reviewede metoder du kan bruge direkte i din analyse.
 
 | Algoritme | Hvad den gør | Artikel |
 |---|---|---|
@@ -18,24 +18,159 @@ Denne sektion beskriver de tre, vi bruger oftest.
 | **NMI** | Beregner en vægtet comorbiditetsscore (Nordic Multimorbidity Index) ud fra 50 prediktorer | [doi:10.2147/CLEP.S353398](https://doi.org/10.2147/CLEP.S353398) |
 | **SEPLINE** | Vejledning til valg og kodning af socioøkonomiske variable i registerdata | [doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772) |
 
----
+**Hvornår bruger du hvilken?**
 
-## Hvornår bruger du hvilken?
+- **OSDC** — hvis du vil definere en diabetes-population, vide hvornår en person fik diabetes og hvilken type, eller ekskludere personer med diabetes
+- **NMI** — hvis du vil justere for comorbiditet i en regressionsmodel eller beskrive comorbiditetsbyrden (Table 1)
+- **SEPLINE** — hvis du vil inkludere uddannelse, indkomst eller beskæftigelse som kovariater
 
-**OSDC** er relevant, hvis du vil:
-- Definere en diabetes-population
-- Vide hvornår en person fik diabetes og hvilken type
-- Ekskludere personer med diabetes fra en population
-
-**NMI** er relevant, hvis du vil:
-- Justere for comorbiditet i en regressionsmodel
-- Beskrive comorbiditetsbyrden i din population (Table 1)
-- Bruge en valideret comorbiditetsscore frem for fx Charlson
-
-**SEPLINE** er relevant, hvis du vil:
-- Inkludere uddannelse, indkomst eller beskæftigelse som kovariater
-- Vide hvilke registre og variable der anbefales til socioøkonomisk position
+Klik på en algoritme i sidebaren for fuld dokumentation.
 
 ---
 
-Klik på en algoritme i sidebaren for at læse mere.
+## R-pakker til registerdata-arbejde
+
+Disse pakker løser praktiske problemer der er særlige for dansk registerdata eller DST-miljøet.
+
+---
+
+### Statistik og analyse
+
+**`heaven` — dansk registerdata-toolkit**
+45 funktioner bygget specifikt til danske registerdata af Thomas Gerds (Københavns Universitet, Biostatistik). Dækker Lexis-splitting til tidsvarerende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson comorbiditetsscore. Også på CRAN.
+[github.com/tagteam/heaven](https://github.com/tagteam/heaven)
+
+<details>
+<summary>Hvad heaven kan — og hvornår du bruger det</summary>
+
+**Lexis-splitting** — opdel opfølgningstid på flere tidsakser
+
+Bruges når en kovariat ændrer sig over tid (fx alder, kalenderperiode, tid siden eksponering) og opfølgningstiden skal opdeles tilsvarende.
+
+```r
+library(heaven)
+
+df_split <- lexisTwo(
+  indat      = kohort,
+  invars     = c("pnr", "inn", "out", "event"),   # id, startdato, slutdato, udfald
+  splitvars  = list(age = c(40, 50, 60, 70),       # aldersgrænser
+                    cal = c(2010, 2015, 2020))      # kalenderår
+)
+```
+
+---
+
+**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata
+
+Bruges til at bygge tidsvarerende eksponeringsvariable fra receptdata — fx "var personen i behandling med metformin på index-dato?"
+
+```r
+exp_tabel <- medicinMacro(
+  indat    = lmdb_data,    # receptdata
+  id       = "pnr",
+  atc      = "atc",
+  eksd     = "eksd",       # ekspeditionsdato
+  ddds     = "ddds",       # definerede daglige doser
+  maxdepot = 3             # maks. dages lagerbeholdning
+)
+# Returnerer: pnr | start_exp | stop_exp per eksponeringsperiode
+```
+
+---
+
+**Charlson comorbiditetsscore** — fra LPR-diagnoser
+
+```r
+charlson_data <- charlsonIndex(
+  indat     = lpr_diag_data,
+  id        = "pnr",
+  code      = "c_diag",
+  code_type = "icd10"
+)
+```
+
+---
+
+**Risikoset-matching** — match cases til kontroller på index-dato
+
+```r
+matched <- riskSetMatch(
+  ptid  = "pnr",
+  event = "event",
+  terms = c("koen", "foedselsaar"),   # matchingsvariable
+  dat   = kohort,
+  ratio = 5                            # 5 kontroller per case
+)
+```
+
+::: {.callout-note}
+**Er `heaven` på DST-serveren?** Det er sandsynligt da det er en CRAN-pakke brugt af mange danske registerforskere.
+Kør `find.package("heaven")` for at tjekke — er den der, behøver du ikke installere den manuelt.
+Ellers: `install.packages("heaven")`.
+:::
+
+</details>
+
+---
+
+### Syntetiske data og testmiljø
+
+**`fakeregs` — syntetiske danske registerdata**
+Genererer opdigtede, men strukturelt realistiske data for ni DST-registre (BEF, LPR2, LPR3, LMDB, UDDA, FAIK, AKM m.fl.). Bruges til at øve sig og teste kode *uden* at have adgang til DST. MIT-licens.
+[github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs) — Anders Aasted Isaksen, Steno Diabetes Center Aarhus
+
+<details>
+<summary>Installation og hurtig brug</summary>
+
+```r
+# Installer fra GitHub (ikke på CRAN)
+install.packages("pak")
+pak::pak("steno-aarhus/fakeregs")
+
+library(fakeregs)
+library(arrow)
+library(dplyr)
+
+# Åbn et syntetisk register — samme mønster som på DST
+bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
+bef %>% filter(year == 2015) %>% collect() %>% head()
+```
+
+Se [Første udtræk](foerste-udtraek.qmd) for et komplet gennemgående eksempel med fakeregs.
+</details>
+
+---
+
+### Referencehåndtering på DST
+
+**`pubmedciteR` — PubMed-referencer fra lukkede servere**
+DST-serveren har ingen internetadgang. `pubmedciteR` lader dig hente og formatere PubMed-referencer — giv den en liste af DOI'er, og den returnerer formaterede referencer til Word eller tekst. MIT-licens.
+[github.com/Aastedet/pubmedciteR](https://github.com/Aastedet/pubmedciteR) — Anders Aasted Isaksen, Steno Diabetes Center Aarhus
+
+<details>
+<summary>Installation og workflow</summary>
+
+```r
+# Installer fra GitHub
+pak::pak("Aastedet/pubmedciteR")
+
+library(pubmedciteR)
+
+# Definer dine DOI'er
+dois <- c("10.2147/CLEP.S407019", "10.2147/CLEP.S353398")
+
+# Hent og formatér (kræver internet — kør INDEN du logger på DST)
+referencer <- fetch_references(dois)
+write_references(referencer, "mine_referencer.docx")
+```
+
+::: {.callout-tip}
+Kør `fetch_references()` og gem `.docx`-filen på din computer **inden** du logger på DST-serveren, eller overfør filen til serveren via DST's filoverførsel.
+:::
+
+::: {.callout-warning}
+**Tjek tilgængelighed på DST:** `pubmedciteR` er kun på GitHub og skal muligvis installeres manuelt.
+Kør `find.package("pubmedciteR")` på serveren for at se om den allerede er installeret.
+:::
+
+</details>
