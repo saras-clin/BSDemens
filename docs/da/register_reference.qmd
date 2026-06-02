@@ -7,7 +7,6 @@ format:
     toc: true
     toc-depth: 3
     toc-title: "På denne side"
-    theme: cosmo
     highlight-style: github
 ---
 
@@ -22,8 +21,6 @@ Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ved hvert register.
 :::
 
 ---
-::: {.callout-warning}
-** Kolon
 
 ## Hvad vil jeg finde? — omvendt opslagstabel
 
