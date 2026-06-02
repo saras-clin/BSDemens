@@ -180,7 +180,7 @@ sas_fil  <- "E:/workdata/[projektnummer]/raw/mit_register.sas7bdat"
 parq_sti <- "E:/workdata/[projektnummer]/cleaned-data/parquet-external/mit_register/"
 
 # 1. Læs SAS-filen ind i R
-df <- read_sas(sas_fil)            # hele filen ind i RAM — kun gjort denne ene gang
+df <- read_sas(sas_fil)            # læser hele filen ind i RAM — vi kalder den "df", men du kan bruge et hvilket som helst navn
 
 # 2. Standardisér kolonnenavne
 df <- df %>% rename_with(tolower)
