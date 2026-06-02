@@ -160,6 +160,82 @@ write_references(referencer, "mine_referencer.docx")
 ::: {.callout-tip}
 Kør `fetch_references()` og gem `.docx`-filen på din computer **inden** du logger på DST-serveren, eller send filen til serveren via DST's filoverførsel.
 :::
+
+::: {.callout-warning}
+**Tjek om `pubmedciteR` er tilgængelig på DST-serveren** — pakken er kun på GitHub og skal muligvis installeres manuelt.
+Kør `find.package("pubmedciteR")` på serveren for at se om den allerede er der.
+:::
+</details>
+
+---
+
+**`heaven` — dansk registerdata-toolkit**
+45 funktioner bygget specifikt til danske registerdata af Thomas Gerds (Københavns Universitet). Dækker Lexis-splitting til tidsvarerende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson comorbiditetsscore.
+[github.com/tagteam/heaven](https://github.com/tagteam/heaven) — Thomas Gerds, Biostatistik, KU (også på CRAN)
+
+<details>
+<summary>Hvad heaven kan — og hvornår du bruger det</summary>
+
+**Lexis-splitting** — opdel opfølgningstid på flere tidsakser
+
+Når en kovariat ændrer sig over tid (fx alder, kalenderperiode, tid siden eksponering), skal opfølgningstiden splittes. `heaven` gør dette med:
+
+```r
+library(heaven)
+
+# Split på alder og kalenderperiode
+df_split <- lexisTwo(
+  indat      = kohort,
+  invars     = c("pnr", "inn", "out", "event"),   # id, startdato, slutdato, udfald
+  splitvars  = list(age = c(40, 50, 60, 70),       # aldersgrænser
+                    cal = c(2010, 2015, 2020))      # kalenderår
+)
+```
+
+**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata
+
+```r
+# Byg eksponeringsvindue fra LMDB-recepter
+exp_tabel <- medicinMacro(
+  indat   = lmdb_data,         # receptdata
+  id      = "pnr",
+  atc     = "atc",
+  eksd    = "eksd",            # ekspeditionsdato
+  ddds    = "ddds",            # definerede daglige doser
+  maxdepot = 3                 # maks. antal dages lagerbeholdning
+)
+# Returnerer: pnr | start_exp | stop_exp per eksponeringsperiode
+```
+
+**Charlson comorbiditetsscore**
+
+```r
+charlson_data <- charlsonIndex(
+  indat    = lpr_diag_data,
+  id       = "pnr",
+  code     = "c_diag",
+  code_type = "icd10"
+)
+```
+
+**Risikoset-matching** — match cases til controls på index-dato
+
+```r
+matched <- riskSetMatch(
+  ptid    = "pnr",
+  event   = "event",
+  terms   = c("koen", "foedselsaar"),   # matchingsvariable
+  dat     = kohort,
+  ratio   = 5                            # 5 controls per case
+)
+```
+
+::: {.callout-note}
+**Er `heaven` på DST-serveren?** Det er sandsynligt da det er en CRAN-pakke brugt af mange danske registerforskere.
+Kør `find.package("heaven")` på DST-serveren — er den der, behøver du ikke installere den manuelt.
+Ellers: `install.packages("heaven")`.
+:::
+
 </details>
 
 ---
