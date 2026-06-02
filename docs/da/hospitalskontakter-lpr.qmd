@@ -103,9 +103,23 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 
 ---
 
+## To-fase strategi for diagnoseudtræk
+
+Effektiv udtræk af diagnosebaserede udfald følger et to-fase mønster:
+
+**Fase 1 — byg én diagnosetabel for hele kohorten**
+Hent alle diagnoser for dine kohortmedlemmer fra LPR2 og LPR3 på én gang — uden at filtrere på specifikke koder endnu. Resultatet er én stor tabel (`alle_dx`) med én række per diagnose per person, D-præfiks fjernet. Tabellen er **udfaldsagnostisk**: den bygges én gang og genbruges til alle udfald.
+
+**Fase 2 — filtrer på det specifikke udfald**
+Filtrer `alle_dx` på de ICD-koder du vil have. Find første forekomst per person. Join til kohorten. Gem.
+
+**Den eneste linje du ændrer mellem udfald er `KODER <- c(...)`.**
+
+---
+
 ## Komplet mønster: hent alle diagnoser for din kohort
 
-Dette er det fundamentale mønster til enhver diagnosebaseret udtræk — LPR2 + LPR3 kombineret.
+Dette er Fase 1 — koden til at bygge `alle_dx`.
 
 ::: {.callout-note}
 Kodeeksemplet bruger `load_database()` fra `dstDataPrep`-pakken, som kræver særligt projektsetup.
@@ -160,7 +174,7 @@ alle_dx <- bind_rows(lpr2_dx, lpr3_dx)
 
 ---
 
-## Udtræk et specifikt udfald
+## Udtræk et specifikt udfald (Fase 2)
 
 Skift `KODER` til de ICD-koder du vil have. Alt andet er uændret.
 
@@ -177,10 +191,12 @@ udfald <- alle_dx %>%
   ungroup() %>%
   select(pnr, event_date = date_contact)
 
-# Join til kohort — NA = ingen hændelse (fortsat i risiko)
+# Join til kohort — NA = ingen hændelse (fortsat i risiko, censureres ved studieafslutning)
 resultat <- kohort %>%
   select(pnr) %>%
   left_join(udfald, by = "pnr")
+
+saveRDS(resultat, "datasets/extract_demens.rds")   # skift filnavn for hvert nyt udfald
 ```
 
 <details>
