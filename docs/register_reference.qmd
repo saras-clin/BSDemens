@@ -11,6 +11,21 @@ format:
     highlight-style: github
 ---
 
+::: {.callout-warning}
+**Tjek hvornår cleaned-data sidst blev opdateret, inden du kører pipeline.**
+
+Registrene i `cleaned-data/` er ikke nødvendigvis opdateret til i dag.
+Tjek modificeringsdato på DST-serveren:
+
+```r
+file.info("E:/workdata/708421/cleaned-data/parquet-registers/")$mtime
+```
+
+Overvej: hvornår går din follow-up til, og er registrene opdateret frem til den dato?
+Forældet udtræk afskærer censureringsdatoer og udfald for tidligt — ingen fejlmeddelelse, bare stille forkerte resultater.
+Hvis registrene ikke dækker din studieperiode, skal du bestille et nyt udtræk hos DST.
+:::
+
 Alle kolonnenavne på denne side er bekræftet på DST 2026-05-15 via `colnames()`.
 De vises **efter** `rename_with(tolower)` er kaldt.
 Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.

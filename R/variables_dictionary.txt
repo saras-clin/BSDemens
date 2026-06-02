@@ -253,6 +253,24 @@
 # ============================================================================
 # DATA SOURCES MAPPING - DST parquet folder names
 # ============================================================================
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# VIGTIGT: TJEK DATO FOR SENESTE OPDATERING AF CLEANED-DATA
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Registrene i cleaned-data/ er ikke nødvendigvis opdateret til i dag.
+# Før du kører pipeline: tjek hvornår filerne sidst blev opdateret på DST-serveren.
+#   Windows: højreklik på mappen parquet-registers/ → Properties → Modified dato
+#   R:       file.info("E:/workdata/708421/cleaned-data/parquet-registers/")$mtime
+#
+# Overvej:
+#   1. Hvornår går din follow-up til? (f.eks. 31. december 2024)
+#   2. Er registrene opdateret frem til den dato?
+#   3. Hvis ikke — skal du bestille et nyt udtræk hos DST?
+#
+# Konsekvens af forældet udtræk: censureringsdatoer og udfald afskæres for
+# tidligt, og follow-up-tid undervurderes stille uden fejlmeddelelse.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
 # Base path: E:/workdata/708421/cleaned-data/parquet-registers/
 #
 # OVERVIEW TABLE — all confirmed via colnames() on DST server 2026-05-15
