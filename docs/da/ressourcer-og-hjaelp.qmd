@@ -79,6 +79,22 @@ Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
 
 ---
 
+## R-pakker specifikke til registerbaseret forskning
+
+To pakker der løser problemer specifikke for DST-miljøet:
+
+**`osdc` — Open Source Diabetes Classifier**
+Klassificerer T1D og T2D fra LPR og LMDB med en valideret algoritme (PPV 87–94%). Også på CRAN.
+[github.com/steno-aarhus/osdc](https://github.com/steno-aarhus/osdc)
+
+**`pubmedciteR` — referencer uden internet**
+DST-serveren har ingen internetadgang. `pubmedciteR` lader dig hente og formatere PubMed-referencer *fra* en lukket server — læs DOI-listen ind, og pakken formaterer referencerne til Word eller tekst.
+[github.com/Aastedet/pubmedciteR](https://github.com/Aastedet/pubmedciteR)
+
+Se den fulde liste over open source-pakker relevante for registerbaseret forskning under [OSS-listen i TODO.txt](../doc/TODO.txt) — gennemgås løbende for hvad der inkluderes i vejledningen.
+
+---
+
 ## Spørg om hjælp effektivt — minimal reproducerbart eksempel
 
 Når du beder en kollega eller poster på Stack Overflow, er det vigtigt at give dem nok information til at reproducere dit problem.
