@@ -104,24 +104,38 @@ Bibliotekaren siger "ja, dem finder jeg" — men de er ikke ankommet endnu.
 Det er præcis hvad `open_dataset()` gør: det fortæller computeren *hvad* du vil have, men data er ikke hentet ind i hukommelsen endnu.
 Resten af dine kommandoer (`filter`, `select`) tilføjer yderligere instruktioner, inden du til sidst siger "send dem nu" — det er `collect()`.
 
+::: {.panel-tabset}
+## DST-server
+
 ```r
-# På DST-serveren — erstat med den faktiske sti til registret:
 bef <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/bef/") %>%
   rename_with(tolower)
+```
 
-# Lokalt med syntetiske data (fakeregs — se Første udtræk):
+De bekræftede stier til dit projekt finder du i [Registerreference](register_reference.qmd).
+
+## DARTER
+
+```r
+bef <- load_database("bef") %>% rename_with(tolower)
+```
+
+`load_database()` fra `dstDataPrep` finder stien automatisk — du behøver ikke kende den fulde sti.
+Se [DARTER — setup →](darter/index.qmd) for installation.
+
+## Lokalt (fakeregs)
+
+```r
 bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
 ```
 
-Bruges til alle registre der er gemt som parquet-filer på DST-serveren:
+`reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
+Se [Første udtræk](foerste-udtraek.qmd) for installation af `fakeregs`.
+:::
+
+Bruges til alle registre der er gemt som parquet-filer:
 `bef`, `lpr_adm`, `lpr_diag`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`,
 `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose` med flere.
-De bekræftede stier til dit projekt finder du i [Registerreference](register_reference.qmd).
-
-::: {.callout-tip}
-**DARTER-projektet:** `load_database("navn")` fra `dstDataPrep` er en genvej der finder stien automatisk — du behøver ikke kende den fulde sti.
-Se [DARTER — setup →](darter/index.qmd) for installation af `dstDataPrep`.
-:::
 
 ---
 

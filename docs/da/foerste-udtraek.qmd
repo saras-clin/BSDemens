@@ -56,7 +56,7 @@ Ethvert udtræk starter med en liste af pnr'er — de personer du ønsker data f
 I praksis kommer den fra dit kohorte-script. Her bygger vi en lille øvelseskohorte
 direkte fra BEF-registret.
 
-```r
+```{.r filename="trin1_kohorte.R"}
 # Åbn BEF — doven forbindelse, ingen data i R endnu
 bef <- open_dataset(reg_sti("bef")) %>%
   rename_with(tolower)
@@ -146,7 +146,7 @@ se den direkte her: [steno-aarhus.github.io/fakeregs/articles/common_tasks_dplyr
 Nu trækker vi receptdata fra LMDB for vores kohort.
 Mønstret er altid det samme: **åbn → filtrer → vælg kolonner → collect**.
 
-```r
+```{.r filename="trin2_udtraek.R"}
 # Åbn LMDB — doven forbindelse
 lmdb <- open_dataset(reg_sti("lmdb")) %>%
   rename_with(tolower)
@@ -190,7 +190,7 @@ recepter <- recepter %>%
 
 Gem med `saveRDS()` så næste script kan genindlæse det uden at køre hele udtrækkene igen.
 
-```r
+```{.r filename="trin4_gem.R"}
 saveRDS(recepter, "datasets/extract_recepter.rds")   # gem til disk — skift stien til din egen mappe
 
 # Genindlæs i næste script:

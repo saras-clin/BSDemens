@@ -1,0 +1,45 @@
+/*-- scss:defaults --*/
+$font-size-base: 0.95rem;
+
+/*-- scss:rules --*/
+
+/* Stribede tabeller */
+.table > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-bg-type: rgba(0, 0, 0, 0.025);
+}
+
+/* Lidt mindre kode-skrifttype */
+pre.sourceCode, code {
+  font-size: 0.875em;
+}
+
+/* Fold-ud-link stylet som klikbar */
+details > summary {
+  cursor: pointer;
+  color: #2869a4;
+  font-weight: 500;
+  padding: 0.2rem 0;
+}
+
+details > summary:hover {
+  color: #1a4d7a;
+  text-decoration: underline;
+}
+
+/* Mere luft over H2-overskrifter */
+.quarto-document-content h2 {
+  margin-top: 2.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Lidt bredere indholdssøjle på store skærme */
+@media (min-width: 1400px) {
+  .quarto-document-content {
+    max-width: 880px;
+  }
+}
+
+/* Tabset-labels pænere */
+.panel-tabset .nav-link {
+  font-size: 0.9rem;
+}
