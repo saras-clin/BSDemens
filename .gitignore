@@ -1,0 +1,75 @@
+# ============================================================
+# DATA FILES — never commit patient-level or raw register data
+# ============================================================
+*.rds
+*.RData
+*.parquet
+*.sas7bdat
+*.csv
+*.xlsx
+*.xls
+data/
+datasets/
+output/
+results/
+
+# ============================================================
+# R / RSTUDIO
+# ============================================================
+.Rhistory          # R console history — local only
+.Rapp.history
+.Rproj.user/       # RStudio per-user project settings
+*.Rout             # R output/log files
+*.Ruserdata
+
+# ============================================================
+# CLAUDE / AI TOOLS — local instructions, not for the repo
+# ============================================================
+.claude/
+CLAUDE.md
+claude.md
+
+# ============================================================
+# macOS
+# ============================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ============================================================
+# WINDOWS (DST server is Windows)
+# ============================================================
+Thumbs.db
+desktop.ini
+~$*            # Office lock files (Word, Excel)
+*.tmp
+*.bak
+
+# ============================================================
+# FIGURES / REPORTS — generated output, reproducible from code
+# ============================================================
+*.pdf
+*.html
+*.png
+*.svg
+figures/
+
+# Exception: images committed as part of the documentation website
+!docs/da/images/*.png
+!docs/da/images/*.svg
+!docs/en/images/*.png
+!docs/en/images/*.svg
+
+# ============================================================
+# LOCAL-ONLY DIRECTORIES — restored from git history, not for GitHub
+# ============================================================
+doc/
+help/
+archive/
+
+# ============================================================
+# LOCAL NOTES — working documents, not for the repo
+# ============================================================
+docs/TODO.md
+docs/da/TODO.md
+docs/en/TODO.md

@@ -27,7 +27,7 @@ På DST's servere er begge allerede installeret — du behøver ikke installere 
 
 Sådan ser RStudio ud, første gang du åbner det:
 
-![RStudio's fire paneler: script-editor (øverst venstre), konsol (nederst venstre), environment (øverst højre), files/plots (nederst højre)](images/rstudio-interface.png){fig-alt="RStudio-interface med fire paneler"}
+![RStudio's fire paneler: script-editor (øverst venstre), konsol (nederst venstre), environment (øverst højre), files/plots (nederst højre)](images/RStudio_IDE_screenshot.png){fig-alt="RStudio-interface med fire paneler"}
 
 *Kilde: [Wikipedia / RStudio](https://en.wikipedia.org/wiki/RStudio), CC BY-SA 4.0*
 
