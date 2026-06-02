@@ -18,6 +18,8 @@ Start fra begyndelsen — analyseplan, R-miljø og DST-serveren.
 
 → [Studieforberedelse](studieforberedelse.qmd)
 → [Kom i gang med R](r-intro.qmd)
+→ [Datastrukturer](datastrukturer.qmd)
+→ [Basiskommandoer](basiskommandoer.qmd)
 → [Kom i gang på DST](getting-started-dst.qmd)
 :::
 
@@ -51,20 +53,20 @@ Særlige setup-trin og projekspecifik vejledning.
 **R og RStudio**
 
 - [Kom i gang med R](r-intro.qmd) — RStudio, første projekt, genveje
+- [Datastrukturer](datastrukturer.qmd) — langt og bredt format
 - [Basiskommandoer](basiskommandoer.qmd) — udforsk og forstå dine data
-- [Datastrukturer](datastrukturer.qmd) — langt og bredt format, tidy data
 - [Filformater](filformater.qmd) — SAS, Parquet, RDS, CSV
 
 **DST-serveren**
 
 - [Kom i gang på DST](getting-started-dst.qmd) — de første 10 minutter, det universelle mønster
 - [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) — doven evaluering, collect(), RAM
-- [Formateringstabeller](formateringstabeller.qmd) — oversæt koder til tekst
 
 **Kode og data**
 
 - [Funktioner — oversigt](guide_til_funktioner.qmd) — filter, select, mutate, joins
 - [Joins og pivots](joins-og-pivots.qmd) — kobl datasæt sammen
+- [Formateringstabeller](formateringstabeller.qmd) — oversæt koder til tekst
 - [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — LPR2 + LPR3, ICD-koder
 - [Socioøkonomiske variable](socioekonomiske-variable.qmd) — uddannelse, indkomst, beskæftigelse
 

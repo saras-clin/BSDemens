@@ -83,16 +83,10 @@ gc()       # frigiver hukommelse tilbage til operativsystemet
 ## 4. `rename_with(tolower)` skal kaldes på hvert register
 
 Rå kolonnenavne varierer efter register og år: `PNR`, `pnr`, `Pnr`, `V_CPR`.
-Glemmer du `rename_with(tolower)`, fejler `filter(pnr %in% ...)` stille —
-fordi kolonnen faktisk hedder `PNR`, og R finder den ikke.
-Fejlmeddelelsen ("Column `pnr` not found") er forvirrende, fordi kolonnen burde være der.
+Glemmer du det, fejler `filter(pnr %in% ...)` stille med "Column `pnr` not found" — selvom kolonnen er der.
 
-Reglen: **hvert `load_database()`-kald ender med `%>% rename_with(tolower)`**, altid på samme linje.
-
-```r
-bef <- load_database("bef") %>% rename_with(tolower)   # korrekt
-bef <- load_database("bef")                            # forkert — kolonnerne er i ukendt case
-```
+**Reglen:** hvert `load_database()`-kald ender med `%>% rename_with(tolower)`, altid på samme linje.
+Se [Kom i gang på DST](getting-started-dst.qmd#struktur-mønster-du-vil-bruge-igen-og-igen) for forklaring og eksempel.
 
 ---
 

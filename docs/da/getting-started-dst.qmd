@@ -231,22 +231,7 @@ Alle ICD-10-koder gemt i DST-registre har et foranstillet `"D"`:
 Dette præfiks eksisterer ikke i standard ICD-10 — det er en DST-konvention.
 **Sammenlign aldrig med koder med D-præfikset.**
 
-Fjern det med `substr()` inden sammenligning:
-
-```r
-lpr_diag  <- load_database("lpr_diag") %>% rename_with(tolower)
-pnr_liste <- unique(kohort$pnr)   # erstat 'kohort' med din kohort-data frame
-
-lpr_diag %>%
-  filter(pnr %in% !!pnr_liste) %>%
-  select(c_diag) %>%
-  collect() %>%
-  mutate(
-    icd3 = substr(c_diag, 2, 4),   # 3-tegns kode: "DG30" -> "G30"
-    icd4 = substr(c_diag, 2, 5)    # 4-tegns kode: "DE101" -> "E101"
-  ) %>%
-  filter(icd3 %in% c("G30", "F00", "F01", "F02", "F03"))
-```
+Fjern det med `substr()` inden sammenligning — se [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) for kodeeksempel.
 
 ### LPR2 vs LPR3: opdelingen i marts 2019
 
@@ -254,66 +239,7 @@ Det Nationale Patientregister skiftede format i marts 2019.
 Ethvert studie, der dækker en periode, som spænder over denne dato,
 skal forespørge begge systemer separat og kombinere resultaterne.
 
-Se den fulde oversigt over tabeller, join-nøgler og kolonnenavne i [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd).
-
-```{mermaid}
-gantt
-    title LPR-registre og studieperiode
-    dateFormat  YYYY
-    axisFormat  %Y
-    section LPR2 somatisk
-    lpr_adm + lpr_diag               :done,   1977, 2019
-    section LPR2 psykiatrisk
-    t_psyk_adm + t_psyk_diag         :done,   1995, 2019
-    section LPR3 samlet
-    lpr_a_kontakt + lpr_a_diagnose   :active, 2019, 2027
-    section Studieperiode
-    2010-2024                         :crit,   2010, 2025
-```
-
-I LPR3 er `kont_starttidspunkt` en fuld datetime (f.eks. `"2021-03-15 14:32:00"`).
-Konverter til en almindelig dato: `as.Date(kont_starttidspunkt)`, hvis du skal bruge denne.
-
-### Det psykiatriske LPR2-register
-
-Frem til marts 2019 blev diagnoser stillet på psykiatriske afdelinger gemt i
-et **separat register** fra somatiske diagnoser.
-Det er relevant for dette projekt, fordi demens (F00–F03) hyppigt diagnosticeres
-i geropsykiatriske ambulatorier og hukommelsesklinikker.
-
-Forespørger du kun `lpr_adm`/`lpr_diag`, overser du alle demensdiagnoser
-stillet på en psykiatrisk enhed før 2019. Disse patienter vil fremstå demensfrie
-og forblive i kohorten som falske negativer.
-
-Det psykiatriske register indlæses på samme måde:
-
-```r
-psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%
-  rename(pnr = v_cpr, recnum = k_recnum)    # kolonnenavne afviger fra somatisk LPR2
-psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
-  rename(recnum = v_recnum)
-```
-
-Fra marts 2019 og frem dækker LPR3 (`lpr_a_kontakt`/`lpr_a_diagnose`) både
-somatiske og psykiatriske kontakter i én tabel — ingen separat forespørgsel er nødvendig.
-
-### Diagnosetyper: A, B og G
-
-Hver diagnoserække i LPR har en typekode (A = aktionsdiagnose, B = bidiagnose, G = grundmorbus).
-Se [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) for fuld forklaring og hvornår du inkluderer hvilke typer.
-
-### Kolonnen `senere_afkraeftet` i LPR3
-
-LPR3 har en kolonne `senere_afkraeftet`, der markerer diagnoser, som efterfølgende er tilbagekaldt.
-`"Ja"` = tilbagekaldt (ekskluder), `"Nej"` = bekræftet.
-Standardfiltret er:
-
-```r
-filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
-```
-
-`is.na()`-delen er bevidst: NA-værdier beholdes frem for at blive droppet,
-fordi det er sikrere at inkludere en ukategoriseret diagnose end stiltiende at fjerne den.
+Se den fulde oversigt over tabeller, join-nøgler, diagnosetyper og LPR3-specifikke kolonner i [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd).
 
 ---
 
@@ -327,11 +253,11 @@ Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlme
 | 2 | Glem at geninstallere `duckplyr` | Mærkelige fejl fra dplyr-operationer |
 | 3 | `collect()` før `filter()` på store registre | Session crasher; server langsom for alle |
 | 4 | Glem `rename_with(tolower)` | "Column `pnr` not found" selvom kolonnen eksisterer |
-| 5 | Glem `as.Date()` på DBSO-datokolonner | Datoaritmetik fejler stille |
-| 6 | `foerstefedmeopr_dato` er NA for alle | Kolonne kan ikke bruges til datofiltrering |
+| 5 | Datokolonner er ikke altid i Date-format | Datoaritmetik fejler stille |
+| 6 | BEF er et årsstart-snapshot — ikke et levende register | Forkerte tællinger ved dato-filtrering |
 | 7 | Tro at `lpr_a_diagnose` kun har A-type diagnoser | Fejl i diagnosetypefilter |
-| 8 | Bland DBSO `koen` ("M"/"K") med BEF `koen` (1/2) | Stille mismatch ved join |
-| 9 | Brug `filter(redo_prim)` i stedet for `filter(redo_prim == 1)` | Forkert kohort |
+| 8 | Kategoriske koder er ikke konsistente på tværs af registre | Stille mismatch ved join |
+| 9 | Glem `!!` i lazy filter (`filter(pnr %in% min_liste)`) | Forkert resultat eller fejl |
 | 10 | Forveksle `nmi_count` med `nmi_score` | Forkert kovariat i modellen |
 
 [Se alle 10 faldgruber med kodeeksempler →](dst_faldgruber.qmd)

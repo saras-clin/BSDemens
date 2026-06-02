@@ -33,20 +33,20 @@ website:
         - section: "R og RStudio"
           contents:
             - da/r-intro.qmd
-            - da/basiskommandoer.qmd
             - da/datastrukturer.qmd
+            - da/basiskommandoer.qmd
             - da/filformater.qmd
 
         - section: "DST-serveren"
           contents:
             - da/getting-started-dst.qmd
             - da/parquet-arrow-duckdb.qmd
-            - da/formateringstabeller.qmd
 
         - section: "Kode og data"
           contents:
             - da/guide_til_funktioner.qmd
             - da/joins-og-pivots.qmd
+            - da/formateringstabeller.qmd
             - da/hospitalskontakter-lpr.qmd
             - da/socioekonomiske-variable.qmd
 
