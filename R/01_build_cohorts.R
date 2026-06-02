@@ -226,6 +226,75 @@ get_bef_demographics <- function(pnr_vector) {
 }
 
 
+get_dementia_dates <- function(pnr_vector) {
+  # Returns data frame (pnr, earliest_dementia): earliest dementia diagnosis date
+  # across LPR2 somatic, LPR2 psychiatric, and LPR3 for each person in pnr_vector.
+  # Persons with no dementia diagnosis are absent — left_join them so they get NA.
+  # Used inside matching loops: is.na(earliest_dementia) | earliest_dementia >= idx_date
+
+  lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)   # LPR2 somatic admissions
+  lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)   # LPR2 somatic diagnoses
+
+  lpr2_dx <- lpr_adm %>%
+    filter(pnr %in% !!pnr_vector) %>%                              # restrict to pool members before loading
+    select(pnr, recnum, date_contact = d_inddto) %>%               # contact key and date needed for join and result
+    inner_join(
+      lpr_diag %>%
+        filter(c_diagtype %in% c("A", "B")) %>%                    # primary and secondary diagnoses only
+        mutate(icd3 = substr(c_diag, 2, 4)) %>%                    # strip D prefix
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%                      # dementia codes only
+        select(recnum),                                             # only join key needed
+      by = "recnum"
+    ) %>%
+    select(pnr, date_contact) %>%
+    collect()                                                       # pull into R memory
+
+  psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%
+    rename(pnr = v_cpr, recnum = k_recnum)                         # align column names with somatic LPR2
+  psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
+    rename(recnum = v_recnum)                                       # align join key
+
+  lpr2_psyk_dx <- psyk_adm %>%
+    filter(pnr %in% !!pnr_vector) %>%
+    select(pnr, recnum, date_contact = d_inddto) %>%
+    inner_join(
+      psyk_diag %>%
+        filter(c_diagtype %in% c("A", "B")) %>%
+        mutate(icd3 = substr(c_diag, 2, 4)) %>%
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%
+        select(recnum),
+      by = "recnum"
+    ) %>%
+    select(pnr, date_contact) %>%
+    collect()
+
+  kontakter <- load_database("lpr_a_kontakt") %>% rename_with(tolower)   # LPR3 contacts
+  diagnoser <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # LPR3 diagnoses
+
+  lpr3_dx <- kontakter %>%
+    filter(pnr %in% !!pnr_vector) %>%
+    select(pnr, dw_ek_kontakt, kont_starttidspunkt) %>%
+    inner_join(
+      diagnoser %>%
+        filter(
+          diag_kode_type %in% c("A", "B"),
+          is.na(senere_afkraeftet) | senere_afkraeftet != "Ja"
+        ) %>%
+        mutate(icd3 = substr(diag_kode, 2, 4)) %>%
+        filter(icd3 %in% !!DEMENTIA_ICD3) %>%
+        select(dw_ek_kontakt),
+      by = "dw_ek_kontakt"
+    ) %>%
+    collect() %>%
+    mutate(date_contact = as.Date(kont_starttidspunkt)) %>%        # extract date from datetime
+    select(pnr, date_contact)
+
+  bind_rows(lpr2_dx, lpr2_psyk_dx, lpr3_dx) %>%                   # combine all three LPR sources
+    group_by(pnr) %>%
+    summarise(earliest_dementia = min(date_contact, na.rm = TRUE), .groups = "drop")   # one row per person; earliest date across all sources
+}
+
+
 # ============================================================================
 # 1.1 BUILD BS COHORT FROM DBSO
 # ============================================================================
@@ -408,6 +477,13 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   bef_pool <- bef_pool %>%
     left_join(pool_deaths, by = "pnr")                     # attach death date; living persons absent from dodsaars get death_date = NA
 
+  # Pre-compute earliest dementia date per pool member — used in the loop to avoid
+  # sampling controls who already had dementia at the index date. Doing this before
+  # the loop (rather than post-hoc exclusion after sampling) preserves the target match ratio.
+  dementia_dates_gp <- get_dementia_dates(bef_pool$pnr)             # (pnr, earliest_dementia) for pool members with any dementia history
+  bef_pool <- bef_pool %>%
+    left_join(dementia_dates_gp, by = "pnr")                        # persons with no dementia get earliest_dementia = NA
+
   # Pre-split pool into a named list of data frames, one element per (koen, birth_year) group.
   # Key insight: instead of dplyr::filter(pool, koen==x, birth_year %in% c(y-1,y,y+1)) on
   # every loop iteration — which scans the whole data frame each time — we do a single
@@ -416,7 +492,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   # birth_year is kept in the split data frames so the loop can check age >= 18.
   # This guards against the edge case where a comparator born 1 year later than an
   # 18-year-old BS patient would be 17 at the index date.
-  pool_list <- split(bef_pool[, c("pnr", "birth_year", "death_date", "bs_surgery_date")],
+  pool_list <- split(bef_pool[, c("pnr", "birth_year", "death_date", "bs_surgery_date", "earliest_dementia")],
                      paste(bef_pool$koen, bef_pool$birth_year, sep = "_"))   # named list: key = "sex_birthyear" (e.g. "1_1975")
 
   # Fetch sex + birth_year for the BS cohort (needed for matching key)
@@ -447,9 +523,10 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
     #       case a comparator born 1 year later (within the ±1 year matching window) would be
     #       17 at the index date. Rare but worth enforcing for consistency.
     cand_df <- cand_df[
-      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &   # alive at index date
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &   # no prior BS at index date
-      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]                  # at least 18 years old
+      (is.na(cand_df$death_date)        | cand_df$death_date        > idx_date) &   # alive at index date
+      (is.na(cand_df$bs_surgery_date)   | cand_df$bs_surgery_date   > idx_date) &   # no prior BS at index date
+      (is.na(cand_df$earliest_dementia) | cand_df$earliest_dementia >= idx_date) &  # dementia-free at index date
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]                      # at least 18 years old
     candidates <- cand_df$pnr                               # vector of eligible pnrs for this draw
 
     if (length(candidates) == 0) next                       # no eligible match for this BS patient; skip (flagged in audit below)
@@ -498,15 +575,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
             N_GP_PER_BS, " controls (pool exhaustion for rare birth years).")
   }
 
-  cat(sprintf("GP  matched (before exclusions):                     %d\n", nrow(gp_cohort)))   # attrition step 1
-
-  # Exclude any GP comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs       <- gp_cohort %>% select(pnr, index_date)               # per-person cutoff: each control's assigned index date
-  dementia_pnrs <- get_prior_dementia_pnrs(gp_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
-  gp_cohort     <- gp_cohort %>% filter(!pnr %in% dementia_pnrs)       # remove GP controls with pre-index dementia
-
-  cat(sprintf("GP  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%d)\n",
-      nrow(gp_cohort), length(dementia_pnrs)))   # attrition step 2
+  cat(sprintf("GP  matched (dementia-free at index date):           %d\n", nrow(gp_cohort)))   # attrition step 1 — dementia check applied inside loop
 
   # Exclusion: emigrated before index date (protocol criterion 3)
   # Rule: ANY VNDS "U" event with haend_dato < index date -> excluded.
@@ -550,8 +619,8 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
       nrow(gp_cohort), length(n06d_pnrs_gp)))   # attrition step 4
   cat(sprintf("GP COHORT FINAL:                                     %d\n\n", nrow(gp_cohort)))
 
-  rm(bef, bef_pool, bs_dates_in_pool, pool_deaths, pool_list, bs_key, matched_rows,
-     match_counts, n_zero, n_fewer, cutoffs, dementia_pnrs, vnds_gp,
+  rm(bef, bef_pool, bs_dates_in_pool, pool_deaths, dementia_dates_gp, pool_list, bs_key, matched_rows,
+     match_counts, n_zero, n_fewer, vnds_gp,
      emigrated_gp_pnrs, max_index_gp, n06d_pnrs_gp); gc()   # free memory; lmdb and dod reused in obesity block
 
 
@@ -639,8 +708,13 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
       by = "pnr"
     )
 
+  # Pre-compute earliest dementia date per obesity pool member — same approach as GP comparator.
+  dementia_dates_ob <- get_dementia_dates(obesity_pool$pnr)          # (pnr, earliest_dementia) for pool members with any dementia history
+  obesity_pool <- obesity_pool %>%
+    left_join(dementia_dates_ob, by = "pnr")                         # persons with no dementia get earliest_dementia = NA
+
   # birth_year kept for the age >= 18 check inside the loop (same edge case as GP comparator).
-  pool_list <- split(obesity_pool[, c("pnr", "birth_year", "earliest_e66", "death_date", "bs_surgery_date")],
+  pool_list <- split(obesity_pool[, c("pnr", "birth_year", "earliest_e66", "death_date", "bs_surgery_date", "earliest_dementia")],
                      paste(obesity_pool$koen, obesity_pool$birth_year, sep = "_"))   # named list keyed by "sex_birthyear"
 
   set.seed(42)                                                      # fix random seed for reproducibility of matching draws
@@ -656,12 +730,13 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
     cand_df    <- dplyr::bind_rows(pool_list[group_keys])          # combine candidates from three birth-year groups
 
     # Keep candidates whose E66 predates the index date, alive, without pre-index BS,
-    # and at least 18 years old at the index date (same edge-case check as GP comparator).
+    # dementia-free at index date, and at least 18 years old (same edge-case check as GP comparator).
     cand_df <- cand_df[
-      cand_df$earliest_e66 < idx_date &                            # E66 must predate the BS patient's surgery
-      (is.na(cand_df$death_date)      | cand_df$death_date      > idx_date) &   # alive at index date
-      (is.na(cand_df$bs_surgery_date) | cand_df$bs_surgery_date > idx_date) &   # no prior BS at index date
-      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]    # at least 18 years old
+      cand_df$earliest_e66 < idx_date &                                         # E66 must predate the BS patient's surgery
+      (is.na(cand_df$death_date)        | cand_df$death_date        > idx_date) &   # alive at index date
+      (is.na(cand_df$bs_surgery_date)   | cand_df$bs_surgery_date   > idx_date) &   # no prior BS at index date
+      (is.na(cand_df$earliest_dementia) | cand_df$earliest_dementia >= idx_date) &  # dementia-free at index date
+      lubridate::year(idx_date) - cand_df$birth_year >= 18L, ]                      # at least 18 years old
     candidates <- cand_df$pnr                                      # eligible pnrs for this draw
 
     if (length(candidates) == 0) next                              # no eligible obesity comparator for this BS patient; skip
@@ -710,15 +785,7 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
             N_OBESITY_PER_BS, " controls.")
   }
 
-  cat(sprintf("OB  matched (before exclusions):                     %d\n", nrow(ob_cohort)))   # attrition step 1
-
-  # Exclude any obesity comparators with pre-index dementia (ICD: F00-F03, G30-G31)
-  cutoffs       <- ob_cohort %>% select(pnr, index_date)               # per-person cutoff: each control's assigned index date
-  dementia_pnrs <- get_prior_dementia_pnrs(ob_cohort$pnr, cutoffs)     # pnrs with any dementia diagnosis before their index date
-  ob_cohort     <- ob_cohort %>% filter(!pnr %in% dementia_pnrs)       # remove obesity controls with pre-index dementia
-
-  cat(sprintf("OB  after pre-index dementia (ICD + psyk + LPR3):   %d  (-%d)\n",
-      nrow(ob_cohort), length(dementia_pnrs)))   # attrition step 2
+  cat(sprintf("OB  matched (dementia-free at index date):           %d\n", nrow(ob_cohort)))   # attrition step 1 — dementia check applied inside loop
 
   # Exclusion: emigrated before index date (protocol criterion 3)
   # Rule: ANY VNDS "U" event with haend_dato < index date -> excluded.
@@ -762,8 +829,8 @@ bef <- load_database("bef") %>% rename_with(tolower)   # BEF: annual population 
   cat(sprintf("OB COHORT FINAL:                                     %d\n\n", nrow(ob_cohort)))
 
   rm(lpr_adm, lpr_diag, kontakter, diagnoser, obesity_lpr2, obesity_lpr3, obesity_dates,
-     obesity_pool, bs_dates_in_pool, pool_deaths, bs_key, matched_rows,
-     ob_match_counts, n_ob_zero, n_ob_fewer, pool_list, cutoffs, dementia_pnrs,
+     obesity_pool, bs_dates_in_pool, pool_deaths, dementia_dates_ob, bs_key, matched_rows,
+     ob_match_counts, n_ob_zero, n_ob_fewer, pool_list,
      vnds_ob, emigrated_ob_pnrs, max_index_ob, n06d_pnrs_ob); gc()   # free remaining large objects
 
 # ============================================================================
