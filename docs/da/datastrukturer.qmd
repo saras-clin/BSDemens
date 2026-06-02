@@ -56,9 +56,15 @@ Tidy data er et princip for, hvornår data er velstruktureret til analyse:
 
 1. Hver **variabel** har sin egen kolonne
 2. Hver **observation** har sin egen række
-3. Hvert **datasæt** indeholder én type observationer
+3. Hvert **datasæt** indeholder én type observationer — fx blander du ikke patient-niveau-data (én række per person) og besøg-niveau-data (én række per kontakt) i den samme tabel
 
-Langt format er typisk tidy. Bredt format er det, når én kolonne faktisk rummer to oplysninger (fx `vaegt_6mdr` gemmer både *hvornår* og *hvad*).
+Langt format er typisk tidy.
+
+Bredt format er **ikke** tidy, når én kolonne faktisk gemmer to informationer på én gang.
+Fx gemmer kolonnen `vaegt_6mdr` både *hvad* der måles (vægt) og *hvornår* det måles (6 måneder) — begge dele er presset ind i kolonnenavnet i stedet for at have hver sin kolonne.
+Et tidy alternativ ville have én kolonne `vaegt` og én kolonne `tidspunkt`, hvor `tidspunkt` indeholder værdien `"6mdr"`.
+
+Det er netop den transformation `pivot_longer()` laver.
 
 ---
 
@@ -100,7 +106,7 @@ df_bredt_igen <- df_langt |>
 <details>
 <summary>Praktisk eksempel: DBSO-vægte fra langt til bredt</summary>
 
-DBSO har én række per besøg per patient — langt format.
+Databasen for svær overvægt (dbso) har én række per besøg per patient — langt format.
 For en analyse har vi brug for én række per patient med vægt på hvert tidspunkt — bredt format.
 
 ```r
@@ -132,8 +138,9 @@ En meget hyppig opgave: du har et langt register og vil have én repræsentativ 
 # BEF: behold kun den nyeste post per person
 bef_en_per_person <- bef |>
   group_by(pnr) |>         # gruppér på personnummer
-  arrange(desc(aar)) |>    # nyeste år først
-  slice(1) |>              # tag første række per gruppe (= nyeste år)
+  arrange(desc(aar)) |>    # desc() = faldende rækkefølge = nyeste år først
+                            # uden desc() ville det være stigende = ældste år først
+  slice(1) |>              # tag første række per gruppe — med desc() er det det nyeste år
   ungroup()                # frigiv gruppering
 ```
 

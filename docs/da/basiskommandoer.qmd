@@ -40,16 +40,24 @@ names(full_cohort)
 
 ```r
 str(data)          # kolonner med type og de første værdier — start her
-glimpse(data)      # samme som str(), men pænere layout (kræver dplyr)
-class(data)        # objekttype: "data.frame", "tbl_duckdb_connection" mv.
+glimpse(data)      # samme som str(), men pænere layout (kræver pakken dplyr)
+class(data)        # objekttype — er data faktisk i R, eller er det stadig en forbindelse?
 class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 ```
 
+**Hvad `class(data)` kan returnere:**
+
+| Resultat | Hvad det betyder |
+|---|---|
+| `"data.frame"` eller `"tbl_df"` | Data er i R's hukommelse. Du kan bruge det normalt. |
+| `"tbl_duckdb_connection"` | Data er **ikke** hentet ind i R endnu — det er stadig en usendt forespørgsel til DuckDB. De fleste kommandoer (som `nrow()`, `head()`) fejler på dette. Løsning: tilføj `%>% collect()` til sidst i koden. |
+| `"Table"` / `"ArrowObject"` | Samme situation som ovenfor, men for Arrow-format. |
+
 ::: {.callout-tip}
 **`class()` er din bedste ven på DST.**
-Hvis kode opfører sig underligt — tjek `class()` på objektet.
-Er det `"tbl_duckdb_connection"` i stedet for `"data.frame"`, mangler du et `collect()`.
-Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for forklaring.
+Fejler din kode med en mystisk besked, eller ser objektet ud som data men opfører sig mærkeligt?
+Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`.
+Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for den fulde forklaring på hvorfor.
 :::
 
 ---
@@ -66,21 +74,32 @@ tail(data)         # de sidste 6 rækker
 
 ## Udforsk indholdet
 
+`$`-tegnet er R's måde at sige "denne kolonne i denne tabel": `data$koen` betyder kolonnen `koen` i tabellen `data`.
+
 ```r
-unique(data$koen)              # hvilke unikke værdier findes i kolonnen?
-table(data$koen)               # frekvenstabel: hvor mange af hver?
-table(data$cohort, data$koen)  # krydstabel: to variable mod hinanden
+unique(data$koen)              # hvilke unikke værdier findes i kolonnen koen?
+table(data$koen)               # frekvenstabel: hvor mange rækker har hver værdi?
+table(data$koen, data$alder_gruppe)  # krydstabel: fordeling på tværs af to kolonner
 ```
 
 <details>
-<summary>Eksempel: fordeling af køn og kohorte</summary>
+<summary>Eksempel med simpel data</summary>
 
 ```r
-table(full_cohort$cohort, full_cohort$surgery_type)
-#          RYGB   SG  <NA>
-#  BS      2143 1857     0
-#  GP         0    0 50000
-#  Obesity    0    0  9000
+# Et lille eksempel med tre patienter og to variable:
+df <- data.frame(
+  koen         = c("M", "K", "M", "K", "M"),
+  alder_gruppe = c("18-40", "18-40", "41-60", "41-60", "41-60")
+)
+
+table(df$koen)
+#  K  M
+#  2  3       # 2 kvinder, 3 mænd
+
+table(df$koen, df$alder_gruppe)
+#    18-40  41-60
+# K      1      1    # 1 kvinde i 18-40, 1 kvinde i 41-60
+# M      1      2    # 1 mand i 18-40, 2 mænd i 41-60
 ```
 
 </details>
@@ -97,7 +116,7 @@ summary(data$index_date)   # opsummering af én kolonne
 For kontinuerte variable:
 
 ```r
-min(data$alder, na.rm = TRUE)    # mindste værdi (na.rm fjerner NA'er)
+min(data$alder, na.rm = TRUE)    # mindste værdi (na.rm fjerner NA'er - rm = remove)
 max(data$alder, na.rm = TRUE)    # største værdi
 mean(data$alder, na.rm = TRUE)   # gennemsnit
 median(data$alder, na.rm = TRUE) # median
@@ -126,8 +145,9 @@ barplot(table(data$cohort))              # søjlediagram
 ## Tjek manglende værdier
 
 ```r
-sum(is.na(data$index_date))            # antal NA'er i én kolonne
-colSums(is.na(data))                   # antal NA'er per kolonne
+sum(is.na(data$index_date))   # antal NA'er i kolonnen "index_date" specifikt
+                               # erstat index_date med dit eget kolonnenavn
+colSums(is.na(data))          # antal NA'er per kolonne — giver overblik over hele datasættet
 ```
 
 ---
