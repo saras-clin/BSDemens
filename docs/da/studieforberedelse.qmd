@@ -42,16 +42,8 @@ Det tvinger dig til at tage stilling til design, statistik og variable, før res
 
 ## 3. Forstå datakilden: SDS vs. DST
 
-To myndigheder er centrale for dansk registerbaseret forskning:
-
-| | Sundhedsdatastyrelsen (SDS) | Danmarks Statistik (DST) |
-|---|---|---|
-| **Hvad har de?** | Rå nationale sundhedsregistre (LPR, LMDB, cancerregister, CPR-register mv.) | Bearbejdede og anonymiserede data fra SDS + socioøkonomiske registre |
-| **Til hvem?** | Myndigheder og godkendte forskere | Forskere via sikker fjernforbindelse |
-| **Adgang via** | Direkte ansøgning til SDS | DST Forskningsservice |
-| **Dokumentation** | [sundhedsdatastyrelsen.dk](https://sundhedsdatastyrelsen.dk/data-og-registre/nationale-sundhedsregistre) | [dst.dk/extranet](https://www.dst.dk/extranet/forskningvariabellister/Oversigt%20over%20registre.html) |
-
-Som forsker arbejder du typisk på **DST's servere** med data, der er leveret og bearbejdet af DST på baggrund af SDS-registrene.
+Som forsker arbejder du på **Danmarks Statistiks (DST) servere**.
+DST modtager og bearbejder data fra bl.a. Sundhedsdatastyrelsen (SDS), som har de rå nationale sundhedsregistre (LPR, LMDB, cancerregister mv.), og stiller dem til rådighed for forskere via sikker fjernforbindelse.
 
 ---
 

@@ -27,6 +27,12 @@ Følg denne rækkefølge. AI er nederst af en god grund.
 AI kan generere plausibel-lydende kode, der ikke virker — eller virker, men giver forkerte resultater uden at fejle.
 Når du er ny, er det svært at vurdere om svaret er korrekt.
 Brug det som supplement til din egen forståelse, ikke som erstatning.
+
+Hvis du bruger AI, så giv den disse instrukser fra start:
+
+- **Stil afklarende spørgsmål inden du svarer** — så AI'en er sikker på at have forstået dit behov, inden den genererer kode
+- **Agér som vejleder, ikke som kodeskriver** — forklar hvad koden gør trin for trin, hvilke funktioner der bruges og hvorfor, og tilføj kommentarer til alle vigtige linjer
+- **Antag at jeg er begynder** — undgå at springe trin over eller antage forudgående viden
 :::
 
 ---

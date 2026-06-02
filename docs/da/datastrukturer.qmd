@@ -104,26 +104,36 @@ df_bredt_igen <- df_langt |>
 ```
 
 <details>
-<summary>Praktisk eksempel: DBSO-vægte fra langt til bredt</summary>
+<summary>Praktisk eksempel: HbA1c-målinger fra langt til bredt</summary>
 
-Databasen for svær overvægt (dbso) har én række per besøg per patient — langt format.
-For en analyse har vi brug for én række per patient med vægt på hvert tidspunkt — bredt format.
+Forestil dig tre diabetespatienter med HbA1c-målinger (et blodprøvemål for langtidsblodsukker) ved to tidspunkter.
+I registret gemmes de i langt format — én måling per række.
+Til analysen vil vi have bredt format — én række per patient.
 
 ```r
 library(dplyr)
 library(tidyr)
 
-# Antag dbso_vaegter er allerede collected fra DBSO med kolonner:
-# pnr, tidspunkt ("baseline", "6mdr", "12mdr", "24mdr"), vaegt
+# Langt format — som det ser ud i registret:
+hba1c_langt <- data.frame(
+  pnr       = c("001", "001", "002", "002", "003", "003"),
+  tidspunkt = c("baseline", "6mdr", "baseline", "6mdr", "baseline", "6mdr"),
+  hba1c     = c(72, 58, 65, 54, 80, 61)   # mmol/mol
+)
 
-dbso_bredt <- dbso_vaegter |>
+# Konverter til bredt — én række per patient, én kolonne per tidspunkt:
+hba1c_bredt <- hba1c_langt |>
   pivot_wider(
-    names_from  = tidspunkt,
-    values_from = vaegt,
-    names_prefix = "vaegt_"   # giver kolonner: vaegt_baseline, vaegt_6mdr mv.
+    names_from   = tidspunkt,
+    values_from  = hba1c,
+    names_prefix = "hba1c_"   # giver kolonner: hba1c_baseline, hba1c_6mdr
   )
 
-# Resultatet: én række per patient, én kolonne per tidspunkt
+# Resultat:
+#   pnr   hba1c_baseline  hba1c_6mdr
+#   001             72          58
+#   002             65          54
+#   003             80          61
 ```
 
 </details>
