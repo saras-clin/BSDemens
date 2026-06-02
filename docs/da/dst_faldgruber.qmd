@@ -25,26 +25,26 @@ Der er to registre med lignende navne:
 
 | Register | Indeholder | Bruges til |
 |---|---|---|
-| `dodsaars` | Individuelle dødsregistreringer, præcis dødsdato (`d_dodsdto`), ~1970–2001 | **Censurering ved dødsfald** |
-| `dod` | Individuelle dødsregistreringer, præcis dødsdato (`doddato`), ~2001–2024 | **Censurering ved dødsfald** |
+| `dodsaars` | Individuelle dødsregistreringer med præcis dødsdato (`d_dodsdto`), ~1970–2001 | **Censurering ved dødsfald** |
 | `dodsaasg` | Dødsårsagsklassifikation | Kun analyse af dødsårsag |
 
 `dodsaasg` har ikke dødsdatoen i det rigtige format og er ikke den autoritative kilde til individuelle dødsdatoer.
-`dodsaars` og `dod` er SAS-filer — tilgå dem med `haven::read_sas()`, **ikke** `load_database()`.
+
+::: {.callout-warning}
+**`dodsaars` dækker kun ~1970–2001** (pr. juni 2026). Dødsfald efter 2001 er ikke dækket af cleaned-data.
+DOD-registret (~2001–2024) kræver udtræk fra rå SAS-fil — se udtræksguide (under udvikling).
+<!-- TODO: link til udtræksguide -->
+:::
 
 ```r
-# KORREKT — begge registre kombineres for fuld dækning
-dodsaars  <- haven::read_sas(path_dodsaars) %>% rename_with(tolower)
-dod_fil   <- haven::read_sas(path_dod)      %>% rename_with(tolower) %>%
-             rename(d_dodsdto = doddato)     # align kolonnenavn med dodsaars
+# KORREKT
+dod <- load_database("dodsaars") %>% rename_with(tolower)   # dækker ~1970–2001
+dod_person <- dod %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
+  select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto er den bekræftede kolonne
+  collect()
 
-death_dates <- bind_rows(
-  dodsaars %>% select(pnr, d_dodsdto),
-  dod_fil  %>% select(pnr, d_dodsdto)
-) %>%
-  filter(pnr %in% !!kohort_pnrs)
-
-# FORKERT — brug ikke load_database("dodsaars") og ikke dodsaasg til dødsdatoer
+# FORKERT — brug ikke dodsaasg til censureringsdatoer
 ```
 
 ---

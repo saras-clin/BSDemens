@@ -1,123 +1,26 @@
 ---
 title: "BS & Demens — Projekt 708421"
 subtitle: "Kodevejledning til registerbaseret kohortestudie"
+page-layout: full
+sidebar: false
 ---
-
-## Om projektet
-
-Kodevejledning til registerbaserede kohortestudier på DST — særligt til projekt 708421 (DARTER).
-
----
-
-## Inden du starter
-
-To trin skal altid gøres, inden du åbner projektet.
-
-::: {.callout-note}
-**Mac-brugere: sæt tastaturet til Unicode-tilstand**
-
-Specialtegn som `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Microsoft Remote Desktop som standard, fordi Mac'ens Option-tast sender scancodes, som Windows fortolker forkert.
-
-**Løsning (gøres én gang pr. forbindelse):** Skift til Unicode-tilstand:
-
-- Via menuen: **Connections → Keyboard Mode → Unicode**
-- Via genvej inde i Remote Desktop-vinduet: **⌃⌘U** (Ctrl + Cmd + U)
-
-I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter — RStudio kører på Windows-serveren).
-Markér flere linjer og tryk Ctrl+Enter for at køre hele markeringen på én gang.
-
-Pipe-tegnet `|` skrives med **Option + i**.
-
-Øvrige specialtegn: `[` = **Option + 8**, `]` = **Option + 9**, `{` = **Option + Shift + 8**, `}` = **Option + Shift + 9**.
-:::
-
-::: {.callout-important}
-**1. Byg `dstDataPrep`**
-
-Åbn `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj` → **Ctrl + Shift + B**.
-På Mac kan du alternativt bygge manuelt via RStudios menulinje: **Build → Install Package**.
-Ikke nødvendigt ved hver session — kun efter DST nulstiller serveren (sker efter et antal dage).
-Opdages ved at `library(dstDataPrep)` melder *"there is no package called 'dstDataPrep'"*.
-:::
-
-::: {.callout-important}
-**2. Geninstaller `duckplyr` i starten af hver session**
-
-```r
-install.packages("duckplyr")   # skal køres inden library()
-```
-Den forudinstallerede version er for gammel. Installationen nulstilles ved logout.
-:::
-
----
-
-## Sider på dette website
 
 ::: {.grid}
 
 ::: {.g-col-6}
-### [Kom i gang](getting-started-dst.qmd)
-Alt hvad du behøver for at komme i gang på DST for første gang:
-de to datastores, det universelle forespørgselsmønster, ICD D-præfikset,
-LPR2/LPR3-opdelingen og pipeline-diagrammet.
+### Dansk
+
+Kodevejledning til registerbaserede kohortestudier på DST — særligt til projekt 708421 (DARTER).
+
+[Gå til dansk vejledning →](da/index.qmd){.btn .btn-primary}
 :::
 
 ::: {.g-col-6}
-### [Funktionsguide](guide_til_funktioner.qmd)
-Forklaring af alle R-funktioner brugt i projektet —
-fra røret `%>%` og `filter()` til joins, datoberegninger og doven evaluering.
-Med analogier til hverdagen og de 7 vigtigste funktioner fremhævet øverst.
-:::
+### English
 
-::: {.g-col-6}
-### [Registerreference](register_reference.qmd)
-Fulde kolonnenavne for alle 16 registre, bekræftet på DST 2026-05-15.
-Nøglekolonner fremhævet. Særlige quirks markeret med advarsler.
-:::
+English version under construction.
 
-::: {.g-col-6}
-### [Faldgruber](dst_faldgruber.qmd)
-10 DST-specifikke fejl der koster tid og giver uinformative fejlmeddelelser —
-fra `dodsaars` vs `dodsaasg` til DBSO-datoformater og NMI-score vs NMI-count.
+[Go to English guide →](en/index.qmd){.btn .btn-secondary}
 :::
 
 :::
-
----
-
-## Pipeline-oversigt for mit specifikke projekt
-
-Data flyttes fra råregistre til analysedata i fem trin:
-
-```
-00_prepare_dbso.R   →  DBSO parquet (kun én gang)
-01_build_cohorts.R  →  full_cohort.rds
-02_extract_*.R      →  extract_dementia.rds, extract_comorbidities.rds, ...
-03_extract_ses.R    →  ses_data.rds
-04_data_mgmt.R      →  study1_clean.rds  (klar til overlevelsesanalyse)
-```
-
-Trin 2 og 3 kan køre parallelt. Se den fulde pipeline med Mermaid-diagram på siden [Kom i gang](getting-started-dst.qmd#pipeline-i-ét-diagram).
-
----
-
-## Mappestruktur i github
-
-```
-R/
-  00_prepare_dbso.R                    # Engangs: SAS → parquet for DBSO
-  01_build_cohorts.R                   # BS-kohort + GP + fedme-sammenligning
-  02_extract_outcomes_covariates.R     # LPR/LMDB/DBSO-udtræk
-  03_extract_ses.R                     # Socioøkonomiske variabler
-                                       # OBS: fælles-steno SES-kode under udvikling
-  04_data_management_dementia.R        # Merge, eksklusioner, analysedatasæt
-  variables_dictionary.txt             # Bekræftede registerkolonner
-  functions_guide.txt                  # Funktionsinventar (arkiv)
-docs/
-  index.qmd                            # Denne side
-  getting-started-dst.qmd             # Kom i gang på DST
-  guide_til_funktioner.qmd            # Funktionsforklaringer
-  register_reference.qmd              # Registerkolonner
-  dst_faldgruber.qmd                  # Faldgruber
-datasets/                              # gitignored: .rds-outputfiler
-```

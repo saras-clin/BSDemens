@@ -42,7 +42,7 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 |---|---|---|
 | Fødselsdato og køn | BEF | `foed_dag`, `koen` |
 | Om personen er død — og hvornår (~1970–2001) | DODSAARS | `d_dodsdto` |
-| Om personen er død — og hvornår (~2001–2024) | DOD | `doddato` → rename til `d_dodsdto` |
+| Om personen er død — og hvornår (~2001–2024) | DOD | *ikke i cleaned-data endnu — se udtræksguide* |
 | Om personen er emigreret | VNDS | `haend_dato`, `indud_kode` |
 | En somatisk hospitalskontakt (før 2019) | lpr_adm | `d_inddto`, `recnum`, `c_pattype` |
 | En somatisk diagnose (før 2019) | lpr_diag | `c_diag`, `c_diagtype`, `recnum` |
@@ -72,8 +72,8 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | Register | `load_database()`-navn | Join-nøgle | Periode | Kritisk kolonne |
 |---|---|---|---|---|
 | BEF | `"bef"` | `pnr` | Alle år | `koen`, `foed_dag`, `familie_id` |
-| DODSAARS | `read_sas(path_dodsaars)` | `pnr` | ~1970–2001 | **`d_dodsdto`** (dødsdato til censurering) |
-| DOD | `read_sas(path_dod)` | `pnr` | ~2001–2024 | **`doddato`** → rename til `d_dodsdto` |
+| DODSAARS | `"dodsaars"` | `pnr` | ~1970–2001 | **`d_dodsdto`** (dødsdato til censurering) |
+| DOD | *ikke i cleaned-data endnu* | `pnr` | ~2001–2024 | kræver udtræk fra rå SAS |
 | VNDS | `"vnds"` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
 | LPR2 kontakter | `"lpr_adm"` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
 | LPR2 diagnoser | `"lpr_diag"` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |
@@ -109,15 +109,21 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | `civst` | character | Civilstand |
 
 ::: {.callout-note}
-BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`, ~1970–2001) og DOD (`doddato`, ~2001–2024) til censurering — begge er SAS-filer tilgået via `haven::read_sas()`, ikke `load_database()`.
+BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering — dækker ~1970–2001 og er tilgængeligt via `load_database("dodsaars")`. DOD (~2001–2024) er endnu ikke i cleaned-data og kræver udtræk fra rå SAS-fil.
 :::
 
 ---
 
 ### DODSAARS — Dødsregistret (~1970–2001)
 
-Én række per afdød person. **Adgang: `haven::read_sas(path_dodsaars)` — ikke `load_database()`.**
-Dækker ~1970 til 2001. Brug [DOD](#dod-dødsfald-2001-2024) for perioden 2001–2024.
+Én række per afdød person. Adgang: `load_database("dodsaars")`.
+
+::: {.callout-warning}
+**DODSAARS dækker kun ~1970–2001** (pr. juni 2026 — cleaned-data er ikke opdateret).
+For dødsfald efter 2001 er DOD-registret endnu ikke tilgængeligt i cleaned-data.
+<!-- TODO: link til udtræksguide når den er klar -->
+:::
+
 
 | Kolonne | Type | Indhold |
 |---|---|---|
@@ -139,30 +145,14 @@ Brug altid `dodsaars` med kolonnen `d_dodsdto`.
 
 ---
 
-### DOD — Dødsfald (~2001–2024) {#dod-dødsfald-2001-2024}
+### DOD — Dødsfald (~2001–2024)
 
-Én række per afdød person. **Adgang: `haven::read_sas(path_dod)` — ikke `load_database()`.**
-Kompletterer DODSAARS for perioden ~2001–2024. Bekræft præcis cutoff med datamanager.
+::: {.callout-warning}
+**DOD er ikke tilgængeligt i cleaned-data pr. juni 2026.**
+Registret dækker ~2001–2024 og komplementerer DODSAARS, men kræver udtræk fra rå SAS-fil.
+Kolonner (forventet efter `rename_with(tolower)`): `pnr`, `doddato` (rename til `d_dodsdto`), `cprtjek`, `cprtype`.
 
-| Kolonne | Type | Indhold |
-|---|---|---|
-| **`pnr`** | character | Personidentifikator |
-| **`doddato`** | Date | **Dødsdato — rename til `d_dodsdto` for at matche DODSAARS** |
-| `cprtjek` | character | CPR check digit |
-| `cprtype` | character | CPR type |
-
-::: {.callout-note}
-For korrekt censurering: kombinér begge registre og tag den første dødsdato per person.
-
-```r
-dodsaars    <- haven::read_sas(path_dodsaars) %>% rename_with(tolower)
-dod_fil     <- haven::read_sas(path_dod)      %>% rename_with(tolower) %>%
-               rename(d_dodsdto = doddato)
-death_dates <- bind_rows(
-  dodsaars %>% select(pnr, d_dodsdto),
-  dod_fil  %>% select(pnr, d_dodsdto)
-)
-```
+<!-- TODO: link til udtræksguide når den er klar -->
 :::
 
 ---

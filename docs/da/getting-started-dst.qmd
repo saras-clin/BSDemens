@@ -400,8 +400,8 @@ Alle kolonnenavne nedenfor er **efter** `rename_with(tolower)`.
 | Register | `load_database()`-navn | Hvad det indeholder | Nøglekolonner | Dækning |
 |---|---|---|---|---|
 | BEF — Befolkningsregistret | `"bef"` | Årligt befolkningssnapshot. Én række per person per år. | `pnr`, `koen` (1=mand, 2=kvinde), `foed_dag` (fødselsdato), `aar` (år), `familie_id` | Alle år |
-| DODSAARS — Dødsregistret | `read_sas(path_dodsaars)` | Én række per afdød person. | `pnr`, `d_dodsdto` (dødsdato) | ~1970–2001 |
-| DOD — Dødsfald | `read_sas(path_dod)` | Én række per afdød person. | `pnr`, `doddato` → `d_dodsdto` | ~2001–2024 |
+| DODSAARS — Dødsregistret | `"dodsaars"` | Én række per afdød person. | `pnr`, `d_dodsdto` (dødsdato) | ~1970–2001 |
+| DOD — Dødsfald | *ikke i cleaned-data endnu* | Dækker ~2001–2024 — kræver udtræk fra rå SAS | `pnr`, `doddato` | ~2001–2024 |
 | VNDS — Migrationsregistret | `"vnds"` | Én række per migrationsbegivenhed. | `pnr`, `indud_kode` (`"U"` = udvandring, `"I"` = indvandring), `haend_dato` (begivenhedsdato) | Alle år |
 
 ### Hospitalsregistre (LPR)
@@ -584,6 +584,6 @@ Psykiatrisk LPR2 (`t_psyk_adm`/`t_psyk_diag`) skal tilføjes som et tredje udtr�
 | Objektet ser ud som data, men opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |
 | ICD-filter matcher ingenting | Tjek D-præfikset: brug `substr(c_diag, 2, 4)` inden filtrering |
 | Manglende demenstilfælde før 2019 | Du har glemt at forespørge `t_psyk_adm`/`t_psyk_diag` |
-| Forkert eller manglende dødsdato | Brug `dodsaars` (`d_dodsdto`, ~1970–2001) **og** `dod` (`doddato`, ~2001–2024) via `read_sas()` — aldrig `load_database("dodsaars")` og aldrig `dodsaasg` |
+| Forkert eller manglende dødsdato | Brug `dodsaars` (`d_dodsdto`, ~1970–2001) via `load_database()` — aldrig `dodsaasg`. Post-2001 dødsfald kræver DOD-udtræk (ikke i cleaned-data endnu) |
 | Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(stort_objekt); gc()` efter store udtræk |
 | `!!` giver en fejl | Sørg for, at du er inde i et `dplyr`-verbum (`filter`, `mutate`) på et dovent objekt |

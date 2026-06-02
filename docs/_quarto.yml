@@ -6,18 +6,42 @@ website:
   title: "BS & Demens — Projekt 708421"
   description: "Kodevejledning til BS & Demens-kohortestudiet på DST"
   search: true
+
   navbar:
     left:
       - href: index.qmd
-        text: Hjem
-      - href: getting-started-dst.qmd
-        text: Kom i gang
-      - href: guide_til_funktioner.qmd
-        text: Funktionsguide
-      - href: register_reference.qmd
-        text: Registerreference
-      - href: dst_faldgruber.qmd
-        text: Faldgruber
+        text: Forside
+    right:
+      - text: "Dansk"
+        href: da/index.qmd
+      - text: "English"
+        href: en/index.qmd
+
+  sidebar:
+    - id: da
+      title: "Vejledning"
+      style: "docked"
+      collapse-level: 1
+      contents:
+        - da/index.qmd
+        - section: "Kom i gang"
+          contents:
+            - da/getting-started-dst.qmd
+        - section: "Funktioner og kode"
+          contents:
+            - da/guide_til_funktioner.qmd
+        - section: "Registerreference"
+          contents:
+            - da/register_reference.qmd
+            - da/dst_faldgruber.qmd
+
+    - id: en
+      title: "Guide"
+      style: "docked"
+      collapse-level: 1
+      contents:
+        - en/index.qmd
+
   page-footer:
     center: "Steno Diabetes Center Aarhus — Projekt 708421"
 

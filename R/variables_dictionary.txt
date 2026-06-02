@@ -278,8 +278,8 @@
 # Register           — load_database() name    — Join key        — Period
 # ————————————————————+————————————————————————+—————————————————+————————————————
 # BEF                — "bef"                   — pnr             — annual snapshots
-# DODSAARS           — read_sas(path_dodsaars)  — pnr             — ~1970–2001 (confirm exact cutoff)
-# DOD                — read_sas(path_dod)       — pnr             — ~2001–2024 (confirm exact cutoff)
+# DODSAARS           — load_database("dodsaars") — pnr            — ~1970–2001 (aktuelt i cleaned-data juni 2026)
+# DOD                — IKKE i cleaned-data      — pnr             — ~2001–2024  (kræver udtræk fra rå SAS — se udtræksguide)
 # LPR2 contacts      — "lpr_adm"               — recnum          — up to Mar 2019
 # LPR2 diagnoses     — "lpr_diag"              — recnum          — up to Mar 2019
 # LPR procedures     — "lpr_sksopr"            — recnum          — 1996–2018 (NOTE: likely LPR2 only — not yet confirmed)
@@ -316,7 +316,10 @@
 # —————————————————————————————————————————————————————————————————————————————
 # DODSAARS - Doedsaarsagsregisteret (Cause of Death Register)
 # —————————————————————————————————————————————————————————————————————————————
-#   DST folder: dodsaars  (accessed via load_database("dodsaars"))
+#   Access: load_database("dodsaars") — er i cleaned-data som parquet
+#   Period: ~1970–2001 (aktuelt pr. juni 2026 — cleaned-data ikke opdateret til nyere periode)
+#   For dødsfald efter 2001: DOD-registret er IKKE i cleaned-data endnu.
+#   Se udtræksguide (under udvikling) for at trække fra rå SAS-fil.
 #   One row per deceased person.
 #   Confirmed column names (rename_with(tolower) applied):
 #     pnr          encrypted CPR number (patient identifier)
@@ -345,14 +348,14 @@
 # —————————————————————————————————————————————————————————————————————————————
 # DOD - Dødsfald (Death register, recent years)
 # —————————————————————————————————————————————————————————————————————————————
-#   Access: haven::read_sas(path_dod) — SAS file, NOT via load_database()
-#           Loaded fully into RAM; %in% filter works without semi_join workaround.
+#   Status: IKKE tilgængeligt i cleaned-data pr. juni 2026.
+#   Dækker ~2001–2024 og komplementerer DODSAARS.
+#   For at få adgang: udtræk fra rå SAS-fil nødvendigt.
+#   Se udtræksguide (under udvikling) — link tilføjes når guide er klar.
 #   Period: ~2001 to 2024 (confirm exact year cutoff with data manager)
-#   Complements DODSAARS which covers ~1970–2001.
-#   One row per deceased person.
-#   Confirmed column names (rename_with(tolower) applied; 4 columns total):
+#   Expected column names (rename_with(tolower) applied; 4 columns total):
 #     pnr          encrypted CPR number (patient identifier)
-#     doddato      date of death — USE THIS for censoring (rename to d_dodsdto to align with DODSAARS)
+#     doddato      date of death (rename to d_dodsdto to align with DODSAARS)
 #     cprtjek      CPR check digit
 #     cprtype      CPR type code
 #
