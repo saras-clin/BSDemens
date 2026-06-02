@@ -7,20 +7,36 @@ format:
     toc: true
     toc-depth: 3
     toc-title: "På denne side"
+    theme: cosmo
     highlight-style: github
 ---
+
+::: {.callout-warning}
+**For DARTER: Tjek hvornår cleaned-data sidst blev opdateret, inden du kører pipeline.**
+
+Registrene i `cleaned-data/` er ikke nødvendigvis opdateret til i dag.
+Tjek modificeringsdato på DST-serveren:
+
+```r
+file.info("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/")$mtime
+```
+
+Overvej: hvornår går din follow-up til, og er registrene opdateret frem til den dato?
+Forældet udtræk afskærer censureringsdatoer og udfald for tidligt — ingen fejlmeddelelse, bare stille forkerte resultater.
+Hvis registrene ikke dækker din studieperiode, skal du bestille et nyt udtræk hos DST.
+:::
 
 Alle kolonnenavne på denne side er bekræftet på DST 2026-05-15 via `colnames()`.
 De vises **efter** `rename_with(tolower)` er kaldt.
 Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
 
-Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ved hvert register.
-
-::: {.callout-tip}
-**Arbejder du på DARTER?** Bekræftede stier og modificeringsdatoer for projekt 708421 findes på [Registersti og datastores →](darter/registersti-datastores.qmd)
-:::
+Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
 
 ---
+::: {.callout-warning}
+**Kolonnenavne er som de fremgår i DARTER efter `rename_with(tolower)` er kaldt.**
+De er muligvis anderledes i dit datasæt — inspicér med `colnames(dit_register)`.
+:::
 
 ## Hvad vil jeg finde? — omvendt opslagstabel
 
@@ -44,9 +60,7 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | En operationsprocedure / SKS-kode (2019 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_forloeb` |
 
 ::: {.callout-note}
-**Join-nøgler** er den kolonne to tabeller har til fælles — det R bruger til at matche rækker, når du sætter dem sammen med `left_join()` eller `inner_join()`.
-Eks.: `left_join(lpr_adm, lpr_diag, by = "recnum")` finder rækker i begge tabeller med samme `recnum`.
-
+**Join-nøgler:**
 BEF, DODSAARS, VNDS, LMDB, UDDA, AKM joines alle på `pnr`.
 FAIK joines via `familie_id` — hent den fra BEF.
 LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
