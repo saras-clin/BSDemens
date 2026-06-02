@@ -18,7 +18,7 @@ Registrene i `cleaned-data/` er ikke nødvendigvis opdateret til i dag.
 Tjek modificeringsdato på DST-serveren:
 
 ```r
-file.info("E:/workdata/708421/cleaned-data/parquet-registers/")$mtime
+file.info("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/")$mtime
 ```
 
 Overvej: hvornår går din follow-up til, og er registrene opdateret frem til den dato?
@@ -41,8 +41,7 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | Jeg vil finde... | Register | Nøglekolonne(r) |
 |---|---|---|
 | Fødselsdato og køn | BEF | `foed_dag`, `koen` |
-| Om personen er død — og hvornår (~1970–2001) | DODSAARS | `d_dodsdto` |
-| Om personen er død — og hvornår (~2001–2024) | DOD | *ikke i cleaned-data endnu — se udtræksguide* |
+| Om personen er død — og hvornår | DODSAARS | `d_dodsdto` |
 | Om personen er emigreret | VNDS | `haend_dato`, `indud_kode` |
 | En somatisk hospitalskontakt (før 2019) | lpr_adm | `d_inddto`, `recnum`, `c_pattype` |
 | En somatisk diagnose (før 2019) | lpr_diag | `c_diag`, `c_diagtype`, `recnum` |
@@ -71,8 +70,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | Register | `load_database()`-navn | Join-nøgle | Periode | Kritisk kolonne |
 |---|---|---|---|---|
 | BEF | `"bef"` | `pnr` | Alle år | `koen`, `foed_dag`, `familie_id` |
-| DODSAARS | `"dodsaars"` | `pnr` | ~1970–2001 | **`d_dodsdto`** (dødsdato til censurering) |
-| DOD | *ikke i cleaned-data endnu* | `pnr` | ~2001–2024 | kræver udtræk fra rå SAS |
+| DODSAARS | `"dodsaars"` | `pnr` | Se projektvejledning | **`d_dodsdto`** (dødsdato til censurering) |
 | VNDS | `"vnds"` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
 | LPR2 kontakter | `"lpr_adm"` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
 | LPR2 diagnoser | `"lpr_diag"` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |

@@ -108,6 +108,14 @@ table(df$koen, df$alder_gruppe)
 
 ## Opsummering af data
 
+::: {.callout-note}
+**Hvad er NA?**
+`NA` (*Not Available*) er R's betegnelse for en manglende eller ukendt værdi.
+En celle kan have `NA` fordi oplysningen ikke er registreret, ikke er indberettet eller ikke findes for den person.
+De fleste beregningsfunktioner returnerer `NA` hvis der er én `NA` i data — medmindre du skriver `na.rm = TRUE` ("remove NAs").
+`is.na(x)` returnerer `TRUE` for NA-værdier og `FALSE` for alt andet.
+:::
+
 ```r
 summary(data)              # min, max, median, gennemsnit og kvartiler for alle kolonner
 summary(data$index_date)   # opsummering af én kolonne
