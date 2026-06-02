@@ -26,7 +26,8 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | Jeg vil finde... | Register | Nøglekolonne(r) |
 |---|---|---|
 | Fødselsdato og køn | BEF | `foed_dag`, `koen` |
-| Om personen er død — og hvornår | DODSAARS | `d_dodsdto` |
+| Om personen er død — og hvornår (~1970–2001) | DODSAARS | `d_dodsdto` |
+| Om personen er død — og hvornår (~2001–2024) | DOD | `doddato` → rename til `d_dodsdto` |
 | Om personen er emigreret | VNDS | `haend_dato`, `indud_kode` |
 | En somatisk hospitalskontakt (før 2019) | lpr_adm | `d_inddto`, `recnum`, `c_pattype` |
 | En somatisk diagnose (før 2019) | lpr_diag | `c_diag`, `c_diagtype`, `recnum` |
@@ -39,14 +40,14 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | Dato for bariatrisk operation | DBSO | `datoper_prim` |
 | Diabetestype og debutdato | OSDC | `diabetes_type`, `do_dm` |
 | En operationsprocedure / SKS-kode (frem til 2018) | lpr_sksopr | `c_opr`, `recnum` |
-| En operationsprocedure / SKS-kode (2018 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_kontakt` |
+| En operationsprocedure / SKS-kode (2019 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_forloeb` |
 
 ::: {.callout-note}
 **Join-nøgler:**
 BEF, DODSAARS, VNDS, LMDB, UDDA, AKM, DBSO og OSDC joines alle på `pnr`.
 FAIK joines via `familie_id` — hent den fra BEF.
 LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
-`lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_kontakt` (efter `rename_with(tolower)`).
+`lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_forloeb` — **`dw_ek_kontakt` er NA for alle rækker på DST og kan ikke bruges som join-nøgle**.
 :::
 
 ---
@@ -56,7 +57,8 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | Register | `load_database()`-navn | Join-nøgle | Periode | Kritisk kolonne |
 |---|---|---|---|---|
 | BEF | `"bef"` | `pnr` | Alle år | `koen`, `foed_dag`, `familie_id` |
-| DODSAARS | `"dodsaars"` | `pnr` | Alle år | **`d_dodsdto`** (dødsdato til censurering) |
+| DODSAARS | `read_sas(path_dodsaars)` | `pnr` | ~1970–2001 | **`d_dodsdto`** (dødsdato til censurering) |
+| DOD | `read_sas(path_dod)` | `pnr` | ~2001–2024 | **`doddato`** → rename til `d_dodsdto` |
 | VNDS | `"vnds"` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
 | LPR2 kontakter | `"lpr_adm"` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
 | LPR2 diagnoser | `"lpr_diag"` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |
@@ -65,7 +67,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | LPR2 psyk diagnoser | `"t_psyk_diag"` | `v_recnum` → `recnum` | 1995–marts 2019 | `c_diag`, `c_diagtype` |
 | LPR3 kontakter | `"lpr_a_kontakt"` | `dw_ek_kontakt` | Marts 2019+ | `kont_starttidspunkt` (datetime) |
 | LPR3 diagnoser | `"lpr_a_diagnose"` | `dw_ek_kontakt` | Marts 2019+ | `diag_kode`, `diag_kode_type`, `senere_afkraeftet` |
-| LPR3 SKS-procedurer | `"procedurer_kirurgi"` | `DW_EK_KONTAKT` | 2018+ | `procedurekode`, `dato_start` |
+| LPR3 SKS-procedurer | `"procedurer_kirurgi"` | `dw_ek_forloeb` | 2019+ | `procedurekode`, `dato_start` |
 | LMDB | `"lmdb"` | `pnr` | Ca. 1994+ | `atc`, `eksd` |
 | UDDA | `"udda"` | `pnr` | Alle år | `hfaudd`, `aar` |
 | FAIK | `"faik"` | `familie_id` | Alle år | `famaekvivadisp_13` |
@@ -92,14 +94,15 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | `civst` | character | Civilstand |
 
 ::: {.callout-note}
-BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering.
+BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`, ~1970–2001) og DOD (`doddato`, ~2001–2024) til censurering — begge er SAS-filer tilgået via `haven::read_sas()`, ikke `load_database()`.
 :::
 
 ---
 
-### DODSAARS — Dødsregistret
+### DODSAARS — Dødsregistret (~1970–2001)
 
-Én række per afdød person.
+Én række per afdød person. **Adgang: `haven::read_sas(path_dodsaars)` — ikke `load_database()`.**
+Dækker ~1970 til 2001. Brug [DOD](#dod-dødsfald-2001-2024) for perioden 2001–2024.
 
 | Kolonne | Type | Indhold |
 |---|---|---|
@@ -117,6 +120,34 @@ BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering.
 ::: {.callout-warning}
 **`dodsaasg`** er klassifikationsregistret for dødsårsager — det er **ikke** kilden til individuelle dødsdatoer.
 Brug altid `dodsaars` med kolonnen `d_dodsdto`.
+:::
+
+---
+
+### DOD — Dødsfald (~2001–2024) {#dod-dødsfald-2001-2024}
+
+Én række per afdød person. **Adgang: `haven::read_sas(path_dod)` — ikke `load_database()`.**
+Kompletterer DODSAARS for perioden ~2001–2024. Bekræft præcis cutoff med datamanager.
+
+| Kolonne | Type | Indhold |
+|---|---|---|
+| **`pnr`** | character | Personidentifikator |
+| **`doddato`** | Date | **Dødsdato — rename til `d_dodsdto` for at matche DODSAARS** |
+| `cprtjek` | character | CPR check digit |
+| `cprtype` | character | CPR type |
+
+::: {.callout-note}
+For korrekt censurering: kombinér begge registre og tag den første dødsdato per person.
+
+```r
+dodsaars    <- haven::read_sas(path_dodsaars) %>% rename_with(tolower)
+dod_fil     <- haven::read_sas(path_dod)      %>% rename_with(tolower) %>%
+               rename(d_dodsdto = doddato)
+death_dates <- bind_rows(
+  dodsaars %>% select(pnr, d_dodsdto),
+  dod_fil  %>% select(pnr, d_dodsdto)
+)
+```
 :::
 
 ---
@@ -293,7 +324,7 @@ lpr_sksopr <- load_database("lpr_sksopr") %>%
 | `c_tilopr` | character | Supplerende procedurekode |
 | `year` | integer | År (partitionskolonne) |
 
-### procedurer_kirurgi — LPR3 SKS-procedurer (2018 og frem)
+### procedurer_kirurgi — LPR3 SKS-procedurer (2019 og frem)
 
 Placering: `parquet-external/procedurer_kirurgi`
 
@@ -304,10 +335,11 @@ proc_kirurgi <- load_database("procedurer_kirurgi") %>%
 
 | Kolonne (efter tolower) | Type | Indhold |
 |---|---|---|
-| **`dw_ek_kontakt`** | character | Join-nøgle til `lpr_a_kontakt` |
+| **`dw_ek_forloeb`** | character | **Join-nøgle til `lpr_a_kontakt`** — brug denne til pnr-opslag |
+| `dw_ek_kontakt` | character | **NA for alle rækker på DST** — kan ikke bruges som join-nøgle |
 | **`procedurekode`** | character | SKS-procedurekode — brug denne til matching (f.eks. `"KJDF10"`) |
 | **`dato_start`** | Date | Proceduredato |
-| `proceduretype` | character | Proceduretype-kode |
+| `proceduretype` | character | `"P"` = procedure, `"+"` = add-on kode |
 | `procedurekode_parent` | character | Overordnet procedurekode |
 | `proceduretype_parent` | character | Overordnet proceduretype |
 | `tidspunkt_start` | datetime | Proceduretidspunkt |
@@ -318,7 +350,9 @@ proc_kirurgi <- load_database("procedurer_kirurgi") %>%
 | `procedureregistrering_id` | character | Internt registrerings-ID |
 
 ::: {.callout-warning}
-Kolonnenavnene i `procedurer_kirurgi` er blandet store/små bogstaver i rådata. Kald `rename_with(tolower)` umiddelbart efter load — ellers fejler joins.
+**`dw_ek_kontakt` er NA for alle rækker i DST's version af `procedurer_kirurgi`** (bekræftet 2026-06-02).
+Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`.
+Kolonnenavnene er blandet store/små bogstaver i rådata — kald `rename_with(tolower)` umiddelbart efter load.
 :::
 
 ### Kombination over hele perioden
@@ -337,15 +371,15 @@ opr_lpr2 <- load_database("lpr_sksopr") %>%
   select(pnr, opr_dato = d_odto, opr_kode = c_opr) %>%
   collect()
 
-# SKS fra LPR3 (2018 og frem)
+# SKS fra LPR3 (2019 og frem) — join via dw_ek_forloeb (dw_ek_kontakt er NA på DST)
 opr_lpr3 <- load_database("procedurer_kirurgi") %>%
   rename_with(tolower) %>%
   filter(toupper(procedurekode) %in% SKS_KODER) %>%
   left_join(
     load_database("lpr_a_kontakt") %>%
       rename_with(tolower) %>%
-      select(dw_ek_kontakt, pnr),
-    by = "dw_ek_kontakt"
+      select(dw_ek_forloeb, pnr),
+    by = "dw_ek_forloeb"
   ) %>%
   select(pnr, opr_dato = dato_start, opr_kode = procedurekode) %>%
   collect()
@@ -507,7 +541,7 @@ Langt format: **én række per klinikbesøg per patient** (PRE = præoperativt, 
 Færdigberegnet `.rds`-fil — ikke et parquetregister.
 
 ```r
-dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
+dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
 names(dm_pop)   # bekræft kolonnenavne ved første kørsel
 ```
 

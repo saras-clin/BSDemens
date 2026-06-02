@@ -38,7 +38,7 @@
 # alone; ATC-based overlap is captured separately (see Baseline Medications section below).
 #
 # Variable name        ICD-10 codes (3-char, D-prefix stripped)              Notes
-# ─────────────────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————————————————
 # mi                   I21, I22, I23
 # stroke_tia           I60, I61, I62, I63, I64, I69, G45
 # pad                  I70, I71, I72, I73, I74
@@ -161,7 +161,7 @@
 # Purpose: independent covariates in Table 1; not combined with ICD flags for comorbidity flags.
 #
 # Variable name       ATC codes        Description
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # antihypertensive    C02, C03, C07-C09  all antihypertensive drug classes
 # lipid_lowering      C10                lipid-lowering agents (statins and others)
 # antidiabetic        A10                all antidiabetic drugs; A10A = insulin flagged separately
@@ -218,7 +218,7 @@
 # Variables: date_first_{condition} for each above
 
 ## SECONDARY OUTCOMES - MORTALITY ----
-# Source: DODSAARS register (DST folder: dodsaars)
+# Source: DODSAARS register (DST folder: dodsaars) + DOD (SAS file)
 #   death_date: d_dodsdto in dodsaars (confirmed column name)
 #   mortality_90day:  death within 90 days of surgery (binary)
 #   mortality_5year:  death within 5 years of surgery (binary)
@@ -231,7 +231,7 @@
 ## COVARIATES - BASELINE ----
 
 ### Demographics
-#   Same as Study 1 (from BEF + DOD)
+#   Same as Study 1 (from BEF + DODSAARS + DOD)
 
 ### Diabetes Classification
 # Source: OSDC (Open Source Diabetes Classifier, pre-computed cohort)
@@ -256,46 +256,48 @@
 # Base path: E:/workdata/708421/cleaned-data/parquet-registers/
 #
 # OVERVIEW TABLE — all confirmed via colnames() on DST server 2026-05-15
-# ─────────────────────────────────────────────────────────────────────────────
-# Register                │ access method                          │ Join key        │ Period
-# ───────────────────────┼────────────────────────────────────────┼─────────────────┼────────────────
-# BEF                    │ load_database("bef")                   │ pnr             │ annual snapshots
-# DODSAARS               │ load_database("dodsaars")              │ pnr             │ all years
-# LPR2 contacts          │ load_database("lpr_adm")               │ recnum          │ up to Mar 2019
-# LPR2 diagnoses         │ load_database("lpr_diag")              │ recnum          │ up to Mar 2019
-# LPR2 SKS procedures    │ load_database("lpr_sksopr")            │ recnum          │ up to 2018
-# LPR3 contacts          │ load_database("lpr_a_kontakt")         │ dw_ek_kontakt   │ Mar 2019+
-# LPR3 diagnoses         │ load_database("lpr_a_diagnose")        │ dw_ek_kontakt   │ Mar 2019+
-# LPR3 SKS procedures    │ load_database("procedurer_kirurgi")    │ DW_EK_KONTAKT   │ 2018+
-# Psych LPR2 admiss      │ load_database("t_psyk_adm")            │ k_recnum→recnum │ to Mar 2019
-# Psych LPR2 diag        │ load_database("t_psyk_diag")           │ v_recnum→recnum │ to Mar 2019
-# LMDB                   │ load_database("lmdb")                  │ pnr             │ 1994+
-# VNDS                   │ load_database("vnds")                  │ pnr             │ all years
-# DBSO                   │ load_database("dbso")                  │ pnr (col: cpr)  │ 2010+
-# FAIK                   │ load_database("faik")                  │ familie_id      │ annual
-# AKM                    │ load_database("akm")                   │ pnr             │ annual
-# UDDA                   │ load_database("udda")                  │ pnr             │ annual
-# ─────────────────────────────────────────────────────────────────────────────
-# NOTE: lpr_sksopr is in parquet-registers; procedurer_kirurgi is in parquet-external.
+# —————————————————————————————————————————————————————————————————————————————
+# Register           — load_database() name    — Join key        — Period
+# ————————————————————+————————————————————————+—————————————————+————————————————
+# BEF                — "bef"                   — pnr             — annual snapshots
+# DODSAARS           — read_sas(path_dodsaars)  — pnr             — ~1970–2001 (confirm exact cutoff)
+# DOD                — read_sas(path_dod)       — pnr             — ~2001–2024 (confirm exact cutoff)
+# LPR2 contacts      — "lpr_adm"               — recnum          — up to Mar 2019
+# LPR2 diagnoses     — "lpr_diag"              — recnum          — up to Mar 2019
+# LPR procedures     — "lpr_sksopr"            — recnum          — 1996–2018 (NOTE: likely LPR2 only — not yet confirmed)
+# LPR3 contacts      — "lpr_a_kontakt"         — dw_ek_kontakt   — Mar 2019+
+# LPR3 diagnoses     — "lpr_a_diagnose"        — dw_ek_kontakt   — Mar 2019+
+# LPR3 procedures    — "procedurer_kirurgi"    — dw_ek_forloeb   — Mar 2019+
+# Psych LPR2 admiss  — "t_psyk_adm"            — k_recnum→recnum — to Mar 2019
+# Psych LPR2 diag    — "t_psyk_diag"           — v_recnum→recnum — to Mar 2019
+# LMDB               — "lmdb"                  — pnr             — 1994+
+# VNDS               — "vnds"                  — pnr             — all years
+# DBSO               — "dbso"                  — pnr (col: cpr)  — 2010+
+# FAIK               — "faik"                  — familie_id      — annual
+# AKM                — "akm"                   — pnr             — annual
+# UDDA               — "udda"                  — pnr             — annual
+# —————————————————————————————————————————————————————————————————————————————
 # NOTE: "lpr_a_diagnose" — the "a" means "analysis model" (LPR_A series, 2025).
 #       It does NOT mean A-type diagnoses only. Contains all types: A, B, G.
 # NOTE: t_psyk_adm and t_psyk_diag are accessible via load_database() (confirmed
 #       2026-05-15) — open_dataset() and path variables are NOT needed.
 # NOTE: DBSO identifier column is named "cpr" in parquet (not "pnr"); renamed to
 #       pnr in 00_prepare_dbso.R. Code uses pnr throughout after that rename.
+# NOTE: procedurer_kirurgi dw_ek_kontakt is NA for ALL rows on DST (confirmed
+#       2026-06-02). Join to lpr_a_kontakt via dw_ek_forloeb to get pnr.
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # BEF - Befolkningsregisteret (Population register)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: bef
 #   Key vars (lowercase after rename_with(tolower)):
 #     pnr, koen (sex: 1=M, 2=F), foed_dag (birth date), aar (year),
 #     familie_id (for income linkage), reg (region), civst (marital status)
-#   Note: does NOT contain death date - use DOD for that
+#   Note: does NOT contain death date - use DODSAARS + DOD for that
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # DODSAARS - Doedsaarsagsregisteret (Cause of Death Register)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: dodsaars  (accessed via load_database("dodsaars"))
 #   One row per deceased person.
 #   Confirmed column names (rename_with(tolower) applied):
@@ -322,9 +324,23 @@
 #   NOTE: Use d_dodsdto for death date censoring (not dodsaasg — that is the
 #         cause-of-death classification file, not the individual record file)
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
+# DOD - Dødsfald (Death register, recent years)
+# —————————————————————————————————————————————————————————————————————————————
+#   Access: haven::read_sas(path_dod) — SAS file, NOT via load_database()
+#           Loaded fully into RAM; %in% filter works without semi_join workaround.
+#   Period: ~2001 to 2024 (confirm exact year cutoff with data manager)
+#   Complements DODSAARS which covers ~1970–2001.
+#   One row per deceased person.
+#   Confirmed column names (rename_with(tolower) applied; 4 columns total):
+#     pnr          encrypted CPR number (patient identifier)
+#     doddato      date of death — USE THIS for censoring (rename to d_dodsdto to align with DODSAARS)
+#     cprtjek      CPR check digit
+#     cprtype      CPR type code
+#
+# —————————————————————————————————————————————————————————————————————————————
 # LPR2 - Landspatientregisteret (National Patient Registry, 1977 to March 2019)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folders: lpr_adm (contacts) + lpr_diag (diagnoses)
 #   Join: lpr_adm LEFT JOIN lpr_diag ON recnum
 #   ICD note: codes have "D" prefix (e.g. "DG30") — use substr(c_diag, 2, 4) to strip to "G30"
@@ -333,7 +349,8 @@
 #   lpr_adm confirmed columns (rename_with(tolower) applied; confirmed 2026-05-15):
 #     recnum       contact key — join to lpr_diag on this
 #     pnr          patient identifier
-#     d_inddto     admission date — USE THIS as contact date
+#     d_inddto     admission date — USE THIS as contact date (already in date format - checked
+#                  with class() in R)
 #     d_uddto      discharge date
 #     c_adiag      primary diagnosis code (convenience copy; also in lpr_diag with recnum join)
 #     c_spec       specialty code
@@ -352,9 +369,37 @@
 #     c_tildiag    supplementary diagnosis code
 #     year         year
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
+# lpr_sksopr - LPR Procedure Codes (SKS operations, 1996–2018)
+# —————————————————————————————————————————————————————————————————————————————
+#   DST folder: lpr_sksopr  (load_database("lpr_sksopr") — NOT yet confirmed on server)
+#   One row per procedure code per contact.
+#   Join: lpr_adm LEFT JOIN lpr_sksopr ON recnum (same join key as lpr_diag)
+#   Period: 1996–2018 (NOTE: likely LPR2 only, given recnum join key — not yet confirmed)
+#   Column names (rename_with(tolower) applied; from DST documentation — NOT yet confirmed on server):
+#     recnum       contact key — join to lpr_adm on this
+#     c_opr        SKS procedure/operation code — USE THIS for procedure matching
+#                  (e.g. bariatric codes: KJDF10/KJDF11 = RYGB; KJDF40/KJDF41/KJDF96/KJDF97 = SG)
+#                  NOTE: SKS codes can change meaning over time — use d_odto to identify the
+#                  correct version of the code (DST: match code against classification on operation date)
+#     c_oprart     type of operation:
+#                    "V" = most important operation in the completed contact
+#                    "P" = primary operation within a surgical procedure
+#                    "D" = sub-operation (another operation within the same procedure)
+#                    "+" = add-on code: this row's c_opr has an add-on in c_tilopr;
+#                          the operation type is in the row above with same recnum + c_opr
+#                  Filter to c("V","P") for primary/main procedures; exclude "D" and "+"
+#                  unless add-on codes are needed
+#     c_tilopr     add-on code for the operation; only populated when c_oprart == "+"
+#                  link to parent row by matching recnum and c_opr
+#     d_odto       date the operation began — USE THIS as procedure date (class not yet confirmed;
+#                  apply as.Date() explicitly)
+#     c_osgh       hospital code for the hospital that performed the operation
+#     year         year (coverage and format not yet confirmed on server)
+#
+# —————————————————————————————————————————————————————————————————————————————
 # LPR3 - Landspatientregisteret v3 (from March 2019 onwards, unified somatic + psychiatric)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folders: lpr_a_kontakt (contacts) + lpr_a_diagnose (diagnoses)
 #             load_database("lpr_a_kontakt") and load_database("lpr_a_diagnose") are correct.
 #
@@ -438,47 +483,50 @@
 #     diagnosetype       →  diag_kode_type
 #     senare_afkraeftet  →  senere_afkraeftet
 #
-# ─────────────────────────────────────────────────────────────────────────────
-# lpr_sksopr - LPR2 SKS procedure codes (up to 2018)
-# ─────────────────────────────────────────────────────────────────────────────
-#   DST folder: parquet-registers/lpr_sksopr  (accessed via load_database("lpr_sksopr"))
-#   One row per procedure per contact.
-#   Join: lpr_adm LEFT JOIN lpr_sksopr ON recnum
-#   Confirmed column names (rename_with(tolower) applied; confirmed 2026-05-28):
-#     recnum       contact key — join to lpr_adm on this
-#     c_opr        SKS procedure code — USE THIS for procedure matching (e.g. "KJDF10")
-#     c_oprart     procedure type/art code
-#     c_osgh       operating hospital code
-#     c_tilopr     supplementary procedure code
-#     d_odto       procedure date — USE THIS as procedure date
-#     year         year (partition column)
+# —————————————————————————————————————————————————————————————————————————————
+# procedurer_kirurgi - LPR3 Procedure Codes (from March 2019 onwards)
+# —————————————————————————————————————————————————————————————————————————————
+#   DST folder: procedurer_kirurgi  (accessed via load_database("procedurer_kirurgi"))
+#   One row per procedure registration per contact/episode.
+#   NOTE: Trods navnet indeholder tabellen ikke kun K-koder — T-koder og
+#   muligvis andre procedurekodetyper er også tilstede på DST.
+#   Period: March 2019+ (LPR3 period only; for LPR2 procedures use lpr_sksopr)
 #
-# ─────────────────────────────────────────────────────────────────────────────
-# procedurer_kirurgi - LPR3 SKS procedure codes (2018+)
-# ─────────────────────────────────────────────────────────────────────────────
-#   DST folder: parquet-external/procedurer_kirurgi  (accessed via load_database("procedurer_kirurgi"))
-#   One row per procedure per contact.
-#   Join: lpr_a_kontakt LEFT JOIN procedurer_kirurgi ON dw_ek_kontakt (note: uppercase in this table)
-#   Confirmed column names (confirmed via colnames() 2026-05-28):
-#     DW_EK_KONTAKT              contact key — join to lpr_a_kontakt on this
-#     DW_EK_FORLOEB              episode key
-#     procedurekode              SKS procedure code — USE THIS for procedure matching (e.g. "KJDF10")
-#     proceduretype              procedure type code
-#     procedurekode_parent       parent procedure code
-#     proceduretype_parent       parent procedure type code
-#     dato_start                 procedure start date — USE THIS as procedure date
+#   IMPORTANT: dw_ek_kontakt is NA for ALL rows on DST (confirmed 2026-06-02).
+#   Sundhedsdatastyrelsens LPR3_F-vejledning angiver at dw_ek_kontakt burde
+#   være udfyldt for kontaktprocedurer, men DST's version bruger udelukkende
+#   dw_ek_forloeb. Join til lpr_a_kontakt via dw_ek_forloeb for pnr (bekræftet
+#   2026-06-02 — afventer bekræftelse fra Sara om dette er korrekt fremgangsmåde).
+#
+#   Join pattern for pnr:
+#     load_database("procedurer_kirurgi") |>
+#       rename_with(tolower) |>
+#       left_join(
+#         load_database("lpr_a_kontakt") |>
+#           rename_with(tolower) |>
+#           select(dw_ek_forloeb, pnr, kont_starttidspunkt),
+#         by = "dw_ek_forloeb"
+#       )
+#
+#   Confirmed column names (rename_with(tolower) applied; confirmed 2026-06-02):
+#     dw_ek_forloeb              episode key — USE THIS to join to lpr_a_kontakt for pnr
+#     dw_ek_kontakt              ALL NA on DST — do NOT use as join key
+#     procedurekode              SKS procedure code (K-koder, T-koder mv.)
+#     proceduretype              "P" = procedure, "+" = add-on code
+#     procedurekode_parent       parent procedure code (for add-on codes)
+#     proceduretype_parent       parent procedure type
+#     sorenhed_pro               SOR unit that performed the procedure
+#     dato_start                 procedure start date (class not yet confirmed; apply as.Date() explicitly)
 #     tidspunkt_start            procedure start time
 #     dato_slut                  procedure end date
 #     tidspunkt_slut             procedure end time
 #     lprindberetningssystem     LPR reporting system identifier
-#     SORENHED_PRO               SOR unit responsible for the procedure
-#     PROCEDUREREGISTRERING_ID   internal procedure registration ID
-#   NOTE: column names are mixed case (not all lowercase) — apply rename_with(tolower) after loading
-#   NOTE: no pnr in this table — must join via DW_EK_KONTAKT to get pnr from lpr_a_kontakt
+#     procedureregistrering_id   procedure registration ID
 #
-# Combining LPR2 + LPR3 SKS procedures:
-#   LPR2: load_database("lpr_sksopr") — filter/join via recnum, SKS code in c_opr, date in d_odto
-#   LPR3: load_database("procedurer_kirurgi") — filter/join via DW_EK_KONTAKT, SKS code in procedurekode, date in dato_start
+#   Bariatric surgery SKS codes (filter procedurekode):
+#     KJDF10, KJDF11             Roux-en-Y gastric bypass (RYGB)
+#     KJDF40, KJDF41, KJDF96, KJDF97  Sleeve gastrectomy (SG)
+#   Note: filter proceduretype == "P" to exclude add-on codes ("+")
 #
 # Psychiatric LPR contacts
 #   For LPR3: fully unified — psychiatric contacts included in lpr_a_kontakt/lpr_a_diagnose;
@@ -486,9 +534,9 @@
 #   For LPR2: use t_psyk_adm + t_psyk_diag (see dedicated sections below).
 #             Confirmed accessible via load_database() on project 708421 (2026-05-15).
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # t_psyk_adm - Psychiatric LPR2 admissions (up to March 2019)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: t_psyk_adm  (accessed via load_database("t_psyk_adm"))
 #   One row per psychiatric contact/admission per patient.
 #   Join: t_psyk_adm LEFT JOIN t_psyk_diag ON recnum (after rename)
@@ -502,9 +550,9 @@
 #       rename_with(tolower) %>%
 #       rename(pnr = v_cpr, recnum = k_recnum)
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # t_psyk_diag - Psychiatric LPR2 diagnoses (up to March 2019)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: t_psyk_diag  (accessed via load_database("t_psyk_diag"))
 #   One row per diagnosis per psychiatric contact.
 #   Confirmed column names (rename_with(tolower) applied; confirmed from code 2026-05-15):
@@ -519,9 +567,9 @@
 #       rename_with(tolower) %>%
 #       rename(recnum = v_recnum)
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # LMDB - Lagemiddeldatabasen (National Prescription Database)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: lmdb  (accessed via load_database("lmdb"))
 #   Covers: 1994 onwards, annual files combined in parquet
 #   Confirmed column names (rename_with(tolower) applied):
@@ -562,30 +610,30 @@
 #     abc          ABC classification
 #   Key vars for extraction: pnr, atc, eksd (all confirmed present)
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # UDDA - Uddannelsesregisteret (Education register)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: udda
 #   Key vars: pnr, hfaudd (highest completed education code), aar
 #   Use: filter aar == year(surgery_date) - 1 to get education at baseline
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # FAIK - Familieindkomst (Family income register)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: faik
 #   Key vars: familie_id, famaekvivadisp_13 (equivalized disposable household income), aar
 #   Link: join bef (pnr, familie_id, aar) with faik (familie_id, aar) to get income per person
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # AKM - Arbejdsklassifikationsmodulet (Employment classification)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: akm
 #   Key vars: pnr, socio13 (socioeconomic group code), aar
 #   Use: filter aar == year(surgery_date) - 1
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # VNDS - Vandrestatistikken (Migration register)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   DST folder: vnds  (accessed via load_database("vnds"))
 #   One row per migration event per person (both emigration and immigration events).
 #   Used for: censoring persons who emigrate from Denmark (no longer in registers).
@@ -598,9 +646,9 @@
 #   Usage: filter indud_kode == "U", take min(haend_dato) per pnr for first emigration date.
 #   Non-emigrants (not in VNDS with "U" event) get emigration_date = NA.
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # DBSO - Danish Obesity Surgery Registry (Databasen for Behandling af Svær Overvægt)
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 #   Source: SAS file from SunDK (dfr_2025_10_31.sas7bdat); converted to parquet by 00_prepare_dbso.R
 #   Parquet path: E:/workdata/708421/cleaned-data/parquet-external/dbso/
 #   Access: arrow::open_dataset(path_dbso) — NOT via load_database()
@@ -728,10 +776,10 @@
 #                         b12/jern/kalk + compliance columns (extract_dbso_clinical.rds)
 #                         a10a_foer/efter (insulin use; extract_dbso_clinical.rds)
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# —————————————————————————————————————————————————————————————————————————————
 # OSDC - Open Source Diabetes Classifier (pre-computed cohort file)
-# ─────────────────────────────────────────────────────────────────────────────
-#   File path: E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds
+# —————————————————————————————————————————————————————————————————————————————
+#   File path: E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds
 #   Access: readRDS(path_dm_pop) — RDS file, not a parquet register; no load_database()
 #   Covers: 1977-2022 (sufficient for all baseline diabetes classification in this study)
 #   Documented column names (from code; confirm with colnames() before first run):
@@ -740,6 +788,6 @@
 #     do_dm          date of diabetes classification — renamed to date_diabetes in pipeline
 #     age_at_onset   age at diabetes onset (numeric)
 #   To confirm column names on DST server:
-#     dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds")
+#     dm_pop <- readRDS("E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds")
 #     names(dm_pop)
 #   Package: https://steno-aarhus.github.io/osdc/index.html

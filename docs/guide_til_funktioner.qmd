@@ -90,8 +90,9 @@ bef <- load_database("bef") %>% rename_with(tolower)
 # bef er nu en doven forbindelse -- ingen data i hukommelsen endnu
 ```
 
-Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `dodsaars`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`, `dbso`.
+Bruges til: `bef`, `lpr_adm`, `lpr_diag`, `lpr_sksopr`, `lmdb`, `vnds`, `udda`, `faik`, `akm`, `t_psyk_adm`, `t_psyk_diag`, `lpr_a_kontakt`, `lpr_a_diagnose`, `procedurer_kirurgi`, `dbso`.
 Alle åbnes med `load_database()`, uanset om de ligger i `parquet-registers` eller `parquet-external`.
+`dodsaars` og `dod` er SAS-filer — åbnes med `haven::read_sas()`, ikke `load_database()`.
 
 ::: {.callout-note}
 `load_database()` kommer fra pakken `dstDataPrep`, som skal bygges manuelt på DST-serveren.
