@@ -77,6 +77,65 @@ I et rigtigt projekt er `kohort_pnrs` en vektor du har bygget i et tidligere scr
 og genlæser med `readRDS("datasets/full_cohort.rds") %>% pull(pnr)`.
 :::
 
+<details>
+<summary>Omform BEF-variable — hvad betyder koen, civst og reg?</summary>
+
+::: {.callout-note}
+## Kreditering
+
+Koden nedenfor er skrevet af **Anders Aasted Isaksen** (Steno Diabetes Center Aarhus)
+og er hentet direkte fra vignetten
+[`common_tasks_dplyr.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/vignettes/common_tasks_dplyr.qmd)
+i pakken [`fakeregs`](https://github.com/steno-aarhus/fakeregs) (MIT-licens).
+Koden er gengivet uændret — al ære tilhører ham.
+:::
+
+BEF-registret gemmer `koen`, `civst` og `reg` som koder — ikke som tekst.
+Denne omformning oversætter dem til analyseklare variable:
+
+```r
+# Fortsætter fra Trin 1 — bef er allerede åbnet med open_dataset()
+
+bef_renset <- bef %>%
+  filter(year == 2015, alder >= 18) %>%
+  select(pnr, year, foed_dag, koen, civst, reg, opr_land) %>%
+  collect() %>%                          # hent ind i R inden mutate
+  mutate(
+    foed_dato    = as.Date(foed_dag),    # dato-format
+
+    # koen: 1 = mand, 2 = kvinde (Anders Aasted Isaksen, fakeregs)
+    koen_tekst   = if_else(koen == "1", "Mand", "Kvinde"),
+
+    # civst: ægteskabelig status (Anders Aasted Isaksen, fakeregs)
+    civil_status = case_when(
+      civst %in% c("G", "P") ~ "Gift/partner",
+      civst %in% c("F", "O", "E", "L") ~ "Skilt/enke",
+      civst == "U"            ~ "Ugift",
+      TRUE                    ~ NA_character_
+    ),
+
+    # reg: regionskoder (Anders Aasted Isaksen, fakeregs)
+    region       = case_when(
+      reg == 81 ~ "Region Nordjylland",
+      reg == 82 ~ "Region Midtjylland",
+      reg == 83 ~ "Region Syddanmark",
+      reg == 84 ~ "Region Hovedstaden",
+      reg == 85 ~ "Region Sjælland",
+      TRUE      ~ NA_character_
+    ),
+
+    # opr_land: 5100 = Danmark (Anders Aasted Isaksen, fakeregs)
+    indvandrer   = opr_land != 5100
+  )
+
+head(bef_renset)
+```
+
+Kilde: [`fakeregs/vignettes/common_tasks_dplyr.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/vignettes/common_tasks_dplyr.qmd),
+Anders Aasted Isaksen, Steno Diabetes Center Aarhus (MIT-licens).
+
+</details>
+
 ---
 
 ## Trin 2 — Udtræk data fra et register

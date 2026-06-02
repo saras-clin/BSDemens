@@ -133,7 +133,8 @@ Den er ikke på CRAN og skal bygges manuelt inden du kan bruge den.
 DST har forudinstalleret et ældre snapshot af alle R-pakker på CRAN.
 Det betyder, at mange pakker — særligt `duckplyr` — er i forældede versioner der mangler funktioner.
 
-Kør dette **allerførst** i starten af hver DST-session, inden du indlæser andre pakker:
+Kør dette **allerførst** i starten af hver DST-session, inden du indlæser andre pakker
+(som beskrevet under [Kom i gang på DST — Trin 1](getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session)):
 
 ```r
 install.packages("duckplyr")   # geninstaller — nulstilles ved logout
