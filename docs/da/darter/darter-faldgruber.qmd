@@ -4,6 +4,139 @@ subtitle: "Quirks og kendte problemer specifikt for projekt 708421"
 date: last-modified
 ---
 
-::: {.callout-note}
-Denne side er under udarbejdelse.
-:::
+Denne side supplerer de [generelle DST-faldgruber](../dst_faldgruber.qmd) med problemer specifikke for DARTER-projektet.
+
+---
+
+## 1. DODSAARS dækker kun til ~2001
+
+`dodsaars` i cleaned-data (projekt 708421) dækker kun ~1970–2001 pr. juni 2026.
+Det betyder, at dødsfald efter 2001 **ikke** fanges af den nuværende kode.
+
+```r
+# Nuværende kode — fanger kun dødsfald til ~2001:
+dod <- load_database("dodsaars") %>% rename_with(tolower)
+deaths <- dod %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, d_dodsdto) %>%
+  collect()
+```
+
+**Konsekvens:** Matching-loopet i `01_build_cohorts.R` ekskluderer ikke BS-patienter der dør efter 2001 men inden kirurgi, og komparatorer der dør efter 2001 behandles som levende.
+
+**Løsning:** DOD-registret (~2001–2024) skal udtrækkes fra rå SAS-fil og kombineres med dodsaars. Guide under udvikling — se `docs/TODO.md`.
+
+---
+
+## 2. `procedurer_kirurgi` — join via `dw_ek_forloeb`, ikke `dw_ek_kontakt`
+
+`dw_ek_kontakt` er **NA for alle rækker** i `procedurer_kirurgi` på DST (bekræftet 2026-06-02).
+Brug `dw_ek_forloeb` til at hente `pnr` fra `lpr_a_kontakt`.
+
+```r
+# FORKERT — dw_ek_kontakt er NA:
+proc %>% left_join(kontakter, by = "dw_ek_kontakt")   # joiner ingenting
+
+# KORREKT — brug dw_ek_forloeb:
+proc <- load_database("procedurer_kirurgi") %>%
+  rename_with(tolower) %>%
+  left_join(
+    load_database("lpr_a_kontakt") %>%
+      rename_with(tolower) %>%
+      select(dw_ek_forloeb, pnr),
+    by = "dw_ek_forloeb"
+  )
+```
+
+---
+
+## 3. DBSO: alle datokolonner er character-strenge
+
+`datoper_prim`, `datopre`, `datofol` mv. i DBSO er gemt som character i parquet-formatet,
+format `"YYYY-MM-DD"`. Du skal konvertere med `as.Date()` inden datoberegninger.
+
+```r
+# FORKERT — datoaritmetik på character fejler stille:
+dbso %>% mutate(alder_ved_op = datoper_prim - foed_dag)
+
+# KORREKT:
+dbso %>% mutate(
+  datoper_prim = as.Date(datoper_prim),
+  alder_ved_op = as.numeric(datoper_prim - as.Date(foed_dag)) / 365.25
+)
+```
+
+**Undtagelse:** `foerstefedmeopr_dato` er et numerisk SAS-datoheltal (dage siden 1. januar 1960):
+```r
+as.Date(foerstefedmeopr_dato, origin = "1960-01-01")
+```
+
+---
+
+## 4. DBSO kirurgi-flag: 1 = ja, 2 = nej (ikke 0/1)
+
+DBSO bruger dansk SAS-konvention: **1 = ja, 2 = nej**, ikke booleans.
+
+```r
+# FORKERT — fortolker 2 (= nej) som sandt:
+filter(redo_prim)
+
+# KORREKT:
+filter(redo_prim != 1)   # beholder 2 (primær) og dropper NA (ukendt)
+filter(redo_prim == 1)   # kun revisionsoperationer
+```
+
+---
+
+## 5. DBSO `koen` vs BEF `koen`
+
+DBSO: `koen` = `"M"` (mand) / `"K"` (kvinde) — character.
+BEF: `koen` = `1` (mand) / `2` (kvinde) — numeric.
+
+Join på køn uden recoding giver stille mismatch.
+
+```r
+# Recode DBSO til BEF-konventionen:
+dbso <- dbso %>%
+  mutate(koen = if_else(koen == "M", 1L, 2L))
+```
+
+---
+
+## 6. OSDC-sti bruger bindestreg, ikke underscore
+
+Stien til OSDC-filen på projekt 708421 bruger bindestreg:
+
+```r
+# KORREKT:
+path_dm_pop <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"
+
+# FORKERT (underscore):
+path_dm_pop <- "E:/workdata/708421/cleaned-data/diabetes_register_pop/dm_population_1977_2022.rds"
+```
+
+---
+
+## 7. `lpr_a_diagnose` — "a" betyder ikke A-type diagnoser
+
+Tabellen hedder `lpr_a_diagnose` — "a" refererer til analysemodel-betegnelsen (LPR_A-serien).
+Det er **ikke** et filter på A-type diagnoser. Tabellen indeholder A, B og G.
+Du skal stadig filtrere på `diag_kode_type`.
+
+---
+
+## 8. `nmi_count` ≠ `nmi_score`
+
+| Variabel | Hvad den er |
+|---|---|
+| `nmi_score` | **Vægtet** score — Nordic Multimorbidity Index (50 prediktorer med individuelle vægte) |
+| `nmi_count` | Simpel **optælling** af antal kroniske tilstande (33 mulige) |
+
+Bruger du `nmi_count` i din Cox-model i stedet for `nmi_score`, justerer du for noget andet end du tror.
+
+---
+
+## Se også
+
+- [Generelle DST-faldgruber](../dst_faldgruber.qmd) — 10 faldgruber der gælder alle projekter
+- [Registersti og datastores](registersti-datastores.qmd) — bekræftede stier og adgangsmetoder

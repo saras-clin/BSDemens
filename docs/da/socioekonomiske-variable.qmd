@@ -4,6 +4,168 @@ subtitle: "Udtræk af uddannelse, indkomst og beskæftigelse fra registerdata"
 date: last-modified
 ---
 
+Socioøkonomisk position (SEP) måles i registerbaserede studier via tre dimensioner:
+uddannelse (UDDA), indkomst (FAIK) og beskæftigelse (AKM).
+Denne side viser hvordan du udtrækker og kategoriserer dem per SEPLINE-guidelines.
+
+Se [SEPLINE](sepline.qmd) for metodebeskrivelse og anbefalede referencegrupper.
+
 ::: {.callout-note}
-Denne side er under udarbejdelse.
+Eksemplerne bruger variabelnavne fra DARTER-projektet.
+Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
 :::
+
+::: {.callout-warning}
+Alle tre registre er **årsbaserede**. Hent variablen for **året inden index-dato** (ikke index-årstal), da registerdata for et givet år typisk beskriver status ved årets udgang.
+:::
+
+---
+
+## Beskæftigelse — AKM (`socio13`)
+
+```r
+library(dstDataPrep)
+library(dplyr)
+
+akm <- load_database("akm") %>% rename_with(tolower)
+
+# Hent beskæftigelsesstatus for året inden index-dato
+# (antager at kohort har kolonnerne pnr og index_date)
+index_aar <- unique(lubridate::year(kohort$index_date) - 1)
+
+akm_data <- akm %>%
+  filter(pnr %in% !!kohort$pnr, aar %in% !!index_aar) %>%
+  select(pnr, aar, socio13) %>%
+  collect()
+
+# Tilknyt til kohort med index-år som join-nøgle
+kohort_akm <- kohort %>%
+  mutate(aar_baseline = lubridate::year(index_date) - 1) %>%
+  left_join(akm_data, by = c("pnr", "aar_baseline" = "aar"))
+
+# Kategorisér per SEPLINE
+kohort_akm <- kohort_akm %>%
+  mutate(occupation_cat = case_when(
+    socio13 %in% c(110, 111, 112, 113, 114, 120, 131, 132, 133, 134, 135, 139) ~ "Beskæftiget",
+    socio13 == 310                              ~ "Studerende",
+    socio13 %in% c(210, 410)                   ~ "Ledig",
+    socio13 %in% c(220, 321, 330)              ~ "Udenfor arbejdsmarked",
+    socio13 %in% c(322, 323)                   ~ "Pensionist",
+    TRUE                                        ~ "Ukendt"
+  ))
+```
+
+---
+
+## Uddannelse — UDDA (`hfaudd`)
+
+```r
+udda <- load_database("udda") %>% rename_with(tolower)
+
+udda_data <- udda %>%
+  filter(pnr %in% !!kohort$pnr, aar %in% !!index_aar) %>%
+  select(pnr, aar, hfaudd) %>%
+  collect()
+
+# Tag den seneste post hvis en person optræder flere gange
+udda_data <- udda_data %>%
+  group_by(pnr) %>%
+  arrange(desc(aar)) %>%
+  slice(1) %>%
+  ungroup()
+
+# Kategorisér per SEPLINE
+udda_data <- udda_data %>%
+  mutate(education_cat = case_when(
+    substr(as.character(hfaudd), 1, 2) %in% c("10", "15") ~ "Kort",
+    substr(as.character(hfaudd), 1, 2) %in% c("20", "30", "35") ~ "Mellemlang",
+    as.numeric(substr(as.character(hfaudd), 1, 2)) >= 40  ~ "Lang",
+    is.na(hfaudd) | substr(as.character(hfaudd), 1, 2) == "90" ~ "Ukendt",
+    TRUE ~ "Ukendt"
+  ))
+```
+
+---
+
+## Indkomst — FAIK via BEF (`famaekvivadisp_13`)
+
+Indkomst er knyttet til husstanden, ikke personen. Du skal bruge `familie_id` fra BEF som bro.
+
+```r
+bef  <- load_database("bef")  %>% rename_with(tolower)
+faik <- load_database("faik") %>% rename_with(tolower)
+
+# Hent familie_id fra BEF for baseline-år
+bef_familie <- bef %>%
+  filter(pnr %in% !!kohort$pnr, aar %in% !!index_aar) %>%
+  select(pnr, aar, familie_id) %>%
+  collect()
+
+# Hent indkomst fra FAIK for baseline-år
+faik_data <- faik %>%
+  filter(aar %in% !!index_aar) %>%
+  select(familie_id, aar, famaekvivadisp_13) %>%
+  collect()
+
+# Join: pnr → familie_id → indkomst
+indkomst <- bef_familie %>%
+  left_join(faik_data, by = c("familie_id", "aar"))
+```
+
+<details>
+<summary>3-årsgennemsnit og kvintiler (SEPLINE-anbefaling)</summary>
+
+SEPLINE anbefaler 3-årsgennemsnit af indkomst og kvintiler stratificeret på køn × 5-årsaldersgruppe × år.
+Her er en forenklet version med kvintiler per år:
+
+```r
+library(dplyr)
+
+# Hent 3 år: index-år samt de to foregående
+aar_3 <- c(index_aar, index_aar - 1, index_aar - 2)
+
+bef_3aar <- bef %>%
+  filter(pnr %in% !!kohort$pnr, aar %in% !!aar_3) %>%
+  select(pnr, aar, familie_id) %>%
+  collect()
+
+faik_3aar <- faik %>%
+  filter(aar %in% !!aar_3) %>%
+  select(familie_id, aar, famaekvivadisp_13) %>%
+  collect()
+
+# Beregn 3-årsgennemsnit per person
+indkomst_mean <- bef_3aar %>%
+  left_join(faik_3aar, by = c("familie_id", "aar")) %>%
+  group_by(pnr) %>%
+  summarise(
+    mean_indkomst = mean(famaekvivadisp_13, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Inddel i kvintiler
+indkomst_kvintil <- indkomst_mean %>%
+  mutate(income_cat = ntile(mean_indkomst, 5))
+# ntile(x, 5): fordeler i 5 grupper (1 = lavest, 5 = højest)
+```
+
+</details>
+
+---
+
+## Saml alle SES-variable på kohorten
+
+```r
+kohort_ses <- kohort %>%
+  left_join(kohort_akm %>% select(pnr, occupation_cat), by = "pnr") %>%
+  left_join(udda_data  %>% select(pnr, education_cat),  by = "pnr") %>%
+  left_join(indkomst_kvintil %>% select(pnr, income_cat), by = "pnr")
+```
+
+---
+
+## Se også
+
+- [SEPLINE](sepline.qmd) — metodebeskrivelse og anbefalede kategoriseringer
+- [Formateringstabeller](formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
+- [Registerreference](register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA

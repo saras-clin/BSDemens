@@ -1,9 +1,160 @@
 ---
 title: "Parquet, Arrow og DuckDB"
-subtitle: "Hvordan og hvorfor disse teknologier bruges på DST"
+subtitle: "Hvorfor registerdata kræver en anden tilgang end almindelig R"
 date: last-modified
 ---
 
-::: {.callout-note}
-Denne side er under udarbejdelse.
-:::
+Registerdata på DST er store — BEF har millioner af rækker, LMDB har hundredvis af millioner.
+At indlæse dem direkte i R's hukommelse ville crashe de fleste sessioner.
+Løsningen er Parquet + DuckDB: du arbejder med data **uden** at indlæse dem.
+
+---
+
+## Den korte forklaring
+
+Forestil dig et supermarked:
+
+- **Uden DuckDB:** Du køber hele butikken, tager det hjem, og sorterer derefter hvad du skulle bruge.
+- **Med DuckDB:** Du sender en indkøbsliste — "2 mælk, kun fra 2020, kun mænd" — og får præcis det leveret.
+
+Det kaldes **doven evaluering** (lazy evaluation): R skriver din forespørgsel ned som instruktioner, men udfører den først, når du kalder `collect()`.
+
+```r
+# Dette indlæser IKKE data — det skriver bare en instruktion:
+bef <- load_database("bef") %>% rename_with(tolower)
+
+# Dette heller ikke:
+bef_filtreret <- bef %>% filter(aar == 2020, koen == 1)
+
+# Først HER flyttes data ind i R's hukommelse:
+resultat <- bef_filtreret %>% collect()
+```
+
+**Husk:** Filtrer og vælg kolonner FØR `collect()` — ellers henter du millioner af rækker unødvendigt.
+
+---
+
+## Hvad er Parquet, Arrow og DuckDB?
+
+### Parquet
+
+Parquet er et filformat der gemmer data **kolonne for kolonne** i stedet for række for række.
+
+Det betyder, at hvis du kun vil have kolonnerne `pnr` og `aar` fra BEF, behøver computeren kun at læse de to kolonner — ikke alle de andre. Det er meget hurtigere.
+
+Registrene på DST er gemt som parquet-filer, organiseret i mapper med én fil per år.
+`load_database()` samler dem automatisk til én stor tabel.
+
+### Arrow
+
+Arrow er en R-pakke der giver adgang til parquet-filer og oversætter dplyr-kommandoer til effektive parquet-forespørgsler.
+Du bruger det indirekte via `load_database()` — du behøver normalt ikke kalde det direkte.
+
+### DuckDB
+
+DuckDB er en database der kører direkte i din R-session (ingen separat server).
+Den er lynhurtig til analyse af store datasæt og understøtter næsten al dplyr-syntaks.
+
+`duckplyr` er R-pakken der forbinder dplyr og DuckDB. Den "kaprer" dplyr-funktioner og oversætter dem til DuckDB-forespørgsler automatisk.
+
+<details>
+<summary>Mere teknisk: Arrow vs DuckDB — hvilken bruges hvornår?</summary>
+
+Begge pakker (`arrow` og `duckplyr`) bruger doven evaluering og `collect()` til at hente data ind i R.
+
+**Arrow** er hurtig til at læse parquet-filer, men understøtter ikke alle dplyr-funktioner.
+
+**DuckDB (via duckplyr)** understøtter næsten alle dplyr-funktioner, og falder automatisk tilbage til R's motor for de få ting den ikke kan håndtere.
+
+På DST bruges `dstDataPrep::load_database()`, som internt bruger Arrow til at åbne parquet-filerne og DuckDB til at behandle dem. Du behøver ikke tage stilling til det — skriv bare normal dplyr-kode.
+
+Hvis du støder på en fejl om "unsupported function", er du sandsynligvis ved at bruge en funktion som DuckDB ikke understøtter. Løsning: `collect()` data ind i R først, og udfør operationen derefter.
+
+</details>
+
+---
+
+## Det universelle mønster
+
+```r
+library(dstDataPrep)
+library(dplyr)
+
+# 1. Åbn doven forbindelse (ingen data flyttes)
+bef <- load_database("bef") %>% rename_with(tolower)
+
+# 2. Filtrer og vælg kolonner (stadig ingen data i R)
+bef_filtreret <- bef %>%
+  filter(aar == 2020) %>%
+  select(pnr, koen, foed_dag, familie_id)
+
+# 3. collect() — HER flyttes data ind i R's hukommelse
+bef_data <- bef_filtreret %>% collect()
+```
+
+**Reglen:** Gør så meget som muligt *inden* `collect()`. Jo mere du filtrerer og reducerer data på forhånd, jo hurtigere og mere stabilt kører det.
+
+---
+
+## Hvad sker der visuelt
+
+```{mermaid}
+flowchart TD
+    P[("Parquet-filer på DST")]
+    L["load_database()"]
+    F["filter() + select()"]
+    C["collect()"]
+    R[("R-hukommelse · data.frame")]
+
+    P -->|"doven forbindelse — ingenting flyttes til R"| L
+    L -->|"instruktioner staplet op i DuckDB"| F
+    F -->|"send nu!"| C
+    C -->|"kun nødvendige rækker + kolonner"| R
+```
+
+`load_database()`, `filter()` og `select()` er rene instruktioner — de koster næsten ingen RAM.
+`collect()` er den eneste linje, der faktisk flytter data.
+
+---
+
+## Tjek om du har data eller en forbindelse
+
+Mange fejl opstår fordi man tror, man har data i R — men faktisk stadig har en ueksekveret forespørgsel.
+
+```r
+class(mit_objekt)
+```
+
+| Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
+|---|---|---|
+| `"tbl_df" "data.frame"` | Data er i R | Ingenting — du er klar |
+| `"tbl_duckdb_connection"` | Usendt DuckDB-forespørgsel | Tilføj `%>% collect()` |
+| `"Table" "ArrowObject"` | Usendt Arrow-forespørgsel | Tilføj `%>% collect()` |
+
+---
+
+## RAM er delt — vær hensynsfuld
+
+På DST deler alle brugere serverens RAM. Når hukommelseslinjen i RStudio bliver rød, sænker det **alle** brugeres session.
+
+```r
+# Frigør store objekter du ikke længere bruger:
+rm(stort_register)
+gc()   # frigiver hukommelse tilbage til operativsystemet
+```
+
+Ryd altid op efter store udtræk, inden du fortsætter.
+
+---
+
+## Særligt for DST: geninstaller duckplyr
+
+Den forudinstallerede `duckplyr` på DST er forældet.
+Kør dette allerførst i starten af **hver** session:
+
+```r
+install.packages("duckplyr")   # geninstaller — forsvinder ved logout
+library(dplyr)                 # duckplyr aktiveres automatisk
+```
+
+Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.

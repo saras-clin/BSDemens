@@ -4,6 +4,99 @@ subtitle: "GDPR, outputkontrol og hvad der må forlade DST"
 date: last-modified
 ---
 
-::: {.callout-note}
-Denne side er under udarbejdelse.
+Data fra Danmarks Statistik er mikrodata og underlagt GDPR og særlige regler for forskningsdata.
+Du kan **ikke** kopiere rå data ud — alt skal igennem en outputkontrolproces.
+
+---
+
+## Hvad må du eksportere?
+
+**Du må:**
+- Aggregerede resultater (tabeller med summarized data)
+- Grafer og figurer
+- Modeloutput (koefficienter, konfidensintervaller, p-værdier)
+- Kode (scripts — men ikke data)
+
+**Du må ikke:**
+- Rå dataframes med individdata
+- Tabeller med for små celler (tommelfingerregel: n < 5 i en celle er problematisk)
+- Resultater der kan bruges til at identificere enkeltpersoner
+
+::: {.callout-warning}
+**Brug altid versionsstyring (GitHub) til dine scripts — men aldrig til data.**
+Data på DST-serveren er fortroligt og må ikke ligge på GitHub.
 :::
+
+---
+
+## Outputkontrolprocessen
+
+Når du er klar til at hjemsende resultater, følger du denne proces:
+
+1. **Gem filer i outputmappen**
+   Placer de filer du vil hjemsende i den godkendte outputmappe på DST-serveren.
+   Typisk: `E:/workdata/[projektnummer]/output/` eller den mappe jeres projekt har fået tildelt.
+
+2. **Dokumentér indholdet**
+   Skriv en kort beskrivelse af hvad filerne indeholder — DST skal forstå hvad de ser på.
+   En simpel `README.txt` eller `README.md` i outputmappen er tilstrækkeligt.
+
+3. **Anmod om outputkontrol**
+   Kontakt DST's Forskningsservice og anmod om outputkontrol af dine filer.
+   De gennemgår dem og sikrer, at ingen persondata eller for detaljerede oplysninger forlader miljøet.
+
+4. **Download efter godkendelse**
+   Når DST har godkendt, kan du hente filerne via den sikre downloadfunktion.
+
+---
+
+## Gem filer klar til hjemsendelse
+
+```r
+# Gem en aggregeret tabel som CSV:
+write.csv(min_tabel, "output/tabel1.csv", row.names = FALSE)
+
+# Gem en figur:
+ggsave("output/figur1.png", plot = min_figur, width = 8, height = 6, dpi = 300)
+
+# Gem en simpel tekstfil med modeloutput:
+sink("output/cox_model_summary.txt")
+print(summary(cox_model))
+sink()
+```
+
+---
+
+## Hvad tæller som "for detaljerede oplysninger"?
+
+- Tabeller med celler under 5 observationer
+- Gennemsnit beregnet på under 5 personer
+- Resultater der afspejler specifikke enkeltpersoner (fx "den eneste 95-årige kvinde i Thy med demens")
+
+Som tommelfingerregel: tænk om en person i din population ville kunne genkende sig selv i resultatet.
+
+<details>
+<summary>Praktisk tjekliste inden outputkontrol</summary>
+
+- [ ] Ingen rå dataframes — kun aggregerede resultater
+- [ ] Alle celler i tabeller har n ≥ 5
+- [ ] Kontinuerte variable: tjek at middelværdi/median ikke afsløres for meget
+- [ ] Scripts er rene og kommenterede — DST skal kunne følge hvad der er gjort
+- [ ] README-fil forklarer indholdet af outputmappen
+- [ ] Filnavne er sigende (`tabel1_deskriptiv.csv`, ikke `temp123.csv`)
+
+</details>
+
+---
+
+## God praksis
+
+- **Kode på GitHub, data på DST** — script-repositoriet og data holdes altid adskilt
+- **Dokumentér din kode** — outputkontrollen foregår nemmere hvis DST kan følge din metode
+- **Aggregér tidligt** — undgå at have individdata i outputmappen overhovedet
+
+---
+
+## Mere information
+
+Se DST's egne retningslinjer for outputkontrol på [dst.dk](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data).

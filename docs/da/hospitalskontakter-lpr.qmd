@@ -4,6 +4,209 @@ subtitle: "LPR2 og LPR3 kombineret — diagnoser, procedurer og ICD-koder"
 date: last-modified
 ---
 
+Det Nationale Patientregister (LPR) er kilden til diagnoser og hospitalskontakter.
+Det dækker alle offentlige hospitalsindlæggelser og ambulante kontakter i Danmark.
+
 ::: {.callout-note}
-Denne side er under udarbejdelse.
+Eksemplerne bruger variabelnavne fra DARTER-projektet.
+Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
 :::
+
+---
+
+## LPR er opdelt i to perioder
+
+I marts 2019 skiftede LPR format. Studier der dækker perioden på tværs af 2019 skal forespørge **begge systemer** og kombinere dem.
+
+| | LPR2 (frem til marts 2019) | LPR3 (marts 2019 og frem) |
+|---|---|---|
+| Kontakttabel | `lpr_adm` | `lpr_a_kontakt` |
+| Diagnosetabel | `lpr_diag` | `lpr_a_diagnose` |
+| Join-nøgle | `recnum` | `dw_ek_kontakt` |
+| Datokolonne | `d_inddto` (Date) | `kont_starttidspunkt` (datetime — konverter med `as.Date()`) |
+| Diagnosekode | `c_diag` | `diag_kode` |
+| Diagnosetype | `c_diagtype` | `diag_kode_type` |
+| Kontakttype | `c_pattype` (`"0"` = indlagt) | `kont_type` (`"ALCA00"` = indlagt) |
+
+```{mermaid}
+gantt
+    title LPR-registre
+    dateFormat  YYYY
+    axisFormat  %Y
+    section LPR2 somatisk
+    lpr_adm + lpr_diag               :done,   1977, 2019
+    section LPR2 psykiatrisk
+    t_psyk_adm + t_psyk_diag         :done,   1995, 2019
+    section LPR3 samlet
+    lpr_a_kontakt + lpr_a_diagnose   :active, 2019, 2027
+```
+
+---
+
+## ICD-koder og D-præfikset
+
+Alle ICD-10-koder i DST har et foranstillet `"D"`:
+`"DG30"` (Alzheimers), `"DF00"` (demens), `"DI21"` (akut myokardieinfarkt).
+
+**Sammenlign aldrig med D-præfikset.** Strip det altid inden sammenligning:
+
+```r
+mutate(icd3 = substr(c_diag, 2, 4))   # "DG30" → "G30" (3-tegns kode)
+mutate(icd4 = substr(c_diag, 2, 5))   # "DI219" → "I219" (4-tegns kode)
+```
+
+---
+
+## Diagnosetyper: A, B og G
+
+| Kode | Betydning | Hvornår inkluderes den |
+|---|---|---|
+| A | Aktionsdiagnose — primær årsag til kontakten | Altid til udfald |
+| B | Bidiagnose — yderligere tilstand til stede | Altid til udfald |
+| G | Grundmorbus — underliggende baggrundstilstand | Kun til baseline-komorbiditet |
+
+```r
+# Til udfald og eksklusionsdiagnoser:
+filter(c_diagtype %in% c("A", "B"))
+
+# Til baseline-komorbiditet (NMI, Charlson):
+filter(c_diagtype %in% c("A", "B", "G"))
+```
+
+---
+
+## Det psykiatriske LPR2-register
+
+Psykiatriske diagnoser (fx demens F00–F03) stillet **før marts 2019** er gemt i separate registre.
+Glemmer du dem, misser du alle demensdiagnoser fra geropsykiatriske afdelinger og hukommelsesklinikker.
+
+```r
+psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%
+  rename(pnr = v_cpr, recnum = k_recnum)   # kolonnenavne afviger fra somatisk LPR2
+psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
+  rename(recnum = v_recnum)
+```
+
+Fra marts 2019 dækker LPR3 begge — ingen separat psykiatrisk forespørgsel nødvendig.
+
+---
+
+## `senere_afkraeftet` i LPR3
+
+LPR3 markerer diagnoser der er tilbagekaldt. Standardfiltret:
+
+```r
+filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
+```
+
+`is.na()`-delen er bevidst: NA beholdes fremfor at blive droppet, fordi det er sikrere at inkludere en ukategoriseret diagnose.
+
+---
+
+## Komplet mønster: hent alle diagnoser for din kohort
+
+Dette er det fundamentale mønster til enhver diagnosebaseret udtræk — LPR2 + LPR3 kombineret.
+
+```r
+library(dstDataPrep)
+library(dplyr)
+
+pnr_liste <- unique(kohort$pnr)   # erstat kohort med din population
+
+# ── LPR2 somatisk (frem til marts 2019) ─────────────────────────────────
+lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)
+lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)
+
+lpr2_dx <- lpr_adm %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, recnum, date_contact = d_inddto) %>%
+  inner_join(
+    lpr_diag %>%
+      filter(c_diagtype %in% c("A", "B")) %>%
+      select(recnum, c_diag),
+    by = "recnum"
+  ) %>%
+  collect() %>%
+  mutate(icd3 = substr(c_diag, 2, 4))   # strip D-præfiks
+
+# ── LPR3 (marts 2019 og frem) ────────────────────────────────────────────
+lpr3_k <- load_database("lpr_a_kontakt")  %>% rename_with(tolower)
+lpr3_d <- load_database("lpr_a_diagnose") %>% rename_with(tolower)
+
+lpr3_dx <- lpr3_k %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, dw_ek_kontakt, date_contact = kont_starttidspunkt) %>%
+  inner_join(
+    lpr3_d %>%
+      filter(diag_kode_type %in% c("A", "B"),
+             is.na(senere_afkraeftet) | senere_afkraeftet != "Ja") %>%
+      select(dw_ek_kontakt, c_diag = diag_kode),
+    by = "dw_ek_kontakt"
+  ) %>%
+  collect() %>%
+  mutate(
+    date_contact = as.Date(date_contact),  # datetime → dato
+    icd3 = substr(c_diag, 2, 4)
+  )
+
+# ── Kombiner ─────────────────────────────────────────────────────────────
+alle_dx <- bind_rows(lpr2_dx, lpr3_dx)
+```
+
+---
+
+## Udtræk et specifikt udfald
+
+Skift `KODER` til de ICD-koder du vil have. Alt andet er uændret.
+
+```r
+KODER <- c("G30", "F00", "F01", "F02", "F03")   # demens — skift til dit udfald
+
+udfald <- alle_dx %>%
+  filter(icd3 %in% KODER) %>%
+  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%
+  filter(date_contact > index_date) %>%   # post-index; brug < for baseline-kovariat
+  group_by(pnr) %>%
+  arrange(date_contact) %>%
+  slice(1) %>%                            # første forekomst per person
+  ungroup() %>%
+  select(pnr, event_date = date_contact)
+
+# Join til kohort — NA = ingen hændelse (fortsat i risiko)
+resultat <- kohort %>%
+  select(pnr) %>%
+  left_join(udfald, by = "pnr")
+```
+
+<details>
+<summary>Tilføj psykiatrisk LPR2 (nødvendigt for F-koder, fx demens)</summary>
+
+```r
+psyk_adm  <- load_database("t_psyk_adm")  %>% rename_with(tolower) %>%
+  rename(pnr = v_cpr, recnum = k_recnum)
+psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
+  rename(recnum = v_recnum)
+
+lpr2_psyk_dx <- psyk_adm %>%
+  filter(pnr %in% !!pnr_liste) %>%
+  select(pnr, recnum, date_contact = d_inddto) %>%
+  inner_join(
+    psyk_diag %>%
+      filter(c_diagtype %in% c("A", "B")) %>%
+      select(recnum, c_diag),
+    by = "recnum"
+  ) %>%
+  collect() %>%
+  mutate(icd3 = substr(c_diag, 2, 4))
+
+alle_dx <- bind_rows(lpr2_dx, lpr2_psyk_dx, lpr3_dx)
+```
+
+</details>
+
+---
+
+## Se også
+
+- [Registerreference](register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
+- [Faldgruber](dst_faldgruber.qmd) — kendte problemer med LPR på DST

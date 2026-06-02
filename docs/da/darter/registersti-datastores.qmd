@@ -4,6 +4,105 @@ subtitle: "Bekræftede stier og adgangsmetoder for alle registre på projekt 708
 date: last-modified
 ---
 
-::: {.callout-note}
-Denne side er under udarbejdelse.
+::: {.callout-warning}
+**Tjek modificeringsdato på cleaned-data inden du kører pipeline.**
+
+```r
+file.info("E:/workdata/708421/cleaned-data/parquet-registers/")$mtime
+```
+
+Registrene er ikke nødvendigvis opdateret til i dag. Bekræft at dækning matcher din studieperiode.
 :::
+
+---
+
+## Basestier
+
+```r
+# Alle stier bruges som konstanter øverst i scripts
+path_parquet_reg  <- "E:/workdata/708421/cleaned-data/parquet-registers/"
+path_parquet_ext  <- "E:/workdata/708421/cleaned-data/parquet-external/"
+path_dm_pop       <- "E:/workdata/708421/cleaned-data/diabetes-register-pop/dm_population_1977_2022.rds"
+path_output       <- "E:/workdata/708421/workspaces/[ditNavn]/BS_demens/datasets/"
+```
+
+---
+
+## Oversigt — alle registre på projekt 708421
+
+Alle bekræftet via `colnames()` på DST-serveren 2026-05-15.
+Kolonnenavne vises efter `rename_with(tolower)`.
+
+| Register | Adgang | Join-nøgle | Periode | Kritisk kolonne |
+|---|---|---|---|---|
+| **BEF** | `load_database("bef")` | `pnr` | Alle år | `koen`, `foed_dag`, `familie_id` |
+| **DODSAARS** | `load_database("dodsaars")` | `pnr` | ~1970–2001 | `d_dodsdto` (dødsdato) |
+| **DOD** | *ikke i cleaned-data* | `pnr` | ~2001–2024 | `doddato` — se udtræksguide |
+| **VNDS** | `load_database("vnds")` | `pnr` | Alle år | `indud_kode`, `haend_dato` |
+| **LPR2 kontakter** | `load_database("lpr_adm")` | `recnum` | Frem til marts 2019 | `d_inddto`, `c_pattype` |
+| **LPR2 diagnoser** | `load_database("lpr_diag")` | `recnum` | Frem til marts 2019 | `c_diag`, `c_diagtype` |
+| **LPR2 psyk kontakter** | `load_database("t_psyk_adm")` | `k_recnum` → `recnum` | 1995–marts 2019 | `v_cpr` → `pnr` |
+| **LPR2 psyk diagnoser** | `load_database("t_psyk_diag")` | `v_recnum` → `recnum` | 1995–marts 2019 | `c_diag`, `c_diagtype` |
+| **LPR3 kontakter** | `load_database("lpr_a_kontakt")` | `dw_ek_kontakt` | Marts 2019+ | `kont_starttidspunkt` (datetime) |
+| **LPR3 diagnoser** | `load_database("lpr_a_diagnose")` | `dw_ek_kontakt` | Marts 2019+ | `diag_kode`, `diag_kode_type`, `senere_afkraeftet` |
+| **LPR3 procedurer** | `load_database("procedurer_kirurgi")` | `dw_ek_forloeb` | 2019+ | `procedurekode`, `dato_start` |
+| **LPR2 procedurer** | `load_database("lpr_sksopr")` | `recnum` | 1996–2018 | `c_opr`, `d_odto` |
+| **LMDB** | `load_database("lmdb")` | `pnr` | Ca. 1994+ | `atc`, `eksd` |
+| **UDDA** | `load_database("udda")` | `pnr` | Alle år | `hfaudd`, `aar` |
+| **FAIK** | `load_database("faik")` | `familie_id` | Alle år | `famaekvivadisp_13` |
+| **AKM** | `load_database("akm")` | `pnr` | Alle år | `socio13`, `aar` |
+| **DBSO** | `load_database("dbso")` | `pnr` | 2010+ | `datoper_prim`, kirurgi-flag |
+| **OSDC** | `readRDS(path_dm_pop)` | `PNR` → rename til `pnr` | 1977–2022 | `diabetes_type`, `do_dm` |
+
+---
+
+## Kritiske noter
+
+**DODSAARS og DOD:** `dodsaars` er i cleaned-data men dækker kun ~1970–2001 (pr. juni 2026). For post-2001 dødsfald kræves DOD-udtræk fra rå SAS — guide under udvikling.
+<!-- TODO: link til udtræksguide når klar -->
+
+**procedurer_kirurgi:** `dw_ek_kontakt` er **NA for alle rækker** på DST. Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`.
+
+**DBSO:** Identifier-kolonnen hedder `cpr` i råparquet — omdøbt til `pnr` af `00_prepare_dbso.R`. Al kode bruger `pnr` herefter.
+
+**OSDC:** `PNR` er uppercase i rå fil — rename med `rename(pnr = PNR)` efter indlæsning.
+
+---
+
+## Indlæsningsskabeloner
+
+```r
+library(dstDataPrep)
+library(dplyr)
+
+# Standard register — parquet via load_database:
+bef <- load_database("bef") %>% rename_with(tolower)
+
+# Psykiatrisk LPR2 — kræver rename:
+psyk_adm <- load_database("t_psyk_adm") %>%
+  rename_with(tolower) %>%
+  rename(pnr = v_cpr, recnum = k_recnum)
+
+# DBSO — parquet-external:
+dbso <- load_database("dbso") %>% rename_with(tolower)
+
+# OSDC — RDS-fil:
+dm_pop <- readRDS(path_dm_pop) %>% rename(pnr = PNR)
+
+# LPR3 procedurer — join via dw_ek_forloeb (IKKE dw_ek_kontakt):
+proc <- load_database("procedurer_kirurgi") %>%
+  rename_with(tolower) %>%
+  left_join(
+    load_database("lpr_a_kontakt") %>%
+      rename_with(tolower) %>%
+      select(dw_ek_forloeb, pnr),
+    by = "dw_ek_forloeb"
+  )
+```
+
+---
+
+## Se også
+
+- [Registerreference](../register_reference.qmd) — fulde bekræftede kolonnenavne
+- [DARTER — faldgruber](darter-faldgruber.qmd) — projekt-specifikke problemer
