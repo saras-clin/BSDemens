@@ -41,10 +41,10 @@ website:
           contents:
             - da/getting-started-dst.qmd
             - da/parquet-arrow-duckdb.qmd
-            - da/foerste-udtraek.qmd
 
         - section: "Kode og data"
           contents:
+            - da/foerste-udtraek.qmd
             - da/guide_til_funktioner.qmd
             - da/joins-og-pivots.qmd
             - da/formateringstabeller.qmd
