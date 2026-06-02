@@ -1,0 +1,9 @@
+---
+title: "Hospitalskontakter (LPR)"
+subtitle: "LPR2 og LPR3 kombineret — diagnoser, procedurer og ICD-koder"
+date: last-modified
+---
+
+::: {.callout-note}
+Denne side er under udarbejdelse.
+:::

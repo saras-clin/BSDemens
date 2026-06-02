@@ -1,0 +1,100 @@
+---
+title: "Studieforberedelse"
+subtitle: "Inden du åbner R — planlæg dit studie"
+date: last-modified
+---
+
+Registerforskning starter ikke i R. Det starter med blyant og papir.
+Denne side guider dig igennem de ting, du bør have på plads, inden du skriver en eneste linje kode.
+
+---
+
+## 1. Hvad vil jeg undersøge?
+
+Formulér dit forskningsspørgsmål præcist, inden du begynder at kigge på data.
+Et vagt spørgsmål giver et rodet datasæt. Et præcist spørgsmål giver en klar plan.
+
+Stil dig selv disse spørgsmål:
+
+| Spørgsmål | Eksempel |
+|---|---|
+| Hvem er min population? | Alle voksne med T2D i Danmark, 2010–2020 |
+| Hvad er min eksponering? | Bariatrisk kirurgi |
+| Hvad er mit udfald? | Demensdebut |
+| Hvornår starter opfølgningen? | Operationsdato (index-dato) |
+| Hvornår stopper den? | Diagnose, død, emigration eller studieperiode slut |
+| Hvilke confoundere skal justeres for? | Alder, køn, komorbiditet, SES |
+
+---
+
+## 2. Lav en analyseplan
+
+En analyseplan er et dokument, du skriver **inden** du ser på dine data.
+Det tvinger dig til at tage stilling til design, statistik og variable, før resultaterne farver dine beslutninger.
+
+**Brug STROBE-checklisten** som skelet:
+[STROBE Statement — checklist (PDF)](https://www.equator-network.org/wp-content/uploads/2015/10/STROBE_checklist_v4_combined.pdf)
+
+**Pre-registrer din analyseplan på OSF** — det er god videnskabelig praksis og kræves af mange tidsskrifter:
+[Open Science Framework — registreringsskabeloner](https://help.osf.io/article/330-welcome-to-registrations)
+
+---
+
+## 3. Forstå datakilden: SDS vs. DST
+
+To myndigheder er centrale for dansk registerbaseret forskning:
+
+| | Sundhedsdatastyrelsen (SDS) | Danmarks Statistik (DST) |
+|---|---|---|
+| **Hvad har de?** | Rå nationale sundhedsregistre (LPR, LMDB, cancerregister, CPR-register mv.) | Bearbejdede og anonymiserede data fra SDS + socioøkonomiske registre |
+| **Til hvem?** | Myndigheder og godkendte forskere | Forskere via sikker fjernforbindelse |
+| **Adgang via** | Direkte ansøgning til SDS | DST Forskningsservice |
+| **Dokumentation** | [sundhedsdatastyrelsen.dk](https://sundhedsdatastyrelsen.dk/data-og-registre/nationale-sundhedsregistre) | [dst.dk/extranet](https://www.dst.dk/extranet/forskningvariabellister/Oversigt%20over%20registre.html) |
+
+Som forsker arbejder du typisk på **DST's servere** med data, der er leveret og bearbejdet af DST på baggrund af SDS-registrene.
+
+---
+
+## 4. Dan et overblik — pen og papir
+
+Inden du åbner R, svar på disse spørgsmål skriftligt:
+
+1. **Hvilke kolonner skal jeg bruge?** (patientinformation — alder, køn, diagnoser mv.)
+2. **Hvilke rækker skal jeg bruge?** (hvilken patienttype, hvilke år)
+3. **Hvilke registre indeholder disse oplysninger?** (LPR, BEF, LMDB, ...)
+4. **I hvilken rækkefølge skal data samles?** (definer population → hent udfald → hent kovariater)
+
+Et godt overblik på papiret sparer mange timers fejlretning i koden.
+
+<details>
+<summary>Eksempel: overblik for et demensstudie</summary>
+
+```
+Population:   Voksne opereret for fedme (DBSO), 2010–2024
+              Matchede kontroller fra befolkningsregistret (BEF)
+
+Udfald:       Første demensDiagnose (LPR — ICD-10: F00–F03, G30–G31)
+              Dato: første kontakt med demenskode efter operationsdato
+
+Kovariater:   Alder og køn (BEF)
+              Komorbiditet (LPR — 5-års lookback)
+              Uddannelse (UDDA)
+              Indkomst (FAIK via BEF familie_id)
+              Beskæftigelse (AKM)
+
+Censurering:  Død (DODSAARS)
+              Emigration (VNDS)
+              Studieperiode slut (31. dec 2024)
+```
+
+</details>
+
+---
+
+## 5. Næste skridt
+
+Når du har dit overblik på plads:
+
+- **Ny R-bruger?** → [Kom i gang med R](r-intro.qmd)
+- **Klar til DST-serveren?** → [Kom i gang på DST](getting-started-dst.qmd)
+- **Arbejder du på DARTER / projekt 708421?** → Læs dette inden du starter: [DARTER — oversigt og pipeline](darter/index.qmd)

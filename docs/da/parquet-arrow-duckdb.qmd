@@ -1,0 +1,9 @@
+---
+title: "Parquet, Arrow og DuckDB"
+subtitle: "Hvordan og hvorfor disse teknologier bruges på DST"
+date: last-modified
+---
+
+::: {.callout-note}
+Denne side er under udarbejdelse.
+:::

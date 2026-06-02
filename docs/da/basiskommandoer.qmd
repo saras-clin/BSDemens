@@ -1,0 +1,151 @@
+---
+title: "Basiskommandoer"
+subtitle: "De vigtigste kommandoer til at udforske og forstå dine data"
+date: last-modified
+---
+
+Inden du begynder at filtrere og analysere, skal du forstå hvad du har.
+Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine data.
+
+::: {.callout-note}
+Eksemplerne bruger variabelnavne fra DARTER-projektet.
+Dine kolonner kan hedde noget andet — tjek dine egne med `names(din_data)`.
+:::
+
+---
+
+## Se hvad du har
+
+```r
+dim(data)          # antal rækker og kolonner — fx "5000 rows, 12 columns"
+nrow(data)         # kun antal rækker
+ncol(data)         # kun antal kolonner
+names(data)        # kolonnenavne som en vektor
+```
+
+<details>
+<summary>Eksempel med DARTER-data</summary>
+
+```r
+names(full_cohort)
+# [1] "pnr"               "index_date"        "cohort"
+# [4] "surgery_type"      "matched_pnr"       "bs_crossover_date"
+```
+
+</details>
+
+---
+
+## Forstå strukturen
+
+```r
+str(data)          # kolonner med type og de første værdier — start her
+glimpse(data)      # samme som str(), men pænere layout (kræver dplyr)
+class(data)        # objekttype: "data.frame", "tbl_duckdb_connection" mv.
+class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
+```
+
+::: {.callout-tip}
+**`class()` er din bedste ven på DST.**
+Hvis kode opfører sig underligt — tjek `class()` på objektet.
+Er det `"tbl_duckdb_connection"` i stedet for `"data.frame"`, mangler du et `collect()`.
+Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for forklaring.
+:::
+
+---
+
+## Se de første og sidste rækker
+
+```r
+head(data)         # de første 6 rækker
+head(data, 10)     # de første 10 rækker
+tail(data)         # de sidste 6 rækker
+```
+
+---
+
+## Udforsk indholdet
+
+```r
+unique(data$koen)              # hvilke unikke værdier findes i kolonnen?
+table(data$koen)               # frekvenstabel: hvor mange af hver?
+table(data$cohort, data$koen)  # krydstabel: to variable mod hinanden
+```
+
+<details>
+<summary>Eksempel: fordeling af køn og kohorte</summary>
+
+```r
+table(full_cohort$cohort, full_cohort$surgery_type)
+#          RYGB   SG  <NA>
+#  BS      2143 1857     0
+#  GP         0    0 50000
+#  Obesity    0    0  9000
+```
+
+</details>
+
+---
+
+## Opsummering af data
+
+```r
+summary(data)              # min, max, median, gennemsnit og kvartiler for alle kolonner
+summary(data$index_date)   # opsummering af én kolonne
+```
+
+For kontinuerte variable:
+
+```r
+min(data$alder, na.rm = TRUE)    # mindste værdi (na.rm fjerner NA'er)
+max(data$alder, na.rm = TRUE)    # største værdi
+mean(data$alder, na.rm = TRUE)   # gennemsnit
+median(data$alder, na.rm = TRUE) # median
+sd(data$alder, na.rm = TRUE)     # standardafvigelse
+IQR(data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
+```
+
+---
+
+## Hurtige visualiseringer
+
+For at danne sig et hurtigt overblik — ikke til publikation.
+
+```r
+# Kontinuerte variable:
+hist(data$alder)                         # histogram
+boxplot(data$alder)                      # boksplot
+boxplot(alder ~ koen, data = data)       # boksplot opdelt på køn
+
+# Kategoriske variable:
+barplot(table(data$cohort))              # søjlediagram
+```
+
+---
+
+## Tjek manglende værdier
+
+```r
+sum(is.na(data$index_date))            # antal NA'er i én kolonne
+colSums(is.na(data))                   # antal NA'er per kolonne
+```
+
+---
+
+## Tæl og sorter
+
+```r
+data |> count(cohort)                   # antal rækker per kategori (dplyr)
+data |> count(cohort, surgery_type)     # per kombination af to variable
+data |> arrange(index_date)             # sorter stigende efter dato
+data |> arrange(desc(index_date))       # sorter faldende
+```
+
+---
+
+## Næste skridt
+
+Disse kommandoer er til at **udforske** data. Næste trin er at **bearbejde** det:
+
+- [Funktioner — oversigt](guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
+- [Datastrukturer](datastrukturer.qmd) — hvad er langt og bredt format?

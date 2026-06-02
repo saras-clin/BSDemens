@@ -1,0 +1,155 @@
+---
+title: "Datastrukturer"
+subtitle: "Langt og bredt format, tidy data og hvad det betyder i praksis"
+date: last-modified
+---
+
+Inden du kan arbejde effektivt med registerdata, skal du forstå **formen** af dine data.
+Registerdata er næsten altid i langt format — men det er ikke altid det format, du har brug for til din analyse.
+
+---
+
+## Bredt vs. langt format
+
+Forestil dig, at vi har tre personer med målinger af vægt ved to tidspunkter.
+
+**Bredt format** — én række per person, én kolonne per tidspunkt:
+
+| pnr | vaegt_baseline | vaegt_6mdr |
+|---|---|---|
+| 001 | 120 | 95 |
+| 002 | 105 | 88 |
+| 003 | 98 | 80 |
+
+**Langt format** — én række per observation, én kolonne til tidspunkt og én til værdi:
+
+| pnr | tidspunkt | vaegt |
+|---|---|---|
+| 001 | baseline | 120 |
+| 001 | 6mdr | 95 |
+| 002 | baseline | 105 |
+| 002 | 6mdr | 88 |
+| 003 | baseline | 98 |
+| 003 | 6mdr | 80 |
+
+Begge formater indeholder **de samme oplysninger** — de er bare arrangeret forskelligt.
+
+---
+
+## Hvornår ser du hvert format?
+
+| Register | Format | Hvorfor |
+|---|---|---|
+| BEF | Langt | Én række per person **per år** — samme person optræder 30 gange |
+| LPR (lpr_adm + lpr_diag) | Langt | Én række per **diagnose per kontakt** — en indlæggelse kan have 10 diagnoser |
+| LMDB | Langt | Én række per **ekspederet recept** |
+| DBSO | Langt | Én række per **klinikbesøg** (pre-op, operation, opfølgning) |
+| Dit analysedatasæt | Bredt | Én række per person — én kolonne per kovariat |
+
+**Registre er altid lange. Dit analysedatasæt skal typisk være bredt.**
+
+---
+
+## Hvad er "tidy data"?
+
+Tidy data er et princip for, hvornår data er velstruktureret til analyse:
+
+1. Hver **variabel** har sin egen kolonne
+2. Hver **observation** har sin egen række
+3. Hvert **datasæt** indeholder én type observationer
+
+Langt format er typisk tidy. Bredt format er det, når én kolonne faktisk rummer to oplysninger (fx `vaegt_6mdr` gemmer både *hvornår* og *hvad*).
+
+---
+
+## Konverter fra bredt til langt — `pivot_longer()`
+
+```r
+library(dplyr)
+library(tidyr)
+
+# Bredt format:
+df_bredt <- data.frame(
+  pnr        = c("001", "002", "003"),
+  vaegt_base = c(120, 105, 98),
+  vaegt_6mdr = c(95, 88, 80)
+)
+
+# Konverter til langt:
+df_langt <- df_bredt |>
+  pivot_longer(
+    cols      = c(vaegt_base, vaegt_6mdr),  # kolonner der skal "foldes ind"
+    names_to  = "tidspunkt",                # navn på den nye tidspunkt-kolonne
+    values_to = "vaegt"                     # navn på den nye værdi-kolonne
+  )
+```
+
+---
+
+## Konverter fra langt til bredt — `pivot_wider()`
+
+```r
+# Langt format → bredt:
+df_bredt_igen <- df_langt |>
+  pivot_wider(
+    names_from  = "tidspunkt",  # hvilken kolonne skal blive til kolonnenavne?
+    values_from = "vaegt"       # hvilken kolonne indeholder værdierne?
+  )
+```
+
+<details>
+<summary>Praktisk eksempel: DBSO-vægte fra langt til bredt</summary>
+
+DBSO har én række per besøg per patient — langt format.
+For en analyse har vi brug for én række per patient med vægt på hvert tidspunkt — bredt format.
+
+```r
+library(dplyr)
+library(tidyr)
+
+# Antag dbso_vaegter er allerede collected fra DBSO med kolonner:
+# pnr, tidspunkt ("baseline", "6mdr", "12mdr", "24mdr"), vaegt
+
+dbso_bredt <- dbso_vaegter |>
+  pivot_wider(
+    names_from  = tidspunkt,
+    values_from = vaegt,
+    names_prefix = "vaegt_"   # giver kolonner: vaegt_baseline, vaegt_6mdr mv.
+  )
+
+# Resultatet: én række per patient, én kolonne per tidspunkt
+```
+
+</details>
+
+---
+
+## Én række per person — `group_by()` + `slice()`
+
+En meget hyppig opgave: du har et langt register og vil have én repræsentativ række per person.
+
+```r
+# BEF: behold kun den nyeste post per person
+bef_en_per_person <- bef |>
+  group_by(pnr) |>         # gruppér på personnummer
+  arrange(desc(aar)) |>    # nyeste år først
+  slice(1) |>              # tag første række per gruppe (= nyeste år)
+  ungroup()                # frigiv gruppering
+```
+
+```r
+# LPR: find første demensdiagnose per person
+foerste_demens <- lpr_dx |>
+  group_by(pnr) |>
+  arrange(date_contact) |>    # ældste dato først
+  slice(1) |>                 # første diagnose per person
+  ungroup()
+```
+
+---
+
+## Næste skridt
+
+- [Funktioner — oversigt](guide_til_funktioner.qmd) — alle de funktioner du bruger til at transformere data
+- [Joins og pivots](joins-og-pivots.qmd) — sammenkobling af to datasæt
+- [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — praktisk eksempel på langt registerdata

@@ -1,0 +1,9 @@
+---
+title: "Socioøkonomiske variable"
+subtitle: "Udtræk af uddannelse, indkomst og beskæftigelse fra registerdata"
+date: last-modified
+---
+
+::: {.callout-note}
+Denne side er under udarbejdelse.
+:::

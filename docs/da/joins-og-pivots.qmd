@@ -1,0 +1,9 @@
+---
+title: "Joins og pivots"
+subtitle: "Sammenkobling af datasæt og omformning af data"
+date: last-modified
+---
+
+::: {.callout-note}
+Denne side er under udarbejdelse.
+:::

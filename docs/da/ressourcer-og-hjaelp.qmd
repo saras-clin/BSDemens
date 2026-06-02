@@ -1,0 +1,106 @@
+---
+title: "Ressourcer og hjælp"
+subtitle: "Hvor finder du hjælp — og i hvilken rækkefølge"
+date: last-modified
+---
+
+At støde på fejl i R er normalt — ikke et tegn på, at du er dårlig til det.
+Alle fejlretter kode. Spørgsmålet er bare, hvor du leder.
+
+---
+
+## Når du sidder fast — prioriteret rækkefølge
+
+Følg denne rækkefølge. AI er nederst af en god grund.
+
+| # | Hvor | Hvornår |
+|---|---|---|
+| 1 | **Kollega eller vejleder** | Spørg først — de kender jeres data og workflow |
+| 2 | **Google** | Kopier fejlmeddelelsen præcist — inklusiv `Error:` |
+| 3 | **Stack Overflow** | [stackoverflow.com](https://stackoverflow.com/questions) — verdens største samling af kode-spørgsmål og -svar |
+| 4 | **Zheers R Coding Café** | [r-coding-cafe.zheer.dk](https://r-coding-cafe.zheer.dk/) — noter og eksempler specifikt til registerdata |
+| 5 | **Officiel pakkdokumentation** | Søg efter pakkens navn + "documentation" — fx [tidyverse.org/packages](https://tidyverse.org/packages/) |
+| 6 | **AI (Claude, ChatGPT)** | God til kodeproblemer, men let at tro på forkerte svar — brug kun, når du forstår svaret du får |
+
+::: {.callout-warning}
+**Undgå AI som første stop, hvis du er ny.**
+AI kan generere plausibel-lydende kode, der ikke virker — eller virker, men giver forkerte resultater uden at fejle.
+Når du er ny, er det svært at vurdere om svaret er korrekt.
+Brug det som supplement til din egen forståelse, ikke som erstatning.
+:::
+
+---
+
+## Kurser og lærebøger
+
+Alle links nedenfor er gratis og tilgængelige uden login.
+
+### Begynderkurser i R
+
+**DDEA Introductory Course**
+Undervisningsmateriale fra et begynderkursus i R tilbudt af Danish Diabetes and Endocrine Academy (DDEA).
+Holdes typisk én gang om året, men materialet er offentligt tilgængeligt.
+[r-cubed-intro.rostools.org](https://r-cubed-intro.rostools.org/)
+
+**AU PhD-kursus: "Basic R"**
+Introducerer RStudio som redskab til datamanagement, basisprogrammering og datavisualisering.
+Find det på [au.phd-courses.dk](https://au.phd-courses.dk/) — søg på "Basic R".
+
+### Opslagsværker
+
+**The Epidemiologist R Handbook**
+Praktisk, sundhedsvidenskabeligt fokus. Dækker import, rensning, datamanagement, analyse og visualisering.
+[epirhandbook.com](https://www.epirhandbook.com/en/)
+
+**R for Data Science (gratis e-bog)**
+Forklarer hvordan man importerer, renser, transformerer, visualiserer og modellerer data i R.
+[r4ds.hadley.nz](https://r4ds.hadley.nz/)
+
+---
+
+## Dokumentation på DST
+
+**TIMES — variabelbeskrivelser**
+Slå op hvad en variabel betyder:
+[dst.dk/da/Statistik/dokumentation/Times](https://www.dst.dk/da/Statistik/dokumentation/Times)
+
+**Stjernen på skrivebordet**
+Inde på DST-serveren: den stjerne-genvej på Windows-skrivebordet åbner DST's formateringstabel-guide — bruges til at finde de SAS-filer, der oversætter koder til tekst (fx kommunenumre til kommunenavne).
+Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
+
+**Steno GitHub: Quick guide til GitHub**
+[SDCA Research — GitHub start](https://sdca-research.dk/quick-guide-to-using-github)
+
+---
+
+## Spørg om hjælp effektivt — minimal reproducerbart eksempel
+
+Når du beder en kollega eller poster på Stack Overflow, er det vigtigt at give dem nok information til at reproducere dit problem.
+
+Et godt hjælp-spørgsmål er:
+
+- **Minimalt** — den mindste mængde kode, der stadig viser fejlen
+- **Komplet** — alt hvad modtageren skal bruge til at køre koden
+- **Reproducerbart** — koden fejler faktisk, når man kører den
+
+<details>
+<summary>Eksempel: dårligt vs. godt hjælp-spørgsmål</summary>
+
+**Dårligt:**
+> "Min kode fejler, hvad er galt?"
+> *(ingen kode, ingen fejlbesked)*
+
+**Godt:**
+> "Jeg får fejlen `Error: object 'pnr' not found` når jeg kører denne kode — hvad mangler?"
+>
+> ```r
+> library(dplyr)
+> df <- data.frame(PNR = 1:5, alder = 20:24)
+> df %>% filter(pnr > 3)   # fejl her
+> ```
+>
+> Forventet: rækker hvor PNR > 3. Faktisk: fejl om at 'pnr' ikke findes.
+
+Forklaring på fejlen her: kolonnen hedder `PNR` (store bogstaver), men koden spørger efter `pnr` (små). R skelner mellem store og små bogstaver.
+
+</details>

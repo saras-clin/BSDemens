@@ -1,0 +1,93 @@
+---
+title: "DARTER — Projekt 708421"
+subtitle: "Projektspecifik vejledning til BS & Demens-kohortestudiet"
+date: last-modified
+---
+
+Denne sektion er **kun** for dem der arbejder på DARTER-projektet (projekt 708421).
+Indholdet her bygger ovenpå den generelle DST-vejledning og tilføjer det projekt-specifikke.
+
+Ny på projektet? Start med den generelle vejledning og vend tilbage hertil:
+→ [Studieforberedelse](../studieforberedelse.qmd)
+→ [Kom i gang med R](../r-intro.qmd)
+→ [Kom i gang på DST](../getting-started-dst.qmd)
+
+---
+
+## Initielle setup-trin for DARTER
+
+To trin skal gennemføres **inden du skriver kode** på DARTER:
+
+::: {.callout-important}
+**Trin 1 — Byg `dstDataPrep`**
+
+`dstDataPrep` er den pakke, der giver adgang til `load_database()` og alle registerdata.
+Den skal bygges manuelt, da DST-serveren nulstiller installerede pakker.
+
+1. **File → Open Project in New Session**
+2. Naviger til `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
+3. Tryk **Ctrl+Shift+B** (Build) — eller på Mac via menuen: **Build → Install Package**
+4. Vent på "Done" og luk sessionen
+
+Gør det igen hvis `library(dstDataPrep)` melder `Error: there is no package called 'dstDataPrep'`.
+:::
+
+::: {.callout-important}
+**Trin 2 — Geninstaller `duckplyr` i starten af hver session**
+
+```r
+install.packages("duckplyr")   # kør inden library() — nulstilles ved logout
+```
+:::
+
+---
+
+## Pipeline-oversigt
+
+Data flyttes fra råregistre til analyseklar datasæt i fem trin:
+
+```
+00_prepare_dbso.R   →  DBSO parquet (kun én gang)
+01_build_cohorts.R  →  full_cohort.rds
+02_extract_*.R      →  extract_dementia.rds, extract_comorbidities.rds, ...
+03_extract_ses.R    →  ses_data.rds
+04_data_mgmt.R      →  study1_clean.rds  (klar til overlevelsesanalyse)
+```
+
+Trin 2 og 3 kan køres parallelt — de læser begge `full_cohort.rds` uafhængigt.
+
+---
+
+## Studieoversigt
+
+**Studie 1:** Bariatrisk kirurgi og risiko for demens
+- Eksponering: Bariatrisk kirurgi (RYGB eller sleeve gastrektomi), 2010–2024
+- Udfald: Incident demens (ICD-10: F00–F03, G30–G31)
+- Komparatorer: GP (1:25) og fedme-kohort (1:5), matchet på køn og fødselsår ±1
+
+**Studie 2:** Bariatrisk kirurgi ved type 1-diabetes — glykæmiske og hospitalsmæssige udfald
+- Population: T1D-patienter opereret bariatrisk
+
+---
+
+## Mappestruktur
+
+```
+R/
+  00_prepare_dbso.R                    # Engangs: SAS → parquet for DBSO
+  01_build_cohorts.R                   # BS-kohort + GP + fedme-komparatorer
+  02_extract_outcomes_covariates.R     # LPR/LMDB/DBSO-udtræk
+  03_extract_ses.R                     # Socioøkonomiske variable
+  04_data_management_dementia.R        # Merge, eksklusioner, analysedatasæt
+  variables_dictionary.txt             # Bekræftede registerkolonner
+docs/
+  da/                                  # Dansk vejledning (denne side)
+datasets/                              # gitignored: .rds-outputfiler
+```
+
+---
+
+## Næste skridt i denne sektion
+
+- [Registersti og datastores](registersti-datastores.qmd) — bekræftede stier til alle registre på 708421
+- [DARTER-specifikke faldgruber](darter-faldgruber.qmd) — quirks der er specifikke for dette projekt
