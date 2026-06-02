@@ -50,48 +50,6 @@ Begge formater indeholder **de samme oplysninger** — de er bare arrangeret for
 
 ---
 
-## Hvad er "tidy data"?
-
-Tidy data er et princip for, hvornår data er velstruktureret til analyse:
-
-1. Hver **variabel** har sin egen kolonne
-2. Hver **observation** har sin egen række
-3. Hvert **datasæt** indeholder én type observationer — fx blander du ikke patient-niveau-data (én række per person) og besøg-niveau-data (én række per kontakt) i den samme tabel
-
-Langt format er typisk tidy.
-
-Bredt format er **ikke** tidy, når én kolonne faktisk gemmer to informationer på én gang.
-Fx gemmer kolonnen `vaegt_6mdr` både *hvad* der måles (vægt) og *hvornår* det måles (6 måneder) — begge dele er presset ind i kolonnenavnet i stedet for at have hver sin kolonne.
-Et tidy alternativ ville have én kolonne `vaegt` og én kolonne `tidspunkt`, hvor `tidspunkt` indeholder værdien `"6mdr"`.
-
-Det er netop den transformation `pivot_longer()` laver.
-
----
-
-## Konverter fra bredt til langt — `pivot_longer()`
-
-```r
-library(dplyr)
-library(tidyr)
-
-# Bredt format:
-df_bredt <- data.frame(
-  pnr        = c("001", "002", "003"),
-  vaegt_base = c(120, 105, 98),
-  vaegt_6mdr = c(95, 88, 80)
-)
-
-# Konverter til langt:
-df_langt <- df_bredt |>
-  pivot_longer(
-    cols      = c(vaegt_base, vaegt_6mdr),  # kolonner der skal "foldes ind"
-    names_to  = "tidspunkt",                # navn på den nye tidspunkt-kolonne
-    values_to = "vaegt"                     # navn på den nye værdi-kolonne
-  )
-```
-
----
-
 ## Konverter fra langt til bredt — `pivot_wider()`
 
 ```r
@@ -134,6 +92,33 @@ hba1c_bredt <- hba1c_langt |>
 #   001             72          58
 #   002             65          54
 #   003             80          61
+```
+
+</details>
+
+---
+
+<details>
+<summary>Konverter fra bredt til langt — `pivot_longer()`</summary>
+
+```r
+library(dplyr)
+library(tidyr)
+
+# Bredt format:
+df_bredt <- data.frame(
+  pnr        = c("001", "002", "003"),
+  vaegt_base = c(120, 105, 98),
+  vaegt_6mdr = c(95, 88, 80)
+)
+
+# Konverter til langt:
+df_langt <- df_bredt |>
+  pivot_longer(
+    cols      = c(vaegt_base, vaegt_6mdr),  # kolonner der skal "foldes ind"
+    names_to  = "tidspunkt",                # navn på den nye tidspunkt-kolonne
+    values_to = "vaegt"                     # navn på den nye værdi-kolonne
+  )
 ```
 
 </details>

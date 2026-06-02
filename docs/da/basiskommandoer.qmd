@@ -7,11 +7,6 @@ date: last-modified
 Inden du begynder at filtrere og analysere, skal du forstå hvad du har.
 Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine data.
 
-::: {.callout-note}
-Eksemplerne bruger variabelnavne fra DARTER-projektet.
-Dine kolonner kan hedde noget andet — tjek dine egne med `names(din_data)`.
-:::
-
 ---
 
 ## Se hvad du har
@@ -24,12 +19,17 @@ names(data)        # kolonnenavne som en vektor
 ```
 
 <details>
-<summary>Eksempel med DARTER-data</summary>
+<summary>Eksempel med simpel data</summary>
 
 ```r
-names(full_cohort)
-# [1] "pnr"               "index_date"        "cohort"
-# [4] "surgery_type"      "matched_pnr"       "bs_crossover_date"
+df <- data.frame(
+  pnr        = c("001", "002", "003"),
+  koen       = c("M", "K", "M"),
+  index_date = as.Date(c("2015-03-01", "2016-07-14", "2014-11-30"))
+)
+
+names(df)
+# [1] "pnr"        "koen"       "index_date"
 ```
 
 </details>
@@ -54,7 +54,7 @@ class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 | `"Table"` / `"ArrowObject"` | Samme situation som ovenfor, men for Arrow-format. |
 
 ::: {.callout-tip}
-**`class()` er din bedste ven på DST.**
+**`class()` kan hjælpe dig med at fejlfinde**
 Fejler din kode med en mystisk besked, eller ser objektet ud som data men opfører sig mærkeligt?
 Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`.
 Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for den fulde forklaring på hvorfor.
@@ -145,9 +145,8 @@ barplot(table(data$cohort))              # søjlediagram
 ## Tjek manglende værdier
 
 ```r
-sum(is.na(data$index_date))   # antal NA'er i kolonnen "index_date" specifikt
-                               # erstat index_date med dit eget kolonnenavn
-colSums(is.na(data))          # antal NA'er per kolonne — giver overblik over hele datasættet
+sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
+colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
 ```
 
 ---
@@ -155,10 +154,10 @@ colSums(is.na(data))          # antal NA'er per kolonne — giver overblik over 
 ## Tæl og sorter
 
 ```r
-data |> count(cohort)                   # antal rækker per kategori (dplyr)
-data |> count(cohort, surgery_type)     # per kombination af to variable
-data |> arrange(index_date)             # sorter stigende efter dato
-data |> arrange(desc(index_date))       # sorter faldende
+data |> count(koen)              # antal rækker per kategori (dplyr)
+data |> count(koen, alder_gruppe) # per kombination af to variable
+data |> arrange(dato)             # sorter stigende efter dato
+data |> arrange(desc(dato))       # sorter faldende
 ```
 
 ---

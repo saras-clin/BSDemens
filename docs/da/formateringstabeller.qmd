@@ -7,6 +7,20 @@ date: last-modified
 Mange variable i DST-registre er gemt som koder — kommunenumre, uddannelseskoder, beskæftigelseskoder.
 For at give dem meningsfulde labels bruger du DST's **formateringstabeller**: SAS-filer på serveren der oversætter koder til tekst.
 
+En formateringstabel har altid mindst to kolonner:
+
+| Kolonne | Indhold | Eksempel |
+|---|---|---|
+| `START` | Den rå kode fra dit register | `101` (kommunenummer) |
+| Label-kolonne | Den tilsvarende tekstlabel | `"København"` |
+
+Du joiner formateringstabellen på dit datasæt med `START` som nøgle — præcis som et opslag i en ordbog.
+
+::: {.callout-note}
+Rækker i dit datasæt uden match i formateringstabellen får `NA` i label-kolonnen — ingen fejlmeddelelse.
+Tjek altid med `sum(is.na(data$label_kolonne))` efter join.
+:::
+
 ---
 
 ## Hvor er formateringstabellerne?

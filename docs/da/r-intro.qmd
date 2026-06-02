@@ -25,7 +25,7 @@ Forholdet er som mellem en motor og en bil: R er motoren, RStudio er bilen du si
 
 På DST's servere er begge allerede installeret — du behøver ikke installere noget selv.
 
-Sådan ser RStudio ud, første gang du åbner det:
+Sådan ser RStudio ud:
 
 ![RStudio's fire paneler: script-editor (øverst venstre), konsol (nederst venstre), environment (øverst højre), files/plots (nederst højre)](images/RStudio_IDE_screenshot.png){fig-alt="RStudio-interface med fire paneler"}
 
@@ -179,5 +179,6 @@ Indstil det permanent under **Tools → Global Options → General → "Save wor
 ## Næste skridt
 
 - [Basiskommandoer](basiskommandoer.qmd) — de vigtigste kommandoer til at udforske dine data
+- [Guide til funktioner](guide_til_funktioner.qmd) — kender du ikke en funktion? Start her
 - [Datastrukturer](datastrukturer.qmd) — hvad er langt/bredt format og hvad er tidy data?
 - [Kom i gang på DST](getting-started-dst.qmd) — det første gang du logger på DST-serveren

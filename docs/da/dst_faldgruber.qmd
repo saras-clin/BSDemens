@@ -30,12 +30,6 @@ Der er to registre med lignende navne:
 
 `dodsaasg` har ikke dødsdatoen i det rigtige format og er ikke den autoritative kilde til individuelle dødsdatoer.
 
-::: {.callout-warning}
-**`dodsaars` dækker kun ~1970–2001** (pr. juni 2026). Dødsfald efter 2001 er ikke dækket af cleaned-data.
-DOD-registret (~2001–2024) kræver udtræk fra rå SAS-fil — se udtræksguide (under udvikling).
-<!-- TODO: link til udtræksguide -->
-:::
-
 ```r
 # KORREKT
 dod <- load_database("dodsaars") %>% rename_with(tolower)   # dækker ~1970–2001
@@ -177,7 +171,6 @@ Tjek altid med `table()` og `class()` inden du joiner eller sammenligner på tv�
 |---|---|---|
 | BEF | `koen` | `1` = mand, `2` = kvinde (numeric) |
 | LPR2 (`lpr_adm`) | `c_sex` | `"1"` = mand, `"2"` = kvinde (character) |
-| Visse SAS-konverterede registre | `koen` | `"M"` / `"K"` (character) |
 
 ```r
 # Tjek altid inden join:

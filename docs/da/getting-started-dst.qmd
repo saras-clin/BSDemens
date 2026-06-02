@@ -21,8 +21,8 @@ Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Microso
 
 **Løsning (gøres én gang pr. forbindelse):** Skift til Unicode-tilstand:
 
-- Via menuen: **Connections → Keyboard Mode → Unicode**
-- Via genvej inde i Remote Desktop-vinduet: **⌃⌘U** (Ctrl + Cmd + U)
+- **Via genvej inde i Remote Desktop-vinduet: ⌃⌘U (Ctrl + Cmd + U)** ← brug denne
+- Via menuen: **Connections → Keyboard Mode → Unicode** *(kan være blokeret af manglende administratorrettigheder)*
 
 I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter — RStudio kører på Windows-serveren).
 
@@ -85,19 +85,17 @@ Opret en `datasets/`-mappe i projektmappen til mellemregninger, hvis den ikke ek
 ### Trin 3 — Verificer at alt virker
 
 ```r
-library(dstDataPrep)
-list_databases()   # bør returnere en lang liste med registernavne
+getwd()                      # bør vise stien til din projektmappe
+packageVersion("duckplyr")   # bør vise 1.1 eller højere
 ```
 
-Hvis dette kører uden fejl, er du klar.
+Hvis begge linjer kører uden fejl, er du klar.
 
 ---
 
 ## 2. Sådan er data faktisk gemt
 
-Onboarding-guiden bruger **syntetiske data** i en mappe, du selv opretter.
 På DST er de rigtige data allerede klargjort og klar til brug.
-Dette afsnit oversætter onboarding-begreberne til den faktiske filstruktur.
 
 ### De to datavarehuse
 
@@ -210,38 +208,13 @@ At kalde collect() før filter() vil crashe din session og gøre serveren langso
 ### Sådan tjekker du, om du har husket `collect()`
 
 Mange fejl opstår, fordi man tror, man har data i R — men i virkeligheden har man stadig bare en instruktion til DuckDB.
-Kald `class()` for at se, hvad du faktisk har:
-
-```r
-class(mit_objekt)
-```
+Kald `class()` for at se, hvad du faktisk har — se [Basiskommandoer](basiskommandoer.qmd#forstå-strukturen) for kodeeksempler.
 
 | Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
 |---|---|---|
 | `"tbl_df" "data.frame"` | Data er i R. Du kan bruge det normalt. | Ingenting — du er klar. |
 | `"tbl_duckdb_connection"` | Stadig en usendt forespørgsel til DuckDB. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
 | `"Table" "ArrowObject"` | Stadig en usendt forespørgsel til Arrow. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
-
-**Eksempel på problemet:**
-
-```r
-# Du har skrevet dette:
-mine_patienter <- load_database("lpr_adm") %>%
-  filter(pnr %in% !!pnr_liste) %>%
-  rename_with(tolower)
-
-nrow(mine_patienter)   # fejl — nrow() virker ikke på en DuckDB-forespørgsel
-```
-
-```r
-# Fix: tilføj collect()
-mine_patienter <- load_database("lpr_adm") %>%
-  filter(pnr %in% !!pnr_liste) %>%
-  rename_with(tolower) %>%
-  collect()            # nu er data i R
-
-nrow(mine_patienter)   # virker
-```
 
 ---
 
@@ -278,18 +251,10 @@ lpr_diag %>%
 ### LPR2 vs LPR3: opdelingen i marts 2019
 
 Det Nationale Patientregister skiftede format i marts 2019.
-Ethvert studie, der dækker en periode, som spænder over denne dato (hvilket inkluderer vores: 2010–2024),
+Ethvert studie, der dækker en periode, som spænder over denne dato,
 skal forespørge begge systemer separat og kombinere resultaterne.
 
-| | LPR2 (frem til marts 2019) | LPR3 (marts 2019 og frem) |
-|---|---|---|
-| Kontakttabel | `lpr_adm` | `lpr_a_kontakt` |
-| Diagnosetabel | `lpr_diag` | `lpr_a_diagnose` |
-| Join-nøgle | `recnum` | `dw_ek_kontakt` |
-| Datokolonne | `d_inddto` | `kont_starttidspunkt` (datetime, ikke dato) |
-| Diagnosekode | `c_diag` | `diag_kode` |
-| Diagnosetype | `c_diagtype` | `diag_kode_type` |
-| Kontakttype | `c_pattype` (`"0"` = indlagt) | `kont_type` (`"ALCA00"` = indlagt) |
+Se den fulde oversigt over tabeller, join-nøgler og kolonnenavne i [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd).
 
 ```{mermaid}
 gantt
@@ -334,16 +299,8 @@ somatiske og psykiatriske kontakter i én tabel — ingen separat forespørgsel 
 
 ### Diagnosetyper: A, B og G
 
-Hver diagnoserække i LPR har en typekode:
-
-| Kode | Betydning | Hvornår inkluderes den |
-|---|---|---|
-| A | Aktionsdiagnose — den primære årsag til kontakten | Altid |
-| B | Bidiagnose — yderligere tilstand til stede | Altid |
-| G | Grundmorbus — underliggende baggrundstilstand | Kun ved comorbiditetslookback |
-
-For **udfald** (demens, DKA osv.): brug `c("A", "B")`.
-For **baseline-comorbiditet** og NMI: brug `c("A", "B", "G")` — du ønsker at fange alle tilstande personen har, ikke kun den primære årsag til hver kontakt.
+Hver diagnoserække i LPR har en typekode (A = aktionsdiagnose, B = bidiagnose, G = grundmorbus).
+Se [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) for fuld forklaring og hvornår du inkluderer hvilke typer.
 
 ### Kolonnen `senere_afkraeftet` i LPR3
 
