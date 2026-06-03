@@ -31,6 +31,11 @@ Alle øvrige linjer på siden er identiske.
 Se [DARTER — oversigt og pipeline](darter/00_index.qmd) for setup-vejledning.
 :::
 
+::: {.callout-note}
+**Næste skridt: hospitalsdiagnoser (LPR)**
+Dette eksempel bruger LMDB (recepter) som er relativt simpelt. Når du arbejder med **LPR** (diagnoser), gælder ekstra regler: registret er delt i to perioder (LPR2 og LPR3), koder har et D-præfiks der skal fjernes, og du skal vælge diagnosetyper. Alt dette gennemgås i [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
+:::
+
 ---
 
 ## Forberedelse: installer fakeregs

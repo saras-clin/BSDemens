@@ -116,10 +116,6 @@ gc()                 # giv hukommelsen tilbage til systemet
 
 Ryd altid op efter store udtræk, inden du fortsætter.
 
-::: {.callout-note}
-**Husk:** `duckplyr` på DST er forældet og skal geninstalleres i starten af hver session — se [Fase 3 — Log ind på DST](03_log-ind-dst.qmd#dst-specifikke-pakkeindstillinger).
-:::
-
 ---
 
 ## Hvad sker der visuelt
