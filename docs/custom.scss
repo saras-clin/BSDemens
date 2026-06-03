@@ -18,6 +18,11 @@ $grid-sidebar-width: 340px;
   white-space: nowrap;
 }
 
+/* Tabeller hvor første kolonne skal have god bredde (fx fulde algoritmenavne) */
+.wide-first-col td:first-child {
+  min-width: 18em;
+}
+
 /* Lidt mindre kode-skrifttype */
 pre.sourceCode, code {
   font-size: 0.875em;

@@ -13,11 +13,15 @@ Guiden tager dig frem til et analyseklart datasæt og peger dig mod de rigtige v
 
 Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovariater.
 
+::: {.wide-first-col}
+
 | Algoritme | Hvad den gør | Artikel |
 |---|---|---|
-| **OSDC** | Klassificerer alle i Danmark som T1D, T2D eller ingen diabetes | [doi:10.2147/CLEP.S407019](https://doi.org/10.2147/CLEP.S407019) |
-| **NMI** | Vægtet comorbiditetsscore (Nordic Multimorbidity Index, 50 prediktorer) | [doi:10.2147/CLEP.S353398](https://doi.org/10.2147/CLEP.S353398) |
-| **SEPLINE** | Vejledning til socioøkonomiske variable | [doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772) |
+| **Open Source Diabetes Classifier (OSDC)** | Klassificerer alle i Danmark som T1D, T2D eller ingen diabetes | [doi:10.2147/CLEP.S407019](https://doi.org/10.2147/CLEP.S407019) |
+| **Nordic Multimorbidity Index (NMI)** | Vægtet comorbiditetsscore (50 prediktorer) | [doi:10.2147/CLEP.S353398](https://doi.org/10.2147/CLEP.S353398) |
+| **SEPLINE — Socioeconomic Position in Epidemiological Research** | National vejledning til socioøkonomiske variable | [doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772) |
+
+:::
 
 - **OSDC** — definér en diabetes-population, type og debutdato → [Fase 12 — OSDC](12b_osdc.qmd)
 - **NMI** — justér for comorbiditet i en model eller beskriv comorbiditetsbyrde → [Fase 12 — NMI](12c_nmi.qmd)
@@ -31,9 +35,10 @@ Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovar
 
 ## 2. Datahåndtering og udtræk
 
-**`heaven` — dansk registerdata-toolkit** *(forudinstalleret på DST; ikke på CRAN)*
+### `heaven` — dansk registerdata-toolkit
+*(forudinstalleret på DST; ikke på CRAN — [github.com/tagteam/heaven](https://github.com/tagteam/heaven))*
+
 Funktioner bygget specifikt til danske registerdata af Thomas Gerds (KU, Biostatistik): Lexis-splitting til tidsvarierende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson-score.
-[github.com/tagteam/heaven](https://github.com/tagteam/heaven)
 
 <details>
 <summary>Hvad heaven kan — og hvornår du bruger det</summary>
@@ -49,15 +54,20 @@ df_split <- lexisTwo(
   splitvars  = list(age = c(40, 50, 60, 70),       # aldersgrænser
                     cal = c(2010, 2015, 2020))      # kalenderår
 )
+# Returnerer: én data frame med FLERE rækker per person — én per tidsinterval.
+# Nye kolonner tilføjes for de aktuelle bånd (aldersgruppe, kalenderperiode mv.).
+# Klar til en Cox-model med tidsvarierende kovariater.
 ```
 
-**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata (fx "var personen i metformin-behandling på index-dato?").
+**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata (fx "var personen i behandling med metformin på index-dato?").
 
 ```r
 exp_tabel <- medicinMacro(
-  indat    = lmdb_data, id = "pnr", atc = "atc", eksd = "eksd",
+  indat = lmdb_data, id = "pnr", atc = "atc", eksd = "eksd",
   ddds = "ddds", maxdepot = 3
 )
+# Returnerer: én række per eksponeringsperiode per person med start- og slutdato
+# for perioden. Brug efterfølgende joins til at afgøre eksponering på index-dato.
 ```
 
 **Charlson comorbiditetsscore** fra LPR-diagnoser:
@@ -65,6 +75,8 @@ exp_tabel <- medicinMacro(
 ```r
 charlson_data <- charlsonIndex(indat = lpr_diag_data, id = "pnr",
                                code = "c_diag", code_type = "icd10")
+# Returnerer: én række per person med samlet Charlson-score og binære indikatorer
+# per Charlson-sygdomsgruppe. Funktionen matcher selv ICD-10-koder til kategorier.
 ```
 
 **Risikoset-matching** — match cases til kontroller på index-dato:
@@ -72,6 +84,7 @@ charlson_data <- charlsonIndex(indat = lpr_diag_data, id = "pnr",
 ```r
 matched <- riskSetMatch(ptid = "pnr", event = "event",
                         terms = c("koen", "foedselsaar"), dat = kohort, ratio = 5)
+# Returnerer: matchet datasæt med matchID der kobler cases og kontroller.
 ```
 
 ::: {.callout-note}
@@ -82,9 +95,10 @@ matched <- riskSetMatch(ptid = "pnr", event = "event",
 
 ---
 
-**`EpiForsk` — registerdata-hjælpefunktioner fra SSI** *(CRAN; på DST)*
+### `EpiForsk` — registerdata-hjælpefunktioner fra SSI
+*(CRAN; på DST — [github.com/Laksafoss/EpiForsk](https://github.com/Laksafoss/EpiForsk))*
+
 Kode-delingspakke fra Statens Serum Institut. Særligt nyttig: `flatten_date_intervals()` der smelter overlappende hospitalskontakter til sammenhængende perioder — nødvendigt inden comorbiditetslookback. Dansk Charlson-score inkluderet.
-[github.com/Laksafoss/EpiForsk](https://github.com/Laksafoss/EpiForsk)
 
 <details>
 <summary>Vigtigste funktioner og hvornår du bruger dem</summary>
@@ -100,38 +114,68 @@ lpr_flat <- flatten_date_intervals(
   data = lpr_kontakter, id = "pnr",
   start_date = "d_inddto", end_date = "d_uddto"
 )
+# Returnerer: en data frame med sammensmeltet start/slut per person —
+# overlappende perioder er reduceret til den samlede dækkede periode.
 ```
 
-**`charlson_score()` — dansk-kalibreret comorbiditetsscore** fra ICD-10 (inkl. D-præfiks):
+**`charlson_score()` — dansk-kalibreret Charlson comorbiditetsscore** fra ICD-10 (inkl. D-præfiks):
 
 ```r
 charlson <- charlson_score(data = lpr_diag_data, id = "pnr", icd_codes = "c_diag")
+# Returnerer: én række per person med Charlson-score.
 ```
+
+::: {.callout-important}
+**Hvad kræver `charlson_score()`?**
+Du skal selv udtrække en lookback-periode fra LPR (typisk 5 år inden index-dato) og give funktionen **alle diagnoser** i det vindue — A-, B- og G-type. Du behøver **ikke** at filtrere på specifikke ICD-koder på forhånd; funktionen matcher selv koderne til Charlson-kategorierne. D-præfikset (`DG30` osv.) håndteres af EpiForsk — det skal ikke strippes inden.
+
+```r
+# Eksempel: udtrækker lookback selv og giver alle diagnoser videre
+lpr2_lookback <- lpr_diag %>%
+  filter(pnr %in% !!kohort$pnr,
+         as.Date(d_inddto) >= index_date - 365.25*5,   # 5-årig lookback
+         as.Date(d_inddto) < index_date) %>%
+  collect()
+
+charlson <- charlson_score(data = lpr2_lookback, id = "pnr", icd_codes = "c_diag")
+```
+:::
 
 </details>
 
 ---
 
-**`fakeregs` — syntetiske danske registerdata** *(kun GitHub — kun lokalt)*
-Opdigtede, men strukturelt realistiske data for ni DST-registre. Til at øve og teste kode lokalt *uden* DST-adgang. Bruges ikke på serveren.
-[github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs) — Anders Aasted Isaksen (SDCA). Se [Fase 6 — Første udtræk](06_foerste-udtraek.qmd).
+### `fakeregs` — syntetiske danske registerdata
+*(kun GitHub — kun lokalt — [github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs))*
 
-**`fastreg` — SAS → parquet** *(kun GitHub)*
+Opdigtede, men strukturelt realistiske data for ni DST-registre. Til at øve og teste kode lokalt *uden* DST-adgang. Bruges ikke på serveren. Se [Fase 6 — Første udtræk](06_foerste-udtraek.qmd).
+
+---
+
+### `fastreg` — SAS → parquet
+*(kun GitHub — [github.com/dp-next/fastreg](https://github.com/dp-next/fastreg))*
+
 Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun relevant hvis du selv bygger et parquet-workspace fra bunden. Se den korte note i [Fase 6's SAS → parquet-fold-ud](06_foerste-udtraek.qmd).
 
 ---
 
 ## 3. Analyse: regression, overlevelse og competing risks
 
-Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST** og dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam).
+Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST**.
+
+::: {.wide-first-col}
 
 | Pakke | Brug den til | Relevans |
 |---|---|---|
-| **`prodlim`** | Kaplan-Meier og **Aalen-Johansen** kumulativ incidens | Kerne — korrekt deskriptiv kurve når død er konkurrerende risiko (KM alene overestimerer) |
-| **`riskRegression`** | cause-specific Cox (`CSC`), Fine-Gray (`FGR`), absolut risiko (`predictRisk`), modelvalidering (`Score`: Brier, tidsafh. AUC) | Kerne — hovedanalysen: demens med død som competing risk |
-| **`Publish`** | `regressionTable()` → HR-tabeller med KI, `plotConfidence()` forest plots | Kerne — Table 2 hurtigt |
-| **`pec`** | prediction error curves (Brier over tid) | Situationsbestemt — kun ved prædiktionsmodeller; `riskRegression::Score()` dækker ofte behovet |
-| **`BuyseTest`** | generalized pairwise comparisons (win ratio, net benefit, prioriterede endpoints) | Mest **Studie 2 (T1D)**; niche for demens |
+| **[`prodlim`](https://cran.r-project.org/package=prodlim)** — Product-Limit Estimation | Kaplan-Meier og **Aalen-Johansen** kumulativ incidens | Kerne — korrekt deskriptiv kurve når død er konkurrerende risiko (KM alene overestimerer) |
+| **[`riskRegression`](https://cran.r-project.org/package=riskRegression)** | Cause-Specific Cox (`CSC`), Fine-Gray regression (`FGR`), absolut risiko (`predictRisk`), modelvalidering (`Score`: Brier, tidsafhængig AUC) | Kerne — hovedanalysen: demens med død som competing risk |
+| **[`Publish`](https://cran.r-project.org/package=Publish)** | `regressionTable()` → HR-tabeller med konfidensintervaller, `plotConfidence()` forest plots | Kerne — Table 2 hurtigt |
+| **[`pec`](https://cran.r-project.org/package=pec)** — Prediction Error Curves | Prediction error curves (Brier over tid) | Situationsbestemt — kun ved prædiktionsmodeller; `riskRegression::Score()` dækker ofte behovet |
+| **[`BuyseTest`](https://cran.r-project.org/package=BuyseTest)** | Generalized Pairwise Comparisons: win ratio, net benefit, prioriterede endpoints | Mest **Studie 2 (T1D)**; niche for demens |
+
+:::
+
+Alle pakker er dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam) og [bozenne (Brice Ozenne, KU)](https://github.com/bozenne/BuyseTest).
 
 ---
 
