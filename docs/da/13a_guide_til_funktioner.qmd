@@ -500,7 +500,7 @@ group_by(pnr) %>%
 ::: {.callout-warning}
 Bruges **ikke** til indkomstkvintiler i registerbaserede studier der følger SEPLINE-retningslinjerne.
 SEPLINE anbefaler at sammenligne med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80) stratificeret på køn × 5-årsaldersgruppe × referenceår — ikke `ntile()` på din kohorte alene.
-Se [SEPLINE](11b_sepline.qmd).
+Se [SEPLINE](11_socioekonomiske-variable.qmd).
 :::
 
 ---

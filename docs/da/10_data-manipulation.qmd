@@ -239,7 +239,7 @@ kohort_med_dod <- kohort %>%
 
 Du kan nu forme og kombinere dine udtræk. Næste skridt er de socioøkonomiske variable:
 
-→ [Fase 11 — Socioøkonomiske variable](11a_socioekonomiske-variable.qmd)
+→ [Fase 11 — Socioøkonomiske variable](11_socioekonomiske-variable.qmd)
 
 ## Se også
 

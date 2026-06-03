@@ -146,5 +146,4 @@ head(kom_tabel)    # se de første rækker og forstå strukturen
 
 ## Se også
 
-- [Socioøkonomiske variable](11a_socioekonomiske-variable.qmd) — komplet kodeeksempel med AKM, FAIK og UDDA
-- [SEPLINE](11b_sepline.qmd) — guidelines til kategorisering af SES-variable
+- [Socioøkonomiske variable](11_socioekonomiske-variable.qmd) — SEPLINE-tilgang med kodeeksempler for AKM, FAIK og UDDA

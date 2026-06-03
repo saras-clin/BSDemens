@@ -1,14 +1,23 @@
 ---
 title: "Socioøkonomiske variable"
-subtitle: "Udtræk af uddannelse, indkomst og beskæftigelse fra registerdata"
+subtitle: "Uddannelse, indkomst og beskæftigelse efter SEPLINE-tilgangen"
 date: last-modified
 ---
 
 Socioøkonomisk position (SEP) måles i registerbaserede studier via tre dimensioner:
 uddannelse (UDDA), indkomst (FAIK) og beskæftigelse (AKM).
-Denne side viser hvordan du udtrækker og kategoriserer dem per SEPLINE-guidelines.
+Denne side viser, hvordan du udtrækker og kategoriserer dem efter **SEPLINE**-guidelinen.
 
-Se [SEPLINE](11b_sepline.qmd) for metodebeskrivelse og anbefalede referencegrupper.
+**SEPLINE-artikel:** Hjorth et al. *Clinical Epidemiology* 2025 —
+[doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772).
+Se artiklen for fuld begrundelse, anbefalede referencegrupper og kategoriseringer.
+
+::: {.callout-important}
+**Denne algoritme er under udvikling.**
+Kodningen nedenfor er et arbejdsudkast og er endnu ikke endeligt valideret.
+Har du kode der allerede virker, eller input til kategoriseringerne, så hører jeg meget gerne fra dig:
+**Sara Schwartz — [saras@clin.au.dk](mailto:saras@clin.au.dk)**. Så kan det komme alle til gode her.
+:::
 
 ::: {.callout-note}
 Eksemplerne bruger variabelnavne fra DARTER-projektet.
@@ -18,6 +27,18 @@ Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
 ::: {.callout-warning}
 Alle tre registre er **årsbaserede**. Hent variablen for **året inden index-dato** (din kohortes indgangsdato — fx operationsdatoen eller diagnosedatoen), da registerdata for et givet år typisk beskriver status ved årets udgang.
 :::
+
+---
+
+## De tre dimensioner
+
+| Dimension | Register | Variabel |
+|---|---|---|
+| **Uddannelse** | UDDA | `hfaudd` — højeste afsluttede uddannelse (ISCED-kode) |
+| **Indkomst** | FAIK | `famaekvivadisp_13` — husstandsækvivaleret disponibel indkomst |
+| **Beskæftigelse** | AKM | `socio13` — arbejdsmarkedsklassifikation |
+
+SEPLINE specificerer både **hvordan** disse variable kategoriseres og **hvornår** i forløbet de måles.
 
 ---
 
@@ -50,15 +71,17 @@ kohort_akm <- kohort_akm %>%
     socio13 %in% c(110, 111, 112, 113, 114, 120, 131, 132, 133, 134, 135, 139) ~ "Beskæftiget",
     socio13 == 310                              ~ "Studerende",
     socio13 %in% c(210, 410)                   ~ "Ledig",
-    socio13 %in% c(220, 321, 330)              ~ "Udenfor arbejdsmarked",
+    socio13 %in% c(220, 321, 330)              ~ "Udenfor arbejdsmarked",   # sygedagpenge, førtidspension, fleksjob
     socio13 %in% c(322, 323)                   ~ "Pensionist",
-    TRUE                                        ~ "Ukendt"
+    TRUE                                        ~ "Ukendt"                   # 0, 420 eller manglende
   ))
 ```
 
 ---
 
 ## Uddannelse — UDDA (`hfaudd`)
+
+Kategoriseres ud fra ISCED-koden i `hfaudd`: kort (`10`/`15`), mellemlang (`20`/`30`/`35`), lang (`40`–`80`), ukendt (`90` eller manglende).
 
 ```r
 udda <- load_database("udda") %>% rename_with(tolower)
@@ -91,6 +114,7 @@ udda_data <- udda_data %>%
 ## Indkomst — FAIK via BEF (`famaekvivadisp_13`)
 
 Indkomst er knyttet til husstanden, ikke personen. Du skal bruge `familie_id` fra BEF som bro.
+SEPLINE anbefaler 3-årsgennemsnit inddelt i kvintiler stratificeret på køn × 5-årsaldersgruppe × referenceår.
 
 ```r
 bef  <- load_database("bef")  %>% rename_with(tolower)
@@ -167,6 +191,6 @@ kohort_ses <- kohort %>%
 
 ## Se også
 
-- [SEPLINE](11b_sepline.qmd) — metodebeskrivelse og anbefalede kategoriseringer
-- [Formateringstabeller](13b_formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
-- [Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA
+- [SEPLINE-artiklen (Hjorth et al. 2025)](https://doi.org/10.2147/CLEP.S520772) — fuld metodebeskrivelse og anbefalede referencegrupper
+- [Fase 13 — Formateringstabeller](13b_formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
+- [Fase 13 — Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA

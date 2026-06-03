@@ -56,10 +56,8 @@ website:
         - text: "Fase 10 — Dataformater og manipulation"
           href: da/10_data-manipulation.qmd
 
-        - section: "Fase 11 — Socioøkonomiske variable"
-          contents:
-            - da/11a_socioekonomiske-variable.qmd
-            - da/11b_sepline.qmd
+        - text: "Fase 11 — Socioøkonomiske variable"
+          href: da/11_socioekonomiske-variable.qmd
 
         - section: "Fase 12 — Algoritmer og specialpakker"
           contents:
