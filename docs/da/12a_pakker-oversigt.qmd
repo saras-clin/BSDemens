@@ -9,29 +9,7 @@ Guiden tager dig frem til et analyseklart datasæt og peger dig mod de rigtige v
 
 ---
 
-## 1. Tjek først: hvad er på DST?
-
-DST har et stort CRAN-snapshot forudinstalleret. Tjek hvad du har, inden du planlægger:
-
-```r
-pkgs <- c("EpiForsk", "heaven", "riskRegression", "prodlim", "pec", "Publish", "BuyseTest")
-pkgs %in% rownames(installed.packages())   # TRUE = klar med library()
-```
-
-::: {.callout-note}
-- **CRAN-pakker** kan installeres med `install.packages()`, hvis de ikke allerede er der (snapshot kan være forældet — se duckplyr-noten i [Fase 3](03_log-ind-dst.qmd#dst-specifikke-pakkeindstillinger)).
-- **GitHub-pakker** kan *ikke* installeres direkte: DST har ingen internetadgang, så `pak`/`install_github` fejler. Kilden skal importeres via din datamanager og installeres fra lokal fil (`install.packages("sti/pakke.tar.gz", repos = NULL, type = "source")`).
-:::
-
-**Status (bekræftet juni 2026):**
-
-| Klar på DST | Kun GitHub / lokalt |
-|---|---|
-| EpiForsk · heaven · riskRegression · prodlim · pec · Publish · BuyseTest | fakeregs *(kun lokalt)* · fastreg · osdc *(præberegnet på DARTER)* |
-
----
-
-## 2. Validerede algoritmer og kovariater
+## 1. Validerede algoritmer og kovariater
 
 Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovariater.
 
@@ -51,7 +29,7 @@ Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovar
 
 ---
 
-## 3. Datahåndtering og udtræk
+## 2. Datahåndtering og udtræk
 
 **`heaven` — dansk registerdata-toolkit** *(forudinstalleret på DST; ikke på CRAN)*
 Funktioner bygget specifikt til danske registerdata af Thomas Gerds (KU, Biostatistik): Lexis-splitting til tidsvarierende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson-score.
@@ -143,7 +121,7 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ---
 
-## 4. Analyse: regression, overlevelse og competing risks
+## 3. Analyse: regression, overlevelse og competing risks
 
 Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST** og dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam).
 
@@ -157,7 +135,7 @@ Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående
 
 ---
 
-## 5. Hvor får du mere hjælp?
+## 4. Hvor får du mere hjælp?
 
 **Community og kurser** — se den prioriterede hjælpeliste og kursuslinks i [Fase 2 — R: det allermest nødvendige](02_r-intro.qmd) (Stack Overflow, Zheers R Coding Café, DDEA, R for Data Science, Epi R Handbook).
 
