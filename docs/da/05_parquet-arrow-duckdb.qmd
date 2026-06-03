@@ -1,98 +1,124 @@
 ---
-title: "Parquet, Arrow og DuckDB"
-subtitle: "Hvorfor registerdata kræver en anden tilgang end almindelig R"
+title: "Det universelle mønster"
+subtitle: "Sådan henter du data fra et register — uden at crashe noget"
 date: last-modified
 ---
 
-Registerdata på DST er store — BEF har millioner af rækker, LMDB har hundredvis af millioner.
-At indlæse dem direkte i R's hukommelse ville crashe de fleste sessioner.
-Løsningen er Parquet + DuckDB: du arbejder med data **uden** at indlæse dem.
+I Fase 4 så du, at registre indlæses *dovent*: du åbner en forbindelse, ikke data.
+Denne side viser **arbejdsmetoden** der følger af det — det samme mønster, du vil bruge i hvert eneste udtræk resten af guiden.
+
+Lær det her én gang, så genkender du det overalt.
+
+::: {.callout-note}
+**Hvorfor kan vi ikke bare indlæse et register som en CSV-fil?**
+Fordi registrene er for store. En CSV (eller et `readRDS`) læser hele filen ind i hukommelsen på én gang — det går fint med dine egne små datasæt, men BEF og LMDB har millioner til hundredvis af millioner af rækker og ville crashe din session. Den dovne forbindelse lader dig filtrere *inden* du henter, så kun de rækker du faktisk skal bruge, nogensinde rammer hukommelsen.
+:::
 
 ---
 
-## Den korte forklaring
+## Mønstret: åbn → filtrér → vælg → hent
 
-Forestil dig et supermarked:
-
-- **Uden DuckDB:** Du køber hele butikken, tager det hjem, og sorterer derefter hvad du skulle bruge.
-- **Med DuckDB:** Du sender en indkøbsliste — "2 mælk, kun fra 2020, kun mænd" — og får præcis det leveret.
-
-Det kaldes **doven evaluering** (lazy evaluation): R skriver din forespørgsel ned som instruktioner, men udfører den først, når du kalder `collect()`.
-
-```r
-# Dette indlæser IKKE data — det skriver bare en instruktion:
-bef <- load_database("bef") %>% rename_with(tolower)
-
-# Dette heller ikke:
-bef_filtreret <- bef %>% filter(aar == 2020, koen == 1)
-
-# Først HER flyttes data ind i R's hukommelse:
-resultat <- bef_filtreret %>% collect()
-```
-
-**Husk:** Filtrer og vælg kolonner FØR `collect()` — ellers henter du millioner af rækker unødvendigt.
-
----
-
-## Hvad er Parquet, Arrow og DuckDB?
-
-### Parquet
-
-Parquet er et filformat der gemmer data **kolonne for kolonne** i stedet for række for række.
-
-Det betyder, at hvis du kun vil have kolonnerne `pnr` og `aar` fra BEF, behøver computeren kun at læse de to kolonner — ikke alle de andre. Det er meget hurtigere.
-
-Registrene på DST er gemt som parquet-filer, organiseret i mapper med én fil per år.
-`load_database()` samler dem automatisk til én stor tabel.
-
-### Arrow
-
-Arrow er en R-pakke der giver adgang til parquet-filer og oversætter dplyr-kommandoer til effektive parquet-forespørgsler.
-Du bruger det indirekte via `load_database()` — du behøver normalt ikke kalde det direkte.
-
-### DuckDB
-
-DuckDB er en database der kører direkte i din R-session (ingen separat server).
-Den er lynhurtig til analyse af store datasæt og understøtter næsten al dplyr-syntaks.
-
-`duckplyr` er R-pakken der forbinder dplyr og DuckDB. Den "kaprer" dplyr-funktioner og oversætter dem til DuckDB-forespørgsler automatisk.
-
-<details>
-<summary>Mere teknisk: Arrow vs DuckDB — hvilken bruges hvornår?</summary>
-
-Begge pakker (`arrow` og `duckplyr`) bruger doven evaluering og `collect()` til at hente data ind i R.
-
-**Arrow** er hurtig til at læse parquet-filer, men understøtter ikke alle dplyr-funktioner.
-
-**DuckDB (via duckplyr)** understøtter næsten alle dplyr-funktioner, og falder automatisk tilbage til R's motor for de få ting den ikke kan håndtere.
-
-På DST bruges `dstDataPrep::load_database()`, som internt bruger Arrow til at åbne parquet-filerne og DuckDB til at behandle dem. Du behøver ikke tage stilling til det — skriv bare normal dplyr-kode.
-
-Hvis du støder på en fejl om "unsupported function", er du sandsynligvis ved at bruge en funktion som DuckDB ikke understøtter. Løsning: `collect()` data ind i R først, og udfør operationen derefter.
-
-</details>
-
----
-
-## Det universelle mønster
+Forestil dig et supermarked. Du kan enten købe hele butikken og sortere derhjemme — eller sende en indkøbsliste og få præcis det leverede. Registerarbejde er det sidste: du beskriver hvad du vil have, og henter først data til allersidst.
 
 ```r
 library(dstDataPrep)
 library(dplyr)
 
-# 1. Åbn doven forbindelse (ingen data flyttes)
+# 1. Åbn doven forbindelse — ingen data flyttes
 bef <- load_database("bef") %>% rename_with(tolower)
 
-# 2. Filtrer og vælg kolonner (stadig ingen data i R)
+# 2. Filtrér rækker og vælg kolonner — stadig ingen data i R
 bef_filtreret <- bef %>%
   filter(aar == 2020) %>%
   select(pnr, koen, foed_dag, familie_id)
 
-# 3. collect() — HER flyttes data ind i R's hukommelse
+# 3. collect() — HER flyttes de udvalgte data ind i R's hukommelse
 bef_data <- bef_filtreret %>% collect()
 ```
 
-**Reglen:** Gør så meget som muligt *inden* `collect()`. Jo mere du filtrerer og reducerer data på forhånd, jo hurtigere og mere stabilt kører det.
+Trin 1–2 er rene *instruktioner* — de koster næsten ingen hukommelse.
+`collect()` i trin 3 er den eneste linje, der faktisk flytter data.
+
+::: {.callout-note}
+**Hvorfor `rename_with(tolower)` på linje 1?**
+Rå kolonnenavne i DST-registre har inkonsistent store/små bogstaver — `PNR`, `pnr`, `Pnr`. Ved at gøre alt til små bogstaver straks kan resten af din kode bruge `pnr` overalt uden at tænke på det. Gør det altid på samme linje som `load_database()`.
+:::
+
+---
+
+## Den vigtigste regel: filtrér FØR du henter
+
+```r
+# RIGTIGT — filtrér først, hent et lille resultat
+resultat <- stort_register %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
+  collect()
+
+# FORKERT — henter millioner af rækker ind i RAM
+resultat <- stort_register %>%
+  collect() %>%
+  filter(pnr %in% kohort_pnrs)
+```
+
+BEF har millioner af rækker; LMDB har hundredvis af millioner.
+At kalde `collect()` før `filter()` kan crashe din session — og fordi alle deler serverens RAM, gør det serveren langsom for **alle andre** samtidig.
+
+::: {.callout-tip}
+**Tommelfingerregel:** Gør så meget som muligt *inden* `collect()`. Jo mere du har filtreret og reduceret på forhånd, jo hurtigere og mere stabilt kører det.
+:::
+
+---
+
+## Hvad er `!!` — og hvorfor er det nødvendigt?
+
+Lagde du mærke til `!!` i eksemplet ovenfor — `filter(pnr %in% !!kohort_pnrs)`? Det dukker op, hver gang du filtrerer et register mod en liste, du har i R.
+
+Den dovne forespørgsel udføres ikke af R, men af databasemotoren (DuckDB/Arrow), som kører *adskilt* fra R og ikke kender dine lokale variabler.
+
+```r
+filter(pnr %in% !!kohort_pnrs)
+```
+
+Uden `!!` ville motoren lede efter en *kolonne* ved navn `kohort_pnrs` inde i registret. Den findes ikke — `kohort_pnrs` er en R-vektor, du har lavet. `!!` betyder: *"dette er et R-objekt, ikke et kolonnenavn — slå dets værdier op i R, og brug dem i forespørgslen."*
+
+Du vil se `!!` foran næsten enhver lokal variabel, der bruges inde i et `filter()` på et dovent objekt.
+
+::: {.callout-tip}
+Tommelfingerregel: refererer du til en **kolonne** i registret, skriver du navnet direkte. Refererer du til en **R-variabel** du selv har lavet, sætter du `!!` foran.
+:::
+
+---
+
+## Tjek: har du data eller bare en forbindelse?
+
+Mange fejl opstår, fordi man tror, man har hentet data — men faktisk stadig sidder med en ueksekveret forespørgsel. Spørg objektet hvad det er:
+
+```r
+class(mit_objekt)
+```
+
+| Hvad `class()` returnerer | Hvad det betyder | Hvad du gør |
+|---|---|---|
+| `"tbl_df" "data.frame"` | Data er i R | Ingenting — du er klar |
+| `"tbl_duckdb_connection"` | Usendt DuckDB-forespørgsel | Tilføj `%>% collect()` |
+| `"Table" "ArrowObject"` | Usendt Arrow-forespørgsel | Tilføj `%>% collect()` |
+
+---
+
+## RAM er delt — ryd op efter dig
+
+På DST deler alle brugere serverens hukommelse. Når hukommelseslinjen i RStudio bliver rød, sænker det alles sessioner.
+
+```r
+rm(stort_register)   # fjern et stort objekt du ikke længere bruger
+gc()                 # giv hukommelsen tilbage til systemet
+```
+
+Ryd altid op efter store udtræk, inden du fortsætter.
+
+::: {.callout-note}
+**Husk:** `duckplyr` på DST er forældet og skal geninstalleres i starten af hver session — se [Fase 3 — Log ind på DST](03_getting-started-dst.qmd#dst-specifikke-pakkeindstillinger).
+:::
 
 ---
 
@@ -107,54 +133,45 @@ flowchart TD
     R[("R-hukommelse · data.frame")]
 
     P -->|"doven forbindelse — ingenting flyttes til R"| L
-    L -->|"instruktioner staplet op i DuckDB"| F
+    L -->|"instruktioner staplet op"| F
     F -->|"send nu!"| C
     C -->|"kun nødvendige rækker + kolonner"| R
 ```
 
-`load_database()`, `filter()` og `select()` er rene instruktioner — de koster næsten ingen RAM.
-`collect()` er den eneste linje, der faktisk flytter data.
+---
+
+<details>
+<summary>Vil du vide mere? Hvad er Parquet, Arrow og DuckDB egentlig?</summary>
+
+Du behøver ikke kende disse navne for at bruge mønstret ovenfor — men her er hvad der sker under motorhjelmen.
+
+**Parquet** er et filformat der gemmer data *kolonne for kolonne* i stedet for række for række. Vil du kun have `pnr` og `aar`, læser computeren kun de to kolonner — ikke resten. Det er derfor det er hurtigt. Registrene på DST er gemt som parquet, organiseret i mapper med én fil per år; `load_database()` samler dem automatisk.
+
+**Arrow** er R-pakken der læser parquet-filer og oversætter dine dplyr-kommandoer til effektive parquet-forespørgsler.
+
+**DuckDB** er en database, der kører direkte i din R-session (ingen separat server). Den er lynhurtig til store datasæt og forstår næsten al dplyr-syntaks. Pakken `duckplyr` forbinder dplyr og DuckDB automatisk.
+
+På DST bruger `load_database()` begge: Arrow til at åbne filerne, DuckDB til at behandle dem. Du skriver bare normal dplyr-kode.
+
+</details>
+
+<details>
+<summary>Mere teknisk: Arrow vs. DuckDB — hvornår bruges hvad?</summary>
+
+Begge pakker bruger doven evaluering og `collect()`.
+
+**Arrow** er hurtig til at læse parquet, men understøtter ikke alle dplyr-funktioner.
+
+**DuckDB (via duckplyr)** understøtter næsten alle dplyr-funktioner og falder automatisk tilbage til R's motor for de få, den ikke kan.
+
+Støder du på en fejl om *"unsupported function"*, er du sandsynligvis ved at bruge en funktion DuckDB ikke understøtter. Løsning: `collect()` data ind i R først, og udfør operationen derefter.
+
+</details>
 
 ---
 
-## Tjek om du har data eller en forbindelse
+## Næste skridt
 
-Mange fejl opstår fordi man tror, man har data i R — men faktisk stadig har en ueksekveret forespørgsel.
+Du kender nu mønstret. I næste fase bruger du det på rigtige (syntetiske) registerdata fra start til slut.
 
-```r
-class(mit_objekt)
-```
-
-| Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
-|---|---|---|
-| `"tbl_df" "data.frame"` | Data er i R | Ingenting — du er klar |
-| `"tbl_duckdb_connection"` | Usendt DuckDB-forespørgsel | Tilføj `%>% collect()` |
-| `"Table" "ArrowObject"` | Usendt Arrow-forespørgsel | Tilføj `%>% collect()` |
-
----
-
-## RAM er delt — vær hensynsfuld
-
-På DST deler alle brugere serverens RAM. Når hukommelseslinjen i RStudio bliver rød, sænker det **alle** brugeres session.
-
-```r
-# Frigør store objekter du ikke længere bruger:
-rm(stort_register)
-gc()   # frigiver hukommelse tilbage til operativsystemet
-```
-
-Ryd altid op efter store udtræk, inden du fortsætter.
-
----
-
-## Særligt for DST: geninstaller duckplyr
-
-Som beskrevet under [Kom i gang på DST — Trin 1](03_getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session):
-den forudinstallerede `duckplyr` på DST er forældet og skal geninstalleres i starten af **hver** session.
-
-```r
-install.packages("duckplyr")   # geninstaller — forsvinder ved logout
-library(dplyr)                 # duckplyr aktiveres automatisk
-```
-
-Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
+→ [Fase 6 — Første udtræk](06_foerste-udtraek.qmd)
