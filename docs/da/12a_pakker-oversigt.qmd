@@ -118,7 +118,11 @@ lpr_flat <- flatten_date_intervals(
 # overlappende perioder er reduceret til den samlede dækkede periode.
 ```
 
-**`charlson_score()` — dansk-kalibreret Charlson comorbiditetsscore** fra ICD-10 (inkl. D-præfiks):
+**`charlson_score()` — dansk-kalibreret Charlson comorbiditetsscore** fra ICD-10 (inkl. D-præfiks). Se callout nedenfor for hvad den kræver.
+
+**Alternativ: [`comorbidity`](https://cran.r-project.org/package=comorbidity)** *(CRAN; sandsynligvis på DST)* — beregner Charlson og Elixhauser fra ICD-9/10 med Quan-vægte. Bredere dækning, men kræver at **D-præfikset strippes** inden: `mutate(kode = substr(c_diag, 2, nchar(c_diag)))`.
+
+**Alternativ: [`coder`](https://cran.r-project.org/package=coder)** *(CRAN, rOpenSci)* — regex-baseret klassifikation der understøtter ICD-8/9/10 + ATC på tværs af tidsvinduet. Nyttigt hvis du arbejder med perioder der spænder ICD-8 (LPR før ~1994). Uvist om det er i DST's snapshot.
 
 ```r
 charlson <- charlson_score(data = lpr_diag_data, id = "pnr", icd_codes = "c_diag")
@@ -159,18 +163,6 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ---
 
-### `tame` — klustrer medicinmønstre fra LMDB
-*(CRAN; tidlig fase v0.0.1 — [github.com/Laksafoss/tame](https://github.com/Laksafoss/tame))*
-
-Bruger agglomerativ hierarkisk clustering til at identificere mønstre i longitudinelle receptdata baseret på ATC-koder, timing og dosisforløb. Relevant hvis du vil karakterisere komplekse polyfarmacimønstre frem for blot at tælle specifikke ATC-koder.
-
-```r
-library(tame)
-# Kræver et datasæt med pnr, atc, eksd (ekspeditionsdato), og evt. dosis
-# Returnerer: klustermedlemskab per person
-medic(data = lmdb_kohort, id = "pnr", atc = "atc", timing = "eksd")
-```
-
 ---
 
 ## 3. Analyse: regression, overlevelse og competing risks
@@ -184,6 +176,8 @@ Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående
 | **[`prodlim`](https://cran.r-project.org/package=prodlim)** — Product-Limit Estimation | Kaplan-Meier og **Aalen-Johansen** kumulativ incidens | Kerne — korrekt deskriptiv kurve når død er konkurrerende risiko (KM alene overestimerer) |
 | **[`riskRegression`](https://cran.r-project.org/package=riskRegression)** | Cause-Specific Cox (`CSC`), Fine-Gray regression (`FGR`), absolut risiko (`predictRisk`), modelvalidering (`Score`: Brier, tidsafhængig AUC) | Kerne — hovedanalysen: demens med død som competing risk |
 | **[`Publish`](https://cran.r-project.org/package=Publish)** | `regressionTable()` → HR-tabeller med konfidensintervaller, `plotConfidence()` forest plots | Kerne — Table 2 hurtigt |
+| **[`gtsummary`](https://cran.r-project.org/package=gtsummary)** | `tbl_summary()` Table 1, `tbl_regression()` Cox/logistisk, `tbl_survfit()` overlevelsesopsummering | Bredt brugt standard til manuskripttabeller (R Journal 2021) |
+| **[`MatchIt`](https://cran.r-project.org/package=MatchIt)** | Propensity score + eksakt + optimal matching, balance-diagnostik (Love plots) | Alternativ til `heaven::riskSetMatch()` — bedre til PS-matching med balance-check |
 | **[`pec`](https://cran.r-project.org/package=pec)** — Prediction Error Curves | Prediction error curves (Brier over tid) | Situationsbestemt — kun ved prædiktionsmodeller; `riskRegression::Score()` dækker ofte behovet |
 | **[`BuyseTest`](https://cran.r-project.org/package=BuyseTest)** | Generalized Pairwise Comparisons: win ratio, net benefit, prioriterede endpoints | Mest **Studie 2 (T1D)**; niche for demens |
 
@@ -191,13 +185,17 @@ Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående
 
 Alle pakker er dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam) og [bozenne (Brice Ozenne, KU)](https://github.com/bozenne/BuyseTest).
 
-### Visualisering og tabeller
+### Mulig inspiration — ikke tilgængelige på DST
 
-**[`plotsurv`](https://github.com/zheer-kejlberg/plotsurv)** *(kun GitHub; tidlig fase)* — publikationsklar Kaplan-Meier og Aalen-Johansen competing-risks-plots med at-risk-tabel, KI-bånd og censureringsprikker. Enkelt API: `plotsurv(survfit_objekt)`. Kræver import til DST.
+::: {.callout-note}
+Pakkerne nedenfor er **ikke tilgængelige på DST** (GitHub-only; kræver import via datamanager) og er ikke en del af den anbefalede workflow. De nævnes som inspiration — tjek selv om de er relevante for dit projekt.
+:::
 
-**[`Z.gtsummary.addons`](https://github.com/zheer-kejlberg/Z.gtsummary.addons)** *(kun GitHub; tidlig fase)* — udvider `gtsummary` med to nyttige funktioner:
-- `add_SMD()` — standardiserede middeldifferencer (SMD) til Table 1 i matchede studier
-- `round_5_gtsummary()` — **afrunder tælleværdier til nærmeste 5**, som DST's outputkontrol kræver. Meget DST-specifik nytteværdi. Kræver import til DST.
+**[`plotsurv`](https://github.com/zheer-kejlberg/plotsurv)** — publikationsklar Kaplan-Meier og Aalen-Johansen competing-risks-plots med at-risk-tabel, KI-bånd og censureringsprikker. `plotsurv(survfit_objekt)`.
+
+**[`Z.gtsummary.addons`](https://github.com/zheer-kejlberg/Z.gtsummary.addons)** — udvider `gtsummary` med `add_SMD()` (standardiserede middeldifferencer til Table 1) og `round_5_gtsummary()` (afrunder tælleværdier til nærmeste 5 — relevant for DST's outputkontrol).
+
+**[`tame`](https://github.com/Laksafoss/tame)** *(CRAN, men ikke bekræftet på DST)* — klustrer longitudinelle medicinmønstre fra LMDB på ATC, timing og dosis. Relevant ved karakterisering af polyfarmacimønstre.
 
 ---
 
