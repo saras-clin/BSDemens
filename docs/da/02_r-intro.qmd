@@ -24,7 +24,7 @@ Men hvis du vil øve dig lokalt, inden du logger ind for første gang:
 |---|---|
 | [DDEA Introductory Course](https://r-cubed-intro.rostools.org/) | Begynderkursus i R fra Danish Diabetes and Endocrine Academy — holdes én gang om året, men materialet er frit tilgængeligt |
 | [R for Data Science](https://r4ds.hadley.nz/) | Gratis e-bog — det bredest brugte introduktionsværk til moderne R |
-| [Zheers R Coding Café](https://r-coding-cafe.zheer.dk/) | Noter og eksempler specifikt til registerdata — lokalt lavet, meget relevant |
+| [Zheers R Coding Café](https://r-coding-cafe.zheer.dk/) | Noter og eksempler specifikt til registerdata — lokalt på Steno Diabetes Center Aarhus, meget relevant |
 | [The Epidemiologist R Handbook](https://www.epirhandbook.com/en/) | Praktisk opslagsværk med sundhedsvidenskabeligt fokus |
 | [Causal Inference: What If (Hernán & Robins)](https://miguelhernan.org/whatifbook) | Gratis PDF — standardværket om kausal inferens (confounding, DAGs, metode). Epidemiologisk metode, ikke R. |
 
@@ -88,6 +88,8 @@ Du vil se `library(dplyr)` øverst i næsten alle scripts.
 ## De 6 vigtigste funktioner
 
 Du vil se disse i næsten alle udtræk. Du behøver ikke forstå dem i detaljer nu — bare genkende dem.
+
+Et symbol du vil se overalt er **`%>%`** (røret). Det sender resultatet fra én linje videre som input til den næste. `df %>% filter(alder > 50)` betyder: "tag `df`, og giv det videre til `filter()`". Det gør det muligt at kæde trin sammen og læse kode oppefra og ned.
 
 | Funktion | Hvad den gør | Eksempel |
 |---|---|---|

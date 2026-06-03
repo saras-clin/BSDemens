@@ -72,19 +72,17 @@ Kolonnenavne gælder efter `rename_with(tolower)` — inspicér dit eget registe
 | `civst` | character | Civilstand |
 
 ::: {.callout-note}
-BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering — dækker ~1970–2001 og er tilgængeligt via `load_database("dodsaars")`. DOD (~2001–2024) er endnu ikke i cleaned-data og kræver udtræk fra rå SAS-fil.
+BEF indeholder **ikke** dødsdato. Brug DODSAARS (`d_dodsdto`) til censurering.
 :::
 
 ---
 
-### DODSAARS — Dødsregistret (~1970–2001)
+### DODSAARS — Dødsregistret
 
-Én række per afdød person. Adgang: `load_database("dodsaars")`.
+Én række per afdød person.
 
-::: {.callout-warning}
-**DODSAARS dækker kun ~1970–2001** (pr. juni 2026 — cleaned-data er ikke opdateret).
-For dødsfald efter 2001 er DOD-registret endnu ikke tilgængeligt i cleaned-data.
-<!-- TODO: link til udtræksguide når den er klar -->
+::: {.callout-note}
+Dækningsperiode og tilgængelighed afhænger af dit projekts cleaned-data. Tjek modificeringsdato og spørg din datamanager om aktuel dækning.
 :::
 
 
@@ -104,18 +102,6 @@ For dødsfald efter 2001 er DOD-registret endnu ikke tilgængeligt i cleaned-dat
 ::: {.callout-warning}
 **`dodsaasg`** er klassifikationsregistret for dødsårsager — det er **ikke** kilden til individuelle dødsdatoer.
 Brug altid `dodsaars` med kolonnen `d_dodsdto`.
-:::
-
----
-
-### DOD — Dødsfald (~2001–2024)
-
-::: {.callout-warning}
-**DOD er ikke tilgængeligt i cleaned-data pr. juni 2026.**
-Registret dækker ~2001–2024 og komplementerer DODSAARS, men kræver udtræk fra rå SAS-fil.
-Kolonner (forventet efter `rename_with(tolower)`): `pnr`, `doddato` (rename til `d_dodsdto`), `cprtjek`, `cprtype`.
-
-<!-- TODO: link til udtræksguide når den er klar -->
 :::
 
 ---
@@ -304,7 +290,7 @@ proc_kirurgi <- load_database("procedurer_kirurgi") %>%
 | Kolonne (efter tolower) | Type | Indhold |
 |---|---|---|
 | **`dw_ek_forloeb`** | character | **Join-nøgle til `lpr_a_kontakt`** — brug denne til pnr-opslag |
-| `dw_ek_kontakt` | character | **NA for alle rækker på DST** — kan ikke bruges som join-nøgle |
+| `dw_ek_kontakt` | character | **NA for alle rækker i denne parquet-fil på DARTER** — brug `dw_ek_forloeb` i stedet |
 | **`procedurekode`** | character | SKS-procedurekode — brug denne til matching (f.eks. `"KJDF10"`) |
 | **`dato_start`** | Date | Proceduredato |
 | `proceduretype` | character | `"P"` = procedure, `"+"` = add-on kode |
@@ -318,8 +304,8 @@ proc_kirurgi <- load_database("procedurer_kirurgi") %>%
 | `procedureregistrering_id` | character | Internt registrerings-ID |
 
 ::: {.callout-warning}
-**`dw_ek_kontakt` er NA for alle rækker i DST's version af `procedurer_kirurgi`** (bekræftet 2026-06-02).
-Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`.
+**`dw_ek_kontakt` er NA for alle rækker i DARTER's parquet-version af `procedurer_kirurgi`** (bekræftet 2026-06-02).
+Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`. Gælder DARTER/projekt 708421 — tjek på dit eget projekt.
 Kolonnenavnene er blandet store/små bogstaver i rådata — kald `rename_with(tolower)` umiddelbart efter load.
 :::
 
@@ -339,7 +325,7 @@ opr_lpr2 <- load_database("lpr_sksopr") %>%
   select(pnr, opr_dato = d_odto, opr_kode = c_opr) %>%
   collect()
 
-# SKS fra LPR3 (2019 og frem) — join via dw_ek_forloeb (dw_ek_kontakt er NA på DST)
+# SKS fra LPR3 (2019 og frem) — join via dw_ek_forloeb
 opr_lpr3 <- load_database("procedurer_kirurgi") %>%
   rename_with(tolower) %>%
   filter(toupper(procedurekode) %in% SKS_KODER) %>%
