@@ -8,7 +8,7 @@ Socioøkonomisk position (SEP) måles i registerbaserede studier via tre dimensi
 uddannelse (UDDA), indkomst (FAIK) og beskæftigelse (AKM).
 Denne side viser hvordan du udtrækker og kategoriserer dem per SEPLINE-guidelines.
 
-Se [SEPLINE](sepline.qmd) for metodebeskrivelse og anbefalede referencegrupper.
+Se [SEPLINE](11b_sepline.qmd) for metodebeskrivelse og anbefalede referencegrupper.
 
 ::: {.callout-note}
 Eksemplerne bruger variabelnavne fra DARTER-projektet.
@@ -167,6 +167,6 @@ kohort_ses <- kohort %>%
 
 ## Se også
 
-- [SEPLINE](sepline.qmd) — metodebeskrivelse og anbefalede kategoriseringer
-- [Formateringstabeller](formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
-- [Registerreference](register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA
+- [SEPLINE](11b_sepline.qmd) — metodebeskrivelse og anbefalede kategoriseringer
+- [Formateringstabeller](13b_formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
+- [Registerreference](08_register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA

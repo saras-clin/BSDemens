@@ -108,7 +108,7 @@ filter(is.na(senere_afkraeftet) | senere_afkraeftet != "Ja")
 Effektiv udtræk af diagnosebaserede udfald følger et to-fase mønster:
 
 **Fase 1 — byg én diagnosetabel for hele kohorten**
-Hent alle diagnoser for dine kohortmedlemmer fra LPR2 og LPR3 på én gang — uden at filtrere på specifikke koder endnu. Resultatet er én stor tabel (`alle_dx`) med én række per diagnose per person, D-præfiks fjernet. Tabellen er **udfaldsagnostisk**: den bygges én gang og genbruges til alle udfald.
+Hent alle diagnoser for dine kohortemedlemmer fra LPR2 og LPR3 på én gang — uden at filtrere på specifikke koder endnu. Resultatet er én stor tabel (`alle_dx`) med én række per diagnose per person, D-præfiks fjernet. Tabellen er **udfaldsagnostisk**: den bygges én gang og genbruges til alle udfald.
 
 **Fase 2 — filtrer på det specifikke udfald**
 Filtrer `alle_dx` på de ICD-koder du vil have. Find første forekomst per person. Join til kohorten. Gem.
@@ -117,7 +117,7 @@ Filtrer `alle_dx` på de ICD-koder du vil have. Find første forekomst per perso
 
 ---
 
-## Komplet mønster: hent alle diagnoser for din kohort
+## Komplet mønster: hent alle diagnoser for din kohorte
 
 Dette er Fase 1 — koden til at bygge `alle_dx`.
 
@@ -307,6 +307,6 @@ saveRDS(alle_cvd, "datasets/extract_cvd.rds")                # gem — skift sti
 
 ## Se også
 
-- [Registerreference](register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
-- [Faldgruber](dst_faldgruber.qmd) — kendte problemer med LPR på DST
-- [Første udtræk](foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS
+- [Registerreference](08_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
+- [Faldgruber](13c_dst_faldgruber.qmd) — kendte problemer med LPR på DST
+- [Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS

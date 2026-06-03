@@ -8,6 +8,7 @@ format:
     toc-depth: 3
     toc-title: "På denne side"
     code-fold: false
+    theme: cosmo 
     highlight-style: github
 ---
 
@@ -48,12 +49,12 @@ Installationen nulstilles ved logout. Tjek version: `packageVersion("duckplyr")`
 :::
 
 Støder du på en funktion du ikke genkender?
-Slå den op i [Funktioner — oversigt](guide_til_funktioner.qmd).
+Slå den op i [Funktioner — oversigt](13a_guide_til_funktioner.qmd).
 
 ::: {.callout-tip}
 **Arbejder du på DARTER / projekt 708421?**
 Der er ekstra setup-trin (dstDataPrep-pakken skal bygges) specifikke til projektet.
-[Gå til DARTER — oversigt og pipeline →](darter/index.qmd)
+[Gå til DARTER — oversigt og pipeline →](darter/00_index.qmd)
 :::
 
 ---
@@ -107,7 +108,7 @@ På DST er de rigtige data allerede klargjort og klar til brug.
 **Du behøver ikke at samle årsfiler manuelt.**
 Hvert register er gemt som mange separate filer — én per år.
 `load_database()` samler dem automatisk til én tabel, som du kan forespørge som helhed.
-Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret på siden [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
+Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret på siden [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
 :::
 
 ### Hvad er en `.rds`-fil?
@@ -168,7 +169,7 @@ Den kolonne eksisterer ikke — `min_pnr_vektor` er en lokal R-vektor, du define
 Du vil se `!!` foran næsten hver lokal variabel, der bruges inde i et `filter()`-kald.
 Det er påkrævet, når du refererer til et R-objekt (ikke en kolonne) inde i en doven forespørgsel.
 
-[Se mere om `!!` og doven evaluering i Funktionsguiden →](guide_til_funktioner.qmd#bang-bang-to-udråbstegn)
+[Se mere om `!!` og doven evaluering i Funktionsguiden →](13a_guide_til_funktioner.qmd#bang-bang-to-udråbstegn)
 
 ### Hvad sker der i de fem trin — visuelt
 
@@ -209,7 +210,7 @@ At kalde collect() før filter() vil crashe din session og gøre serveren langso
 ### Sådan tjekker du, om du har husket `collect()`
 
 Mange fejl opstår, fordi man tror, man har data i R — men i virkeligheden har man stadig bare en instruktion til DuckDB.
-Kald `class()` for at se, hvad du faktisk har — se [Basiskommandoer](basiskommandoer.qmd#forstå-strukturen) for kodeeksempler.
+Kald `class()` for at se, hvad du faktisk har — se [Basiskommandoer](07_basiskommandoer.qmd#forstå-strukturen) for kodeeksempler.
 
 | Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
 |---|---|---|
@@ -232,7 +233,7 @@ Alle ICD-10-koder gemt i DST-registre har et foranstillet `"D"`:
 Dette præfiks eksisterer ikke i standard ICD-10 — det er en DST-konvention.
 **Sammenlign aldrig med koder med D-præfikset.**
 
-Fjern det med `substr()` inden sammenligning — se [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) for kodeeksempel.
+Fjern det med `substr()` inden sammenligning — se [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) for kodeeksempel.
 
 ### LPR2 vs LPR3: opdelingen i marts 2019
 
@@ -240,7 +241,7 @@ Det Nationale Patientregister skiftede format i marts 2019.
 Ethvert studie, der dækker en periode, som spænder over denne dato,
 skal forespørge begge systemer separat og kombinere resultaterne.
 
-Se den fulde oversigt over tabeller, join-nøgler, diagnosetyper og LPR3-specifikke kolonner i [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd).
+Se den fulde oversigt over tabeller, join-nøgler, diagnosetyper og LPR3-specifikke kolonner i [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
 
 ---
 
@@ -261,26 +262,26 @@ Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlme
 | 9 | Glem `!!` i lazy filter (`filter(pnr %in% min_liste)`) | Forkert resultat eller fejl |
 | 10 | Forveksle `nmi_count` med `nmi_score` | Forkert kovariat i modellen |
 
-[Se alle 10 faldgruber med kodeeksempler →](dst_faldgruber.qmd)
+[Se alle 10 faldgruber med kodeeksempler →](13c_dst_faldgruber.qmd)
 
 ---
 
 ## 6. Registerreference
 
-Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](register_reference.qmd).
+Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](08_register_reference.qmd).
 
 ::: {.callout-tip}
-**Arbejder du på DARTER?** Se den projektspecifikke registeroversigt med bekræftede stier: [Registersti og datastores →](darter/registersti-datastores.qmd)
+**Arbejder du på DARTER?** Se den projektspecifikke registeroversigt med bekræftede stier: [Registersti og datastores →](darter/01_registersti-datastores.qmd)
 :::
 
 ---
 
 ## 7. Diagnoseudtræk fra LPR
 
-Det komplette mønster for at trække diagnoser fra LPR2 + LPR3 — inkl. to-fase strategien for at genbruge udtrækkene til flere udfald — er dokumenteret på [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd).
+Det komplette mønster for at trække diagnoser fra LPR2 + LPR3 — inkl. to-fase strategien for at genbruge udtrækkene til flere udfald — er dokumenteret på [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
 
 ::: {.callout-tip}
-**Arbejder du på DARTER?** `get_lpr_diagnoses()` i `02_extract_outcomes_covariates.R` pakker hele mønstret ind. Se [DARTER — pipeline →](darter/index.qmd)
+**Arbejder du på DARTER?** `get_lpr_diagnoses()` i pakker hele mønstret ind. Se [DARTER — pipeline →](darter/00_index.qmd)
 :::
 
 ---
@@ -297,4 +298,4 @@ Det komplette mønster for at trække diagnoser fra LPR2 + LPR3 — inkl. to-fas
 | Forkert censureringsdato | Brug `dodsaars` (`d_dodsdto`) — aldrig `dodsaasg` |
 | Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(objekt); gc()` efter store udtræk |
 | `!!` giver en fejl | Sørg for at du er inde i et `dplyr`-verbum på et dovent objekt |
-| DARTER: pakke ikke fundet: `dstDataPrep` | Se [DARTER-setup →](darter/index.qmd) |
+| DARTER: pakke ikke fundet: `dstDataPrep` | Se [DARTER-setup →](darter/00_index.qmd) |

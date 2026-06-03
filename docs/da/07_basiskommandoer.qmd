@@ -59,7 +59,7 @@ class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 **`class()` kan hjælpe dig med at fejlfinde**
 Fejler din kode med en mystisk besked, eller ser objektet ud som data men opfører sig mærkeligt?
 Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`.
-Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for den fulde forklaring på hvorfor.
+Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd) for den fulde forklaring på hvorfor.
 :::
 
 ---
@@ -176,5 +176,5 @@ data |> arrange(desc(dato))       # sorter faldende
 
 Disse kommandoer er til at **udforske** data. Næste trin er at **bearbejde** det:
 
-- [Funktioner — oversigt](guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
-- [Datastrukturer](datastrukturer.qmd) — hvad er langt og bredt format?
+- [Funktioner — oversigt](13a_guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
+- [Datastrukturer](10a_datastrukturer.qmd) — hvad er langt og bredt format?

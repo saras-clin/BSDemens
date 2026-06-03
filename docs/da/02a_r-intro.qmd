@@ -11,7 +11,7 @@ Denne side guider dig igennem de første trin.
 ::: {.callout-tip}
 **Arbejder du på DARTER / projekt 708421?**
 Der er ekstra setup-trin specifikke til projektet — bl.a. en pakke med hjælpefunktioner, du skal bygge inden du starter.
-[Gå til DARTER — oversigt og pipeline →](darter/index.qmd)
+[Gå til DARTER — oversigt og pipeline →](darter/00_index.qmd)
 :::
 
 ---
@@ -124,7 +124,7 @@ De pakker du vil bruge mest:
 **Arbejder du på DARTER / projekt 708421?**
 Projektet bruger pakken `dstDataPrep`, som giver adgang til `load_database()` og alle registerdata.
 Den er ikke på CRAN og skal bygges manuelt inden du kan bruge den.
-[Se trin-for-trin vejledning → DARTER oversigt og pipeline](darter/index.qmd)
+[Se trin-for-trin vejledning → DARTER oversigt og pipeline](darter/00_index.qmd)
 :::
 
 ::: {.callout-important}
@@ -134,7 +134,7 @@ DST har forudinstalleret et ældre snapshot af alle R-pakker på CRAN.
 Det betyder, at mange pakker — særligt `duckplyr` — er i forældede versioner der mangler funktioner.
 
 Kør dette **allerførst** i starten af hver DST-session, inden du indlæser andre pakker
-(som beskrevet under [Kom i gang på DST — Trin 1](getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session)):
+(som beskrevet under [Kom i gang på DST — Trin 1](03_getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session)):
 
 ```r
 install.packages("duckplyr")   # geninstaller — nulstilles ved logout
@@ -154,7 +154,7 @@ Alle genveje nedenfor er **Windows-genveje** — de gælder også for Mac-bruger
 ::: {.callout-note}
 **Mac-brugere: sæt tastaturet til Unicode-tilstand først**
 Specialtegn som `$`, `{`, `}`, `\` og `|` virker ikke korrekt på Mac i Remote Desktop uden et ekstra trin.
-[Se løsningen på siden "Kom i gang på DST" →](getting-started-dst.qmd)
+[Se løsningen på siden "Kom i gang på DST" →](03_getting-started-dst.qmd)
 :::
 
 | Genvej (Windows/Mac i Remote Desktop) | Hvad den gør |
@@ -162,7 +162,7 @@ Specialtegn som `$`, `{`, `}`, `\` og `|` virker ikke korrekt på Mac i Remote D
 | **Ctrl+Enter** | Kør markeret linje/kode |
 | **Ctrl+S** | Gem filen |
 | **Alt + –** | Skriv tildelingsoperatoren `<-` (Mac: **Option + –**) |
-| **Ctrl+Shift+M** | Skriv pipe-tegnet `\|>` — [`%>%` virker også, men kræver en pakke](guide_til_funktioner.qmd#røret) |
+| **Ctrl+Shift+M** | Skriv pipe-tegnet `\|>` — [`%>%` virker også, men kræver en pakke](13a_guide_til_funktioner.qmd#røret) |
 | **Ctrl+Shift+R** | Indsæt script-sektion (overskrift i kode) |
 | **Ctrl+Shift+A** | Formater/indenter kode automatisk |
 | **Ctrl+Z / Ctrl+Shift+Z** | Fortryd / Gentag |
@@ -179,7 +179,7 @@ Indstil det permanent under **Tools → Global Options → General → "Save wor
 
 ## Næste skridt
 
-- [Basiskommandoer](basiskommandoer.qmd) — de vigtigste kommandoer til at udforske dine data
-- [Guide til funktioner](guide_til_funktioner.qmd) — kender du ikke en funktion? Start her
-- [Datastrukturer](datastrukturer.qmd) — hvad er langt/bredt format og hvad er tidy data?
-- [Kom i gang på DST](getting-started-dst.qmd) — det første gang du logger på DST-serveren
+- [Basiskommandoer](07_basiskommandoer.qmd) — de vigtigste kommandoer til at udforske dine data
+- [Guide til funktioner](13a_guide_til_funktioner.qmd) — kender du ikke en funktion? Start her
+- [Datastrukturer](10a_datastrukturer.qmd) — hvad er langt/bredt format og hvad er tidy data?
+- [Kom i gang på DST](03_getting-started-dst.qmd) — det første gang du logger på DST-serveren

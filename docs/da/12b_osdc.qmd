@@ -76,7 +76,7 @@ t1d <- dm_pop |>
 ## Dækning og begrænsninger
 
 - Dækker diagnoser frem til **2022** (i den version vi har på DARTER)
-- Klassificerer **alle** personer i Danmark — ikke kun din kohort
+- Klassificerer **alle** personer i Danmark — ikke kun din kohorte
 - Bruger en kombination af LPR, LMDB og laboratoriesvar — kræver adgang til disse registre
 
 Se den fulde metodebeskrivelse i artiklen og dokumentationssitet.

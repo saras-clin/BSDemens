@@ -12,7 +12,7 @@ sidebar: false
 
 Vejledning til registerbaseret forskning på Danmarks Statistik (DST) — for begyndere.
 
-[Gå til dansk vejledning →](da/index.qmd){.btn .btn-primary}
+[Gå til dansk vejledning →](da/00_index.qmd){.btn .btn-primary}
 :::
 
 ::: {.g-col-6}

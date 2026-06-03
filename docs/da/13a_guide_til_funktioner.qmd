@@ -111,7 +111,7 @@ bef <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/
   rename_with(tolower)
 ```
 
-De bekræftede stier til dit projekt finder du i [Registerreference](register_reference.qmd).
+De bekræftede stier til dit projekt finder du i [Registerreference](08_register_reference.qmd).
 
 ## DARTER
 
@@ -120,7 +120,7 @@ bef <- load_database("bef") %>% rename_with(tolower)
 ```
 
 `load_database()` fra `dstDataPrep` finder stien automatisk — du behøver ikke kende den fulde sti.
-Se [DARTER — setup →](darter/index.qmd) for installation.
+Se [DARTER — setup →](darter/00_index.qmd) for installation.
 
 ## Lokalt (fakeregs)
 
@@ -129,7 +129,7 @@ bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
 ```
 
 `reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
-Se [Første udtræk](foerste-udtraek.qmd) for installation af `fakeregs`.
+Se [Første udtræk](06_foerste-udtraek.qmd) for installation af `fakeregs`.
 :::
 
 Bruges til alle registre der er gemt som parquet-filer:
@@ -153,7 +153,7 @@ resultat <- stort_register %>%
 ```
 
 ::: {.callout-note}
-Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt på siden [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
+Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt på siden [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
 :::
 
 ---
@@ -190,7 +190,7 @@ saveRDS(full_cohort, "datasets/full_cohort.rds")
 **Hvad det gør:** læser en SAS-datafil ind i R.
 
 Bruges til at indlæse SAS-filer — fx DST's formateringstabeller eller registre der ikke er konverteret til parquet.
-Se [Filformater](filformater.qmd) og [Formateringstabeller](formateringstabeller.qmd) for praktiske eksempler.
+Se [Filformater](04_filformater.qmd) og [Formateringstabeller](13b_formateringstabeller.qmd) for praktiske eksempler.
 
 ---
 
@@ -499,8 +499,8 @@ group_by(pnr) %>%
 
 ::: {.callout-warning}
 Bruges **ikke** til indkomstkvintiler i registerbaserede studier der følger SEPLINE-retningslinjerne.
-SEPLINE anbefaler at sammenligne med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80) stratificeret på køn × 5-årsaldersgruppe × referenceår — ikke `ntile()` på din kohort alene.
-Se [SEPLINE](sepline.qmd).
+SEPLINE anbefaler at sammenligne med populationsspecifikke grænseværdier (Q20/Q40/Q60/Q80) stratificeret på køn × 5-årsaldersgruppe × referenceår — ikke `ntile()` på din kohorte alene.
+Se [SEPLINE](11b_sepline.qmd).
 :::
 
 ---
@@ -833,7 +833,7 @@ Tjek altid `class()` som det første, hvis du får en mærkelig fejl.
 
 **Hvad det gør:** returnerer antallet af rækker.
 
-Bruges til at udskrive kohortstørrelser og kontrollere, at eksklusioner har virket.
+Bruges til at udskrive kohorte-størrelser og kontrollere, at eksklusioner har virket.
 
 ---
 
@@ -868,7 +868,7 @@ Brug det efter du er færdig med store registre — I deler RAM med alle andre p
 
 ## Pakkeoversigt
 
-Se [Registerreference](register_reference.qmd) for bekræftede kolonnenavne på alle registre disse pakker arbejder mod.
+Se [Registerreference](08_register_reference.qmd) for bekræftede kolonnenavne på alle registre disse pakker arbejder mod.
 
 | Pakke | Hvad den leverer |
 |---|---|

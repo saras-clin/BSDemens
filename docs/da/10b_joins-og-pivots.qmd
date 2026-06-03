@@ -53,11 +53,11 @@ bef_ikke_i_kohort <- bef %>%
 
 | Funktion | Beholder rækker fra | Brugt til |
 |---|---|---|
-| `left_join(x, y)` | Alle fra x | Tilføj udfald/kovariater til kohort — NA hvis ingen match |
+| `left_join(x, y)` | Alle fra x | Tilføj udfald/kovariater til kohorte — NA hvis ingen match |
 | `inner_join(x, y)` | Kun match i begge | Join kontakter og diagnoser — vil kun have rækker med begge |
 | `right_join(x, y)` | Alle fra y | Sjældent |
 | `full_join(x, y)` | Alle fra begge | Sjældent |
-| `semi_join(x, y)` | Kun x med match i y | Filtrer et register til kun kohort-medlemmer |
+| `semi_join(x, y)` | Kun x med match i y | Filtrer et register til kun kohortemedlemmer |
 | `anti_join(x, y)` | Kun x uden match i y | Find alle i BEF der IKKE er i kohorten |
 
 </details>
@@ -78,7 +78,7 @@ bef_akm <- bef %>%
 
 ## Pivots — skift mellem langt og bredt format
 
-Pivots er forklaret grundigt på siden [Datastrukturer](datastrukturer.qmd).
+Pivots er forklaret grundigt på siden [Datastrukturer](10a_datastrukturer.qmd).
 Her er den korte opsummering:
 
 ```r
@@ -111,7 +111,7 @@ Kolonner der mangler i den ene tabel fyldes automatisk med `NA`.
 
 ---
 
-## Praktisk eksempel: kohort + dødsdato
+## Praktisk eksempel: kohorte + dødsdato
 
 ```r
 # Kohort-data (én række per person):
@@ -133,6 +133,6 @@ kohort_med_dod <- kohort %>%
 
 ## Næste skridt
 
-- [Datastrukturer](datastrukturer.qmd) — dybere forklaring af langt/bredt format og pivots
-- [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — praktisk eksempel med inner_join på LPR
-- [Socioøkonomiske variable](socioekonomiske-variable.qmd) — eksempel med left_join på BEF + FAIK via familie_id
+- [Datastrukturer](10a_datastrukturer.qmd) — dybere forklaring af langt/bredt format og pivots
+- [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — praktisk eksempel med inner_join på LPR
+- [Socioøkonomiske variable](11a_socioekonomiske-variable.qmd) — eksempel med left_join på BEF + FAIK via familie_id

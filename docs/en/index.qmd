@@ -4,4 +4,4 @@ subtitle: "Code guide for register-based cohort study"
 ---
 
 English version is under construction.
-See the [Danish guide](../da/index.qmd) in the meantime.
+See the [Danish guide](../da/00_index.qmd) in the meantime.

@@ -149,7 +149,7 @@ Ryd altid op efter store udtræk, inden du fortsætter.
 
 ## Særligt for DST: geninstaller duckplyr
 
-Som beskrevet under [Kom i gang på DST — Trin 1](getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session):
+Som beskrevet under [Kom i gang på DST — Trin 1](03_getting-started-dst.qmd#trin-1-geninstaller-duckplyr-i-starten-af-hver-session):
 den forudinstallerede `duckplyr` på DST er forældet og skal geninstalleres i starten af **hver** session.
 
 ```r

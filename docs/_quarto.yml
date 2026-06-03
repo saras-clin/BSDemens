@@ -13,7 +13,7 @@ website:
         text: Forside
     right:
       - text: "Dansk"
-        href: da/index.qmd
+        href: da/00_index.qmd
       - text: "English"
         href: en/index.qmd
 
@@ -23,55 +23,78 @@ website:
       style: "docked"
       collapse-level: 1
       contents:
-        - da/index.qmd
-
-        - section: "Generelt"
+        - section: "Fase 0 — Orienter dig"
           contents:
-            - da/studieforberedelse.qmd
-            - da/ressourcer-og-hjaelp.qmd
+            - da/00_index.qmd
 
-        - section: "R og RStudio"
+        - section: "Fase 1 — Planlæg dit studie"
           contents:
-            - da/r-intro.qmd
-            - da/datastrukturer.qmd
-            - da/basiskommandoer.qmd
-            - da/filformater.qmd
+            - da/01_studieforberedelse.qmd
 
-        - section: "DST-serveren"
+        - section: "Fase 2 — R: det allermest nødvendige"
           contents:
-            - da/getting-started-dst.qmd
-            - da/parquet-arrow-duckdb.qmd
+            - da/02a_r-intro.qmd
+            - da/02b_ressourcer-og-hjaelp.qmd
 
-        - section: "Kode og data"
+        - section: "Fase 3 — Log ind på DST"
           contents:
-            - da/foerste-udtraek.qmd
-            - da/guide_til_funktioner.qmd
-            - da/joins-og-pivots.qmd
-            - da/formateringstabeller.qmd
-            - da/hospitalskontakter-lpr.qmd
-            - da/socioekonomiske-variable.qmd
+            - da/03_getting-started-dst.qmd
 
-        - section: "Pakker og algoritmer"
+        - section: "Fase 4 — Filtyper og indlæsning"
           contents:
-            - da/pakker-oversigt.qmd
-            - da/osdc.qmd
-            - da/nmi.qmd
-            - da/sepline.qmd
+            - da/04_filformater.qmd
 
-        - section: "Reference"
+        - section: "Fase 5 — Det universelle mønster"
           contents:
-            - da/register_reference.qmd
-            - da/dst_faldgruber.qmd
+            - da/05_parquet-arrow-duckdb.qmd
 
-        - section: "Hjemsendelse"
+        - section: "Fase 6 — Første udtræk"
           contents:
-            - da/eksport-hjemsendelse.qmd
+            - da/06_foerste-udtraek.qmd
 
-        - section: "Projekt 708421 (DARTER)"
+        - section: "Fase 7 — Inspicér din data"
           contents:
-            - da/darter/index.qmd
-            - da/darter/registersti-datastores.qmd
-            - da/darter/darter-faldgruber.qmd
+            - da/07_basiskommandoer.qmd
+
+        - section: "Fase 8 — Kend dine registre"
+          contents:
+            - da/08_register_reference.qmd
+
+        - section: "Fase 9 — Hospitalskontakter (LPR)"
+          contents:
+            - da/09_hospitalskontakter-lpr.qmd
+
+        - section: "Fase 10 — Dataformater og manipulation"
+          contents:
+            - da/10a_datastrukturer.qmd
+            - da/10b_joins-og-pivots.qmd
+
+        - section: "Fase 11 — Socioøkonomiske variable"
+          contents:
+            - da/11a_socioekonomiske-variable.qmd
+            - da/11b_sepline.qmd
+
+        - section: "Fase 12 — Algoritmer og specialpakker"
+          contents:
+            - da/12a_pakker-oversigt.qmd
+            - da/12b_osdc.qmd
+            - da/12c_nmi.qmd
+
+        - section: "Fase 13 — Reference"
+          contents:
+            - da/13a_guide_til_funktioner.qmd
+            - da/13b_formateringstabeller.qmd
+            - da/13c_dst_faldgruber.qmd
+
+        - section: "Fase 14 — Eksport og hjemsendelse"
+          contents:
+            - da/14_eksport-hjemsendelse.qmd
+
+        - section: "DARTER — Projekt 708421"
+          contents:
+            - da/darter/00_index.qmd
+            - da/darter/01_registersti-datastores.qmd
+            - da/darter/02_darter-faldgruber.qmd
 
     - id: en
       title: "Guide"

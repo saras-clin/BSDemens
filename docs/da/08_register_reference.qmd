@@ -30,7 +30,7 @@ Alle kolonnenavne på denne side er bekræftet på DST 2026-05-15 via `colnames(
 De vises **efter** `rename_with(tolower)` er kaldt.
 Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
 
-Se [Faldgruber](dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
+Se [Faldgruber](13c_dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
 Kolonnenavne gælder efter `rename_with(tolower)` — inspicér dit eget register med `colnames()` hvis noget ikke stemmer.
 
 ## Hvad vil jeg finde? — omvendt opslagstabel
@@ -83,7 +83,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 | UDDA | `"udda"` | `pnr` | Alle år | `hfaudd`, `aar` |
 | FAIK | `"faik"` | `familie_id` | Alle år | `famaekvivadisp_13` |
 | AKM | `"akm"` | `pnr` | Alle år | `socio13`, `aar` |
-| Projekt-specifikke registre | Se projektvejledning | `pnr` | Varierer | [DARTER: se registersti →](darter/registersti-datastores.qmd) |
+| Projekt-specifikke registre | Se projektvejledning | `pnr` | Varierer | [DARTER: se registersti →](darter/01_registersti-datastores.qmd) |
 
 ---
 
@@ -480,5 +480,5 @@ Disse er **projekt-specifikke** og ikke tilgængelige i alle projekter på DST.
 **Arbejder du på DARTER / projekt 708421?**
 Projektet bruger bl.a. DBSO (Databasen for Behandling af Svær Overvægt) og OSDC (Open Source Diabetes Classifier).
 Se den fulde registeroversigt med bekræftede kolonnenavne og stier:
-[DARTER — Registersti og datastores →](darter/registersti-datastores.qmd)
+[DARTER — Registersti og datastores →](darter/01_registersti-datastores.qmd)
 :::

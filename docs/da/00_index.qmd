@@ -1,0 +1,85 @@
+---
+title: "Registerbaseret forskning på DST"
+subtitle: "Hvem er denne guide til, og hvad vil du lære?"
+date: last-modified
+---
+
+Denne vejledning er til alle, der arbejder med registerbaseret forskning på Danmarks Statistik (DST).
+Du behøver ikke have kodet før.
+
+---
+
+## Hvad er registerbaseret forskning?
+
+Registerbaseret forskning bruger eksisterende administrative data — oplysninger indsamlet af det offentlige til administrative formål — til at besvare videnskabelige spørgsmål.
+
+I Danmark er disse registre enestående: de dækker hele befolkningen, de går årtier tilbage, og de er koblet via CPR-nummeret. Du kan følge en patient fra fødsel til død på tværs af hospitaler, apoteker, uddannelsesinstitutioner og arbejdsmarked — uden at rekruttere en eneste deltager.
+
+---
+
+## Hvad gør DST særligt?
+
+Når du forsker på DST-platformen, arbejder du under betingelser der adskiller sig fra almindeligt R-arbejde:
+
+- **Alt foregår på en sikker server.** Data forlader aldrig DST — du logger ind via fjernforbindelse og arbejder direkte på serveren.
+- **Du kan ikke downloade rå registerdata.** Output skal godkendes og hjemsende via en formel procedure.
+- **Data ligger i parquet-format.** Et effektivt kolonneformat der kun læser det, du beder om — men det kræver specifikke R-pakker.
+- **Du arbejder med hele befolkningsregistre.** Millioner af rækker. Du kan ikke bare "loade" et register — du skal filtrere, inden du trækker data ind i hukommelsen.
+- **Adgang kræver godkendelse.** Hvert projekt har et projektnummer og en godkendt datadescription.
+
+---
+
+## Forstå datakilden: SDS og DST
+
+Som forsker arbejder du på **Danmarks Statistiks (DST) servere**.
+DST modtager og bearbejder data fra bl.a. Sundhedsdatastyrelsen (SDS), som har de rå nationale sundhedsregistre (LPR, LMDB, cancerregister mv.), og stiller dem til rådighed for forskere via sikker fjernforbindelse.
+
+---
+
+## Vejen fra spørgsmål til analyseklar datasæt
+
+Registerforskning følger typisk disse trin — i denne rækkefølge:
+
+1. **Formuler et præcist forskningsspørgsmål** — hvem, hvad, hvornår, sammenlignet med hvem
+2. **Kortlæg din datamodel** — hvilke registre dækker eksponering, udfald og kovariater?
+3. **Definer din kohorte** — hvem inkluderes, hvornår starter de, og hvornår censureres de?
+4. **Udtræk eksponering** — hent den hændelse der definerer dine grupper (fx operation, diagnose, recept)
+5. **Udtræk udfald** — hent den hændelse du vil måle (fx demensdebut, indlæggelse, død)
+6. **Udtræk kovariater** — demografiske, kliniske og socioøkonomiske variable
+7. **Saml datasættet** — kobl de separate udtræk med joins, håndter manglende data
+8. **Analyser og eksporter** — kør din statistiske model, gennemgå output, hjemsend
+
+Guiden er struktureret efter disse trin. Følg faserne i rækkefølge, eller spring til den fase der er relevant for dig.
+
+---
+
+## Hvor starter du?
+
+::: {.grid}
+
+::: {.g-col-4}
+### Helt ny?
+Følg faserne fra begyndelsen.
+
+→ [Fase 1 — Planlæg dit studie](01_studieforberedelse.qmd)\
+→ [Fase 2 — R: det allermest nødvendige](02a_r-intro.qmd)\
+→ [Fase 3 — Log ind på DST](03_getting-started-dst.qmd)
+:::
+
+::: {.g-col-4}
+### Kender R, ny på DST?
+Spring fase 2 over og start med serveren.
+
+→ [Fase 3 — Log ind på DST](03_getting-started-dst.qmd)\
+→ [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd)\
+→ [Fase 8 — Registerreference](08_register_reference.qmd)
+:::
+
+::: {.g-col-4}
+### Arbejder på DARTER?
+Særlige setup-trin og projektspecifik vejledning.
+
+→ [DARTER — oversigt og pipeline](darter/00_index.qmd)
+:::
+
+:::

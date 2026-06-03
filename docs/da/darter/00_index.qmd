@@ -8,9 +8,9 @@ Denne sektion er **kun** for dem der arbejder på DARTER-projektet (projekt 7084
 Indholdet her bygger ovenpå den generelle DST-vejledning og tilføjer det projekt-specifikke.
 
 Ny på projektet? Start med den generelle vejledning og vend tilbage hertil:
-→ [Studieforberedelse](../studieforberedelse.qmd)
-→ [Kom i gang med R](../r-intro.qmd)
-→ [Kom i gang på DST](../getting-started-dst.qmd)
+→ [Studieforberedelse](../01_studieforberedelse.qmd)
+→ [Kom i gang med R](../02a_r-intro.qmd)
+→ [Kom i gang på DST](../03_getting-started-dst.qmd)
 
 ---
 
@@ -150,5 +150,5 @@ saveRDS(resultat, "datasets/extract_dementia.rds")
 
 ## Næste skridt i denne sektion
 
-- [Registersti og datastores](registersti-datastores.qmd) — bekræftede stier til alle registre på 708421
-- [DARTER-specifikke faldgruber](darter-faldgruber.qmd) — quirks der er specifikke for dette projekt
+- [Registersti og datastores](01_registersti-datastores.qmd) — bekræftede stier til alle registre på 708421
+- [DARTER-specifikke faldgruber](02_darter-faldgruber.qmd) — quirks der er specifikke for dette projekt

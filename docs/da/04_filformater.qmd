@@ -53,7 +53,7 @@ library(dstDataPrep)
 bef <- load_database("bef")   # åbner doven forbindelse til parquet-registret
 ```
 
-Parquet forklares i detaljer på siden [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
+Parquet forklares i detaljer på siden [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
 
 ---
 
@@ -84,7 +84,7 @@ write_csv(min_tabel, "output/tabel1.csv")
 
 ::: {.callout-warning}
 Gem **aldrig** rå registerdata som CSV — kun aggregerede resultater.
-Se [Eksport og hjemsendelse](eksport-hjemsendelse.qmd) for DST's regler om hvad der må eksporteres.
+Se [Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd) for DST's regler om hvad der må eksporteres.
 :::
 
 ---
@@ -93,7 +93,7 @@ Se [Eksport og hjemsendelse](eksport-hjemsendelse.qmd) for DST's regler om hvad 
 
 **SAS** er originalt lavet til statistikprogrammet SAS og er det format, som mange nationale registre leveres i. R kan læse det med `haven`.
 
-**Parquet** er et moderne, kolonne-orienteret format der er meget hurtigere at arbejde med end SAS og CSV, fordi det kun læser de kolonner du beder om. Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd).
+**Parquet** er et moderne, kolonne-orienteret format der er meget hurtigere at arbejde med end SAS og CSV, fordi det kun læser de kolonner du beder om. Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
 
 **RDS** er R's eget binære format — tænk på det som en zip-fil til R-objekter.
 

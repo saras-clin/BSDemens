@@ -238,7 +238,7 @@ bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
 bef %>% filter(year == 2015) %>% collect() %>% head()
 ```
 
-Se [Første udtræk](foerste-udtraek.qmd) for et komplet gennemgående eksempel med fakeregs.
+Se [Første udtræk](06_foerste-udtraek.qmd) for et komplet gennemgående eksempel med fakeregs.
 </details>
 
 ---

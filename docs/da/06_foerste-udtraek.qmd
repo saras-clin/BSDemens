@@ -28,7 +28,7 @@ Funktionen `reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske 
 **Arbejder du på DARTER?**
 Erstat `open_dataset(reg_sti("lmdb"))` med `load_database("lmdb")` efter at have installeret `dstDataPrep`.
 Alle øvrige linjer på siden er identiske.
-Se [DARTER — oversigt og pipeline](darter/index.qmd) for setup-vejledning.
+Se [DARTER — oversigt og pipeline](darter/00_index.qmd) for setup-vejledning.
 :::
 
 ---
@@ -143,7 +143,7 @@ se den direkte her: [steno-aarhus.github.io/fakeregs/articles/common_tasks_dplyr
 
 ## Trin 2 — Udtræk data fra et register
 
-Nu trækker vi receptdata fra LMDB for vores kohort.
+Nu trækker vi receptdata fra LMDB for vores kohorte.
 Mønstret er altid det samme: **åbn → filtrer → vælg kolonner → collect**.
 
 ```{.r filename="trin2_udtraek.R"}
@@ -167,7 +167,7 @@ head(recepter)                               # de første seks rækker
 - `filter()` og `select()` sendte instruktioner til Arrow/DuckDB — stadig ingen data i R
 - `collect()` udførte forespørgslen og hentede kun de nødvendige rækker ind i R
 
-Se [Parquet, Arrow og DuckDB](parquet-arrow-duckdb.qmd) for en detaljeret forklaring af doven evaluering.
+Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd) for en detaljeret forklaring af doven evaluering.
 
 ---
 
@@ -265,9 +265,9 @@ mit_reg <- open_dataset(parq_sti) %>% rename_with(tolower)
 
 ## Næste skridt
 
-- [Hospitalskontakter (LPR)](hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
-- [Joins og pivots](joins-og-pivots.qmd) — kobl to udtræk sammen
-- [Funktioner — oversigt](guide_til_funktioner.qmd) — alle funktioner brugt på denne side
+- [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
+- [Joins og pivots](10b_joins-og-pivots.qmd) — kobl to udtræk sammen
+- [Funktioner — oversigt](13a_guide_til_funktioner.qmd) — alle funktioner brugt på denne side
 
 ::: {.callout-note}
 **Alternativ til manuel SAS → Parquet:** [`fastreg`](https://github.com/dp-next/fastreg) (dp-next, MIT-licens) giver en mere struktureret pipeline til at konvertere hele DST-workspaces fra SAS til Parquet med `convert()` og en targets-baseret skabelon. Relevant hvis du vil bygge et komplet parquet-workspace fra bunden.

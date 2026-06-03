@@ -4,7 +4,7 @@ subtitle: "Quirks og kendte problemer specifikt for projekt 708421"
 date: last-modified
 ---
 
-Denne side supplerer de [generelle DST-faldgruber](../dst_faldgruber.qmd) med problemer specifikke for DARTER-projektet.
+Denne side supplerer de [generelle DST-faldgruber](../13c_dst_faldgruber.qmd) med problemer specifikke for DARTER-projektet.
 
 ---
 
@@ -78,5 +78,5 @@ Bruger du `nmi_count` i din Cox-model i stedet for `nmi_score`, justerer du for 
 
 ## Se også
 
-- [Generelle DST-faldgruber](../dst_faldgruber.qmd) — 10 faldgruber der gælder alle projekter
-- [Registersti og datastores](registersti-datastores.qmd) — bekræftede stier og adgangsmetoder
+- [Generelle DST-faldgruber](../13c_dst_faldgruber.qmd) — 10 faldgruber der gælder alle projekter
+- [Registersti og datastores](01_registersti-datastores.qmd) — bekræftede stier og adgangsmetoder

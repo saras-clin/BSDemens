@@ -72,7 +72,7 @@ Slå op hvad en variabel betyder:
 
 **Stjernen på skrivebordet**
 Inde på DST-serveren: den stjerne-genvej på Windows-skrivebordet åbner DST's formateringstabel-guide — bruges til at finde de SAS-filer, der oversætter koder til tekst (fx kommunenumre til kommunenavne).
-Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
+Mere om formateringstabeller: [Formateringstabeller](13b_formateringstabeller.qmd)
 
 **Steno GitHub: Quick guide til GitHub**
 [SDCA Research — GitHub start](https://steno-aarhus.github.io/research/CONTRIBUTING.html)
@@ -81,7 +81,7 @@ Mere om formateringstabeller: [Formateringstabeller](formateringstabeller.qmd)
 
 ## R-pakker og algoritmer til registerbaseret forskning
 
-Se den samlede oversigt med fold-ud dokumentation på [Pakker og algoritmer →](pakker-oversigt.qmd).
+Se den samlede oversigt med fold-ud dokumentation på [Pakker og algoritmer →](12a_pakker-oversigt.qmd).
 
 Dækker: validerede algoritmer (OSDC, NMI, SEPLINE), statistik og analyse (`heaven`), syntetiske testdata (`fakeregs`) og referencehåndtering på DST (`pubmedciteR`).
 
