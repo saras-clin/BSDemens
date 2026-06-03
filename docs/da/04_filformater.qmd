@@ -1,100 +1,107 @@
 ---
-title: "Filformater"
-subtitle: "Filtyper du møder i registerbaseret forskning"
+title: "Filtyper og hvordan de åbnes"
+subtitle: "Hvad du møder i din arbejdsmappe — og hvad der åbner det"
 date: last-modified
 ---
 
-Registerdata på DST leveres primært som SAS-filer.
-I din arbejdsmappe vil du møde flere formater — her er en oversigt over hvad de er, og hvilke R-pakker du bruger til dem.
+Når du åbner Stifinder på DST-serveren, møder du filer med forskellige endelser.
+Denne side er dit opslagsværktøj: hvilken filtype er det, hvilken funktion åbner den, og kommer dataene ind i hukommelsen med det samme eller ej?
+
+Det sidste — **doven vs. fuld indlæsning** — er den vigtigste skelnen på denne side. Mekanismen bag forklares i [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd); her skal du bare vide, *hvilke* filtyper der opfører sig hvordan.
 
 ---
 
-## Oversigt
+## Oversigt — filtype, pakke, funktion
 
-| Format | Filendelse | R-pakke | Centrale funktioner |
+| Filtype | Pakke | Funktion | Indlæsning |
 |---|---|---|---|
-| **SAS** | `.sas7bdat` / `.xpt` | `haven` | `read_sas()`, `read_xpt()` |
-| **Parquet** | `.parquet` | `arrow` | `read_parquet()`, `open_dataset()` |
-| **RDS** | `.rds` | base R | `readRDS()`, `saveRDS()` |
-| **CSV** | `.csv` | `readr` | `read_csv()`, `write_csv()` |
-| **Stata** | `.dta` | `haven` | `read_dta()`, `write_dta()` |
-| **SPSS** | `.sav` / `.por` | `haven` | `read_sav()`, `write_sav()` |
-| **Excel** | `.xlsx` / `.xls` | `readxl` / `openxlsx` | `read_xlsx()`, `write_xlsx()` |
-| **Feather** | `.feather` | `arrow` | `read_feather()`, `write_feather()` |
-| **RData** | `.rdata` / `.rda` | base R | `load()`, `save()` |
+| `.parquet` / parquet-mappe | `arrow` | `open_dataset()` | **Doven** — intet i RAM før `collect()` |
+| parquet via DuckDB | `duckplyr` | `open_dataset()` → `to_duckdb()` | **Doven** — hurtigere forespørgsler |
+| `.rds` | base R | `readRDS()` | **Fuld** — hele filen ind i RAM |
+| `.sas7bdat` | `haven` | `read_sas()` | **Fuld** — hele filen ind i RAM |
+| `.csv` | `readr` | `read_csv()` | **Fuld** — hele filen ind i RAM |
+| `.xlsx` | `readxl` | `read_xlsx()` | **Fuld** — hele filen ind i RAM |
+
+::: {.callout-note}
+På DST behøver du sjældent `open_dataset()` direkte — registrene åbnes via `dstDataPrep::load_database()`, som bruger Arrow under motorhjelmen og giver dig en doven forbindelse.
+:::
+
+<details>
+<summary>Sjældnere formater (Stata, SPSS, Feather, RData)</summary>
+
+Disse møder du sjældent i et typisk DST-kohortestudie, men her er de for fuldstændighedens skyld:
+
+| Filtype | Pakke | Funktion |
+|---|---|---|
+| `.dta` (Stata) | `haven` | `read_dta()` |
+| `.sav` (SPSS) | `haven` | `read_sav()` |
+| `.feather` | `arrow` | `read_feather()` |
+| `.rdata` / `.rda` | base R | `load()` |
+
+`.rdata`/`.rda` adskiller sig fra `.rds` ved at kunne gemme flere objekter på én gang — men `.rds` er at foretrække, fordi du selv styrer hvad objektet hedder, når du læser det ind.
+
+</details>
 
 ---
 
-## De formater du vil bruge oftest
+## Hvornår bruger du hvad?
 
-### SAS-filer (`.sas7bdat`)
+De tre du faktisk arbejder med i hverdagen:
 
-Rådata på DST leveres som SAS-filer. Bruges til at indlæse formateringstabeller og rå registerdata, der ikke er konverteret til parquet.
+| Filtype | Bruges til |
+|---|---|
+| **Parquet** | De store registre (BEF, LPR, LMDB …). Du indlæser dem dovent og filtrerer, før du henter data. |
+| **RDS** | Dine egne mellemresultater — det datasæt ét script laver og det næste læser ind. |
+| **SAS** | Formateringstabeller og rå registerdata, der endnu ikke er konverteret til parquet. |
+
+### RDS — det format du selv skriver mest
+
+RDS er R's eget format. Det er hurtigt, kompakt og bevarer alle R-egenskaber (datatyper, faktorniveauer, kolonnenavne) perfekt. Det er sådan dine pipeline-scripts sender data videre til hinanden.
+
+```r
+saveRDS(mit_datasaet, "datasets/full_cohort.rds")   # gem et R-objekt til disk
+full_cohort <- readRDS("datasets/full_cohort.rds")   # læs det ind igen
+```
+
+<details>
+<summary>Kodeeksempler: SAS og CSV</summary>
+
+**SAS** — til formateringstabeller og ikke-konverteret registerdata:
 
 ```r
 library(haven)
 df <- read_sas("E:/rawdata/[projektnummer]/lpr_adm2018.sas7bdat")
 ```
 
-::: {.callout-note}
-Indlæsning af store SAS-filer er **meget langsomt** — det er grunden til, at data på DST er konverteret til parquet-format.
-Brug SAS-formatet kun til formateringstabeller og filer, der ikke findes som parquet.
-:::
+Indlæsning af store SAS-filer er **meget langsomt** — det er netop derfor data på DST er konverteret til parquet. Brug kun SAS til formateringstabeller og filer uden parquet-version.
 
----
-
-### Parquet-filer (`.parquet`)
-
-Parquetformatet er kolonne-orienteret og egnet til store datasæt.
-DST's registerdata er gemt som parquet og tilgås via `dstDataPrep::load_database()` — du behøver normalt ikke `read_parquet()` direkte.
-
-```r
-library(dstDataPrep)
-bef <- load_database("bef")   # åbner doven forbindelse til parquet-registret
-```
-
-Parquet forklares i detaljer på siden [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
-
----
-
-### RDS-filer (`.rds`)
-
-RDS er R's eget filformat. Bruges til at gemme mellemresultater og analysedatasæt — hurtigere og mere kompakt end CSV, og bevarer alle R-egenskaber (datatyper, faktorniveauer, kolonnenavne).
-
-```r
-# Gem et R-objekt til disk:
-saveRDS(mit_datasaet, "datasets/full_cohort.rds")
-
-# Indlæs det igen:
-full_cohort <- readRDS("datasets/full_cohort.rds")
-```
-
-RDS er det format, der bruges til at sende data videre mellem scripts i en pipeline.
-
----
-
-### CSV-filer (`.csv`)
-
-Bruges til eksport af tabeller og resultater — fx til hjemsendelse fra DST.
+**CSV** — til eksport af færdige tabeller (fx ved hjemsendelse):
 
 ```r
 library(readr)
 write_csv(min_tabel, "output/tabel1.csv")
 ```
 
-::: {.callout-warning}
-Gem **aldrig** rå registerdata som CSV — kun aggregerede resultater.
-Se [Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd) for DST's regler om hvad der må eksporteres.
-:::
+Gem **aldrig** rå registerdata som CSV — kun aggregerede resultater. Se [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd) for reglerne.
+
+</details>
 
 ---
 
-## Hvad er disse formater — kort fortalt
+## Doven vs. fuld indlæsning — hvad er forskellen i praksis?
 
-**SAS** er originalt lavet til statistikprogrammet SAS og er det format, som mange nationale registre leveres i. R kan læse det med `haven`.
+Læg mærke til den sidste kolonne i oversigtstabellen. Den deler alt i to:
 
-**Parquet** er et moderne, kolonne-orienteret format der er meget hurtigere at arbejde med end SAS og CSV, fordi det kun læser de kolonner du beder om. Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
+**Fuld indlæsning** (`readRDS`, `read_sas`, `read_csv`, `read_xlsx`)
+Hele filen læses ind i RAM med det samme. Det er fint til *dine egne* datasæt og til formateringstabeller — de er små. Men det ville crashe din session, hvis du prøvede det på et helt register.
 
-**RDS** er R's eget binære format — tænk på det som en zip-fil til R-objekter.
+**Doven indlæsning** (parquet via `open_dataset()` / `load_database()`)
+Filen åbnes som en *forbindelse*, ikke som data. Du kan filtrere og vælge kolonner, og **først når du kalder `collect()`** flyttes de udvalgte rækker ind i RAM. Det er sådan du arbejder med registre på millioner af rækker uden at løbe tør for hukommelse.
 
-**CSV** (Comma-Separated Values) er den mest universelle format — kan åbnes i Excel, Python, SAS og alt andet. Men det er langsomt og bevarer ikke datatyper.
+::: {.callout-important}
+**Tommelfingerregel:** Parquet-registre er store og indlæses dovent. Alt andet er små filer, du selv har lavet, og indlæses fuldt.
+:::
+
+Hvorfor det fungerer, og hvordan `collect()` virker, er emnet for næste fase.
+
+→ [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd)
