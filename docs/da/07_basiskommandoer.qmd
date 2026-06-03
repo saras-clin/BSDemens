@@ -1,11 +1,13 @@
 ---
-title: "Basiskommandoer"
-subtitle: "De vigtigste kommandoer til at udforske og forstå dine data"
+title: "Inspicér og forstå din data"
+subtitle: "De vigtigste kommandoer til at se hvad du faktisk har"
 date: last-modified
 ---
 
-Inden du begynder at filtrere og analysere, skal du forstå hvad du har.
-Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine data.
+I Fase 6 lavede du dit første udtræk. Nu har du data — og inden du analyserer det, skal du forstå hvad du har.
+Det er først her, disse kommandoer giver mening: de er værktøjer til at *kigge på* et datasæt, så de er meningsløse uden data at kigge på.
+
+Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine udtræk.
 
 `$`-tegnet bruges overalt til at tilgå én kolonne i en tabel: `data$koen` betyder "kolonnen `koen` i tabellen `data`".
 
@@ -118,6 +120,15 @@ De fleste beregningsfunktioner returnerer `NA` hvis der er én `NA` i data — m
 `is.na(x)` returnerer `TRUE` for NA-værdier og `FALSE` for alt andet.
 :::
 
+**Hvornår er NA et problem?**
+Det afhænger af *hvilken* kolonne der mangler:
+
+- **NA i en nøglevariabel** (index-dato, pnr, udfald) er alvorligt — disse personer kan ikke indgå korrekt i analysen, og du skal beslutte om de skal ekskluderes.
+- **NA i en kovariat** (fx indkomst) kan ofte håndteres — fx med en separat "ukendt"-kategori eller imputation.
+- **NA fra et join** betyder ofte, at en person ikke fandtes i det højre datasæt — fx ingen receptregistrering. Her er `NA` reelt et "nej/ingen", ikke en fejl.
+
+Tjek altid `colSums(is.na(data))` lige efter et udtræk eller et join, så du opdager uventede huller, før de forplanter sig stille gennem analysen.
+
 ```r
 summary(data)              # min, max, median, gennemsnit og kvartiler for alle kolonner
 summary(data$index_date)   # opsummering af én kolonne
@@ -136,9 +147,28 @@ IQR(data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
 
 ---
 
-## Hurtige visualiseringer
+## Tjek manglende værdier
 
-For at danne sig et hurtigt overblik — ikke til publikation.
+```r
+sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
+colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
+```
+
+---
+
+<details>
+<summary>Mere udforskning: tæl, sortér og hurtige plots</summary>
+
+**Tæl og sortér** (dplyr):
+
+```r
+data |> count(koen)               # antal rækker per kategori
+data |> count(koen, alder_gruppe) # per kombination af to variable
+data |> arrange(dato)             # sortér stigende efter dato
+data |> arrange(desc(dato))       # sortér faldende
+```
+
+**Hurtige visualiseringer** — til at danne sig et overblik, ikke til publikation:
 
 ```r
 # Kontinuerte variable:
@@ -150,31 +180,13 @@ boxplot(alder ~ koen, data = data)       # boksplot opdelt på køn
 barplot(table(data$cohort))              # søjlediagram
 ```
 
----
-
-## Tjek manglende værdier
-
-```r
-sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
-colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
-```
-
----
-
-## Tæl og sorter
-
-```r
-data |> count(koen)              # antal rækker per kategori (dplyr)
-data |> count(koen, alder_gruppe) # per kombination af to variable
-data |> arrange(dato)             # sorter stigende efter dato
-data |> arrange(desc(dato))       # sorter faldende
-```
+</details>
 
 ---
 
 ## Næste skridt
 
-Disse kommandoer er til at **udforske** data. Næste trin er at **bearbejde** det:
+Du kan nu inspicere et datasæt. Næste skridt er at vide, *hvilke* registre der indeholder hvad:
 
-- [Funktioner — oversigt](13a_guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
-- [Datastrukturer](10a_datastrukturer.qmd) — hvad er langt og bredt format?
+- [Fase 8 — Kend dine registre](08_register_reference.qmd) — beslutningstabel og bekræftede kolonnenavne
+- [Fase 13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
