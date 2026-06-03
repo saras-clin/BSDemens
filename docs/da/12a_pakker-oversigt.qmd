@@ -159,6 +159,20 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ---
 
+### `tame` — klustrer medicinmønstre fra LMDB
+*(CRAN; tidlig fase v0.0.1 — [github.com/Laksafoss/tame](https://github.com/Laksafoss/tame))*
+
+Bruger agglomerativ hierarkisk clustering til at identificere mønstre i longitudinelle receptdata baseret på ATC-koder, timing og dosisforløb. Relevant hvis du vil karakterisere komplekse polyfarmacimønstre frem for blot at tælle specifikke ATC-koder.
+
+```r
+library(tame)
+# Kræver et datasæt med pnr, atc, eksd (ekspeditionsdato), og evt. dosis
+# Returnerer: klustermedlemskab per person
+medic(data = lmdb_kohort, id = "pnr", atc = "atc", timing = "eksd")
+```
+
+---
+
 ## 3. Analyse: regression, overlevelse og competing risks
 
 Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST**.
@@ -176,6 +190,14 @@ Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående
 :::
 
 Alle pakker er dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam) og [bozenne (Brice Ozenne, KU)](https://github.com/bozenne/BuyseTest).
+
+### Visualisering og tabeller
+
+**[`plotsurv`](https://github.com/zheer-kejlberg/plotsurv)** *(kun GitHub; tidlig fase)* — publikationsklar Kaplan-Meier og Aalen-Johansen competing-risks-plots med at-risk-tabel, KI-bånd og censureringsprikker. Enkelt API: `plotsurv(survfit_objekt)`. Kræver import til DST.
+
+**[`Z.gtsummary.addons`](https://github.com/zheer-kejlberg/Z.gtsummary.addons)** *(kun GitHub; tidlig fase)* — udvider `gtsummary` med to nyttige funktioner:
+- `add_SMD()` — standardiserede middeldifferencer (SMD) til Table 1 i matchede studier
+- `round_5_gtsummary()` — **afrunder tælleværdier til nærmeste 5**, som DST's outputkontrol kræver. Meget DST-specifik nytteværdi. Kræver import til DST.
 
 ---
 
