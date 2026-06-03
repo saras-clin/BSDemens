@@ -145,6 +145,20 @@ charlson <- charlson_score(data = lpr2_lookback, id = "pnr", icd_codes = "c_diag
 
 ---
 
+### `dataReporter` — automatisk datakvalitetsrapport
+*(CRAN; bekræftet på DST — [github.com/ekstroem/dataReporter](https://github.com/ekstroem/dataReporter))*
+
+Genererer automatisk en HTML/PDF-rapport over alle kolonner i et datasæt: fordeling, manglende værdier, outliers og typetjek. Nyttigt til at validere et nyt registerudtræk, inden du begynder analysen. Publiceret i Journal of Statistical Software.
+
+```r
+library(dataReporter)
+makeDataReport(mit_udtraek)   # åbner rapport i browser
+```
+
+Se også [Fase 7 — Inspicér din data](07_inspicer-data.qmd) for de manuelle inspektionskommandoer.
+
+---
+
 ### `fakeregs` — syntetiske danske registerdata
 *(kun GitHub — kun lokalt — [github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs))*
 
@@ -163,7 +177,7 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ## 3. Analyse: regression, overlevelse og competing risks
 
-Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST**.
+Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **bekræftet på DST** (juni 2026).
 
 ::: {.wide-first-col}
 
