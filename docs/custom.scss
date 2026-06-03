@@ -13,6 +13,11 @@ $grid-sidebar-width: 340px;
   --bs-table-bg-type: rgba(0, 0, 0, 0.025);
 }
 
+/* Tabeller hvor første kolonne (fx sidenavne) ikke skal ombrydes */
+.nowrap-first-col td:first-child {
+  white-space: nowrap;
+}
+
 /* Lidt mindre kode-skrifttype */
 pre.sourceCode, code {
   font-size: 0.875em;
