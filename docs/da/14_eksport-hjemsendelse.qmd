@@ -4,6 +4,8 @@ subtitle: "GDPR, outputkontrol og hvad der må forlade DST"
 date: last-modified
 ---
 
+Du har bygget dit datasæt og kørt din analyse (Fase 0–13). Tilbage er det sidste skridt: at få resultaterne sikkert ud af DST.
+
 Data fra Danmarks Statistik er mikrodata og underlagt GDPR og særlige regler for forskningsdata.
 Du kan **ikke** kopiere rå data ud — alt skal igennem en outputkontrolproces.
 
@@ -75,6 +77,11 @@ sink()
 
 Som tommelfingerregel: tænk om en person i din population ville kunne genkende sig selv i resultatet.
 
+::: {.callout-important}
+**`n < 5` er kun en tommelfingerregel — DST har det sidste ord.**
+De autoritative regler fastsættes af DST's Forskningsservice og kan omfatte mere end blot celletællinger (fx dominans-regler, afrunding og krav til kontinuerte mål). Er du i tvivl, så spørg Forskningsservice **inden** du indsender — det er hurtigere end at få et afslag.
+:::
+
 <details>
 <summary>Praktisk tjekliste inden outputkontrol</summary>
 
@@ -100,3 +107,12 @@ Som tommelfingerregel: tænk om en person i din population ville kunne genkende 
 ## Mere information
 
 Se DST's egne retningslinjer for outputkontrol på [dst.dk](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data).
+
+---
+
+## Du er igennem hele forløbet
+
+Når dine resultater er hjemsendt, har du været hele vejen — fra forskningsspørgsmål og kohorte til analyseklart datasæt og publikationsklare resultater.
+
+- Skal du slå en funktion, et register eller en faldgrube op? → [Fase 13 — Reference](13_reference.qmd)
+- Arbejder du på DARTER / projekt 708421? → [DARTER — oversigt og pipeline](darter/00_index.qmd)
