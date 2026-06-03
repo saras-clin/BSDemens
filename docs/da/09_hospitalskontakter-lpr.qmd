@@ -1,15 +1,17 @@
 ---
 title: "Hospitalskontakter (LPR)"
-subtitle: "LPR2 og LPR3 kombineret — diagnoser, procedurer og ICD-koder"
+subtitle: "LPR2 og LPR3 kombineret — diagnoser og ICD-koder"
 date: last-modified
 ---
 
 Det Nationale Patientregister (LPR) er kilden til diagnoser og hospitalskontakter.
 Det dækker alle offentlige hospitalsindlæggelser og ambulante kontakter i Danmark.
 
+Du bruger det samme udtræksmønster som i [Fase 5](05_universelle-moenster.qmd) og [Fase 6](06_foerste-udtraek.qmd) — men LPR er mere komplekst end de fleste registre, fordi det skiftede format i 2019 og er splittet i somatiske og psykiatriske tabeller. Denne side viser, hvordan du håndterer det. Det er den vigtigste og mest komplekse del af guiden — tag den i ro.
+
 ::: {.callout-note}
 Eksemplerne bruger variabelnavne fra DARTER-projektet.
-Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
+Dine kolonner kan hedde noget andet — tjek med `names(din_data)` eller slå dem op i [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd).
 :::
 
 ---
@@ -305,8 +307,14 @@ saveRDS(alle_cvd, "datasets/extract_cvd.rds")                # gem — skift sti
 
 ---
 
+## Næste skridt
+
+Du har nu trukket diagnoser fra to LPR-generationer. Næste skridt er at forme og kombinere dine udtræk:
+
+→ [Fase 10 — Dataformater og manipulation](10a_datastrukturer.qmd)
+
 ## Se også
 
-- [Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
-- [Faldgruber](13c_dst_faldgruber.qmd) — kendte problemer med LPR på DST
-- [Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS
+- [Fase 13 — Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
+- [Fase 13 — Faldgruber](13c_dst_faldgruber.qmd) — kendte problemer med LPR på DST
+- [Fase 6 — Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS
