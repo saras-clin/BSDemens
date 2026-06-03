@@ -117,6 +117,11 @@ RStudio spørger ved lukning: *"Save workspace image?"* — **vælg altid Nej**.
 Indstil det permanent: **Tools → Global Options → General → "Save workspace to .RData" → Never**.
 :::
 
+::: {.callout-tip}
+**Få RStudio til at starte hurtigere på DST**
+DST's RStudio kan være langsom at åbne. Slå pakke-panelet fra: **Tools → Global Options → Packages → fjern fluebenet ved "Enable packages pane"**. Du bruger alligevel `library()` og `install.packages()` direkte i koden.
+:::
+
 ---
 
 ## DST-specifikke pakkeindstillinger

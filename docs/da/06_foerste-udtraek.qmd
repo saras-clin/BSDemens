@@ -169,6 +169,10 @@ head(recepter)                               # de første seks rækker
 
 Se [Det universelle mønster](05_universelle-moenster.qmd) for en detaljeret forklaring af doven evaluering.
 
+::: {.callout-tip}
+**Test på et lille udsnit først.** Inden du kører et tungt udtræk på hele kohorten, så afprøv koden på nogle få personer eller rækker — så fanger du fejl hurtigt uden at vente. Fx `filter(pnr %in% !!head(kohort_pnrs, 10))`, eller `collect() %>% head(100)` mens du bygger koden.
+:::
+
 ---
 
 ## Trin 3 — Byg analysevariable
@@ -259,6 +263,10 @@ write_parquet(df, file.path(parq_sti, "mit_register.parquet"))
 # 4. Verificér
 open_dataset(parq_sti) %>% glimpse()
 ```
+
+::: {.callout-tip}
+**Store SAS-filer:** `heaven::import_SAS()` (forudinstalleret på DST) er mere effektiv end `read_sas()` til store filer og kan begrænse hvad der læses — fx `keep = c("pnr","atc")`, `where = "..."` (filtrér rækker) eller `obs = 1000` (kun de første rækker, godt til test).
+:::
 
 Herefter kan du bruge registret dovent med `open_dataset()` ligesom alle andre:
 

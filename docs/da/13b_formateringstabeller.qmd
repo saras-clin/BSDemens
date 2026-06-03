@@ -35,18 +35,26 @@ E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/
 ```
 
 Stjernen (`*`) på Windows-skrivebordet inde på DST-serveren åbner en HTML-guide til at finde den rigtige tabel.
+Der ligger også PDF-vejledninger i SAS-formater her:
+
+```
+E:/Formater/SAS formater i Danmarks Statistik/Vejledning mv/
+```
+
+Undermapper er organiseret efter emne — bl.a.:
+```
+Geokoder/                ← kommuner, regioner
+Times_personstatistik/   ← beskæftigelse (socio13)
+Disced/                  ← uddannelse (hfaudd)
+Brancher/                ← brancher
+Sundhed/                 ← sundhed
+Uddannelser/             ← uddannelser
+... og flere
+```
 
 ::: {.callout-warning}
-**Ikke verificeret endnu.** Basestien ovenfor og de konkrete filnavne og kolonnenavne længere nede på siden (fx `c_kom_v4_t.sas7bdat`, `KOM_V4_T`) er **illustrative eksempler** — de er endnu ikke bekræftet mod DST-serveren. Brug stjerne-guiden på skrivebordet og `names()`/`head()` til at finde de faktiske navne, inden du stoler på dem.
+**Find selv de konkrete filnavne i mappen.** Basestien og undermappestrukturen ovenfor er bekræftet på DST. Men de **konkrete filnavne og kolonnenavne** længere nede på siden (fx `c_kom_v4_t.sas7bdat`, `KOM_V4_T`) er **illustrative eksempler** — navngivningen varierer, og du skal selv finde den rigtige fil i den relevante undermappe. Brug stjerne-guiden / PDF-vejledningen til at finde filen, og `names()`/`head()` til at se de faktiske kolonnenavne.
 :::
-
-Undermapper er organiseret efter emne:
-```
-Geokoder/          ← kommuner, regioner
-Times_personstatistik/   ← beskæftigelse (socio13)
-Disced/            ← uddannelse (hfaudd)
-... og mange andre
-```
 
 ---
 

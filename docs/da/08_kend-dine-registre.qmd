@@ -58,6 +58,13 @@ Selve mekanikken bag joins gennemgås i [Fase 10 — Joins og pivots](10_data-ma
 
 ---
 
+::: {.callout-note}
+**SDCA's egen registerdatabase**
+Steno Diabetes Center Aarhus har en database med variabellister, registerbeskrivelser og ansøgningsskabeloner til Sundhedsdatastyrelsen:
+[steno-aarhus.github.io/registers-project-database →](https://steno-aarhus.github.io/registers-project-database/)
+Den dækker *hvilke variable og registre der findes* (og ansøgning) — denne guide dækker *hvordan du koder udtrækket*.
+:::
+
 ## Næste skridt
 
 - **Skal du bruge de eksakte kolonnenavne, typer og kodeeksempler?** → [Fase 13 — Registerreference](13d_register_reference.qmd)

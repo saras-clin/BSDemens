@@ -318,3 +318,8 @@ Du har nu trukket diagnoser fra to LPR-generationer. Næste skridt er at forme o
 - [Fase 13 — Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
 - [Fase 13 — Faldgruber](13c_dst_faldgruber.qmd) — kendte problemer med LPR på DST
 - [Fase 6 — Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS
+
+### Eksternt om LPR3 og 2019-overgangen
+
+- [ctpteam/DST — "Guide to LPR3"](https://github.com/ctpteam/DST) — institutionel guide til LPR3-strukturen
+- [Aarhus-Psychiatry-Research/diagnostic-stability-lpr2-lpr3](https://github.com/Aarhus-Psychiatry-Research/diagnostic-stability-lpr2-lpr3) — peer-reviewed, gennemarbejdet eksempel på diagnostisk stabilitet hen over LPR2→LPR3-overgangen (metodisk inspiration, ikke kode til genbrug)
