@@ -120,10 +120,6 @@ lpr_flat <- flatten_date_intervals(
 
 **`charlson_score()` — dansk-kalibreret Charlson comorbiditetsscore** fra ICD-10 (inkl. D-præfiks). Se callout nedenfor for hvad den kræver.
 
-**Alternativ: [`comorbidity`](https://cran.r-project.org/package=comorbidity)** *(CRAN; sandsynligvis på DST)* — beregner Charlson og Elixhauser fra ICD-9/10 med Quan-vægte. Bredere dækning, men kræver at **D-præfikset strippes** inden: `mutate(kode = substr(c_diag, 2, nchar(c_diag)))`.
-
-**Alternativ: [`coder`](https://cran.r-project.org/package=coder)** *(CRAN, rOpenSci)* — regex-baseret klassifikation der understøtter ICD-8/9/10 + ATC på tværs af tidsvinduet. Nyttigt hvis du arbejder med perioder der spænder ICD-8 (LPR før ~1994). Uvist om det er i DST's snapshot.
-
 ```r
 charlson <- charlson_score(data = lpr_diag_data, id = "pnr", icd_codes = "c_diag")
 # Returnerer: én række per person med Charlson-score.
