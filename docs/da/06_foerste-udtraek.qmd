@@ -204,24 +204,29 @@ og hjemsends separat via outputkontrol. De må ikke pushes til GitHub.
 
 ---
 
-## Tjekliste: hvad du altid bør gøre efter et udtræk
+## Inspicér resultatet
+
+Lige efter et udtræk bør du tjekke, at du fik det, du forventede:
 
 ```r
+head(recepter)                      # de første seks rækker — ser det rigtigt ud?
 nrow(recepter)                      # antal rækker — som forventet?
 length(unique(recepter$pnr))        # hvor mange unikke personer?
 colSums(is.na(recepter))            # manglende værdier per kolonne
-table(recepter$aar)                 # fordeling over år — huller?
 class(recepter$eksd)                # er datokolonnen Date? (ikke character)
 ```
 
+Dette er en hurtig fornuftskontrol. Den fulde værktøjskasse til at udforske data — `summary()`, `table()`, krydstabeller og NA-håndtering — gennemgås i [Fase 7 — Inspicér din data](07_basiskommandoer.qmd).
+
 ---
 
-## SAS → Parquet: konvertér projektspecifikke filer én gang
+<details>
+<summary>Avanceret: konvertér projektspecifikke SAS-filer til Parquet én gang</summary>
 
 Mange projekter modtager supplerende SAS-filer (`.sas7bdat`) fra registerholdere —
 fx et kvalitetsregister der ikke allerede ligger i `cleaned-data/` som parquet.
 Det betaler sig at konvertere dem til Parquet én gang og derefter bruge dem
-som alle andre registre.
+som alle andre registre. (Du behøver ikke dette til dit første udtræk.)
 
 **Hvorfor Parquet er det værd:**
 
@@ -261,17 +266,19 @@ Herefter kan du bruge registret dovent med `open_dataset()` ligesom alle andre:
 mit_reg <- open_dataset(parq_sti) %>% rename_with(tolower)
 ```
 
+**Alternativ:** [`fastreg`](https://github.com/dp-next/fastreg) (dp-next, MIT-licens) giver en mere struktureret pipeline til at konvertere hele DST-workspaces fra SAS til Parquet med `convert()` og en targets-baseret skabelon. Relevant hvis du vil bygge et komplet parquet-workspace fra bunden.
+
+</details>
+
 ---
 
 ## Næste skridt
 
-- [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
-- [Joins og pivots](10b_joins-og-pivots.qmd) — kobl to udtræk sammen
-- [Funktioner — oversigt](13a_guide_til_funktioner.qmd) — alle funktioner brugt på denne side
+Du har nu lavet et komplet udtræk og gemt det. Næste skridt er at lære at udforske data grundigt:
 
-::: {.callout-note}
-**Alternativ til manuel SAS → Parquet:** [`fastreg`](https://github.com/dp-next/fastreg) (dp-next, MIT-licens) giver en mere struktureret pipeline til at konvertere hele DST-workspaces fra SAS til Parquet med `convert()` og en targets-baseret skabelon. Relevant hvis du vil bygge et komplet parquet-workspace fra bunden.
-:::
+- [Fase 7 — Inspicér din data](07_basiskommandoer.qmd) — den fulde værktøjskasse til at forstå hvad du har
+- [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
+- [Fase 10 — Joins og pivots](10b_joins-og-pivots.qmd) — kobl to udtræk sammen
 
 ---
 
