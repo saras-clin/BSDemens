@@ -1,0 +1,247 @@
+---
+title: "Dataformater og manipulation"
+subtitle: "Langt vs. bredt format, pivots og joins"
+date: last-modified
+---
+
+Du har nu trukket data ud af registrene (Fase 6 og 9). De kommer næsten altid i **langt format** — og inden du analyserer, skal du ofte forme dem om og koble flere udtræk sammen.
+Det er det, denne fase handler om. Nu hvor du har data at arbejde med, giver disse begreber mening.
+
+::: {.callout-note}
+Eksemplerne bruger variabelnavne fra DARTER-projektet.
+Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
+:::
+
+---
+
+## Bredt vs. langt format
+
+Forestil dig tre personer med målinger af vægt ved to tidspunkter.
+
+**Bredt (wide) format** — én række per person, én kolonne per tidspunkt:
+
+| pnr | vaegt_baseline | vaegt_6mdr |
+|---|---|---|
+| 001 | 120 | 95 |
+| 002 | 105 | 88 |
+| 003 | 98 | 80 |
+
+**Langt (long) format** — én række per observation, én kolonne til tidspunkt og én til værdi:
+
+| pnr | tidspunkt | vaegt |
+|---|---|---|
+| 001 | baseline | 120 |
+| 001 | 6mdr | 95 |
+| 002 | baseline | 105 |
+| 002 | 6mdr | 88 |
+| 003 | baseline | 98 |
+| 003 | 6mdr | 80 |
+
+Begge formater indeholder **de samme oplysninger** — de er bare arrangeret forskelligt.
+
+---
+
+## Hvor er der hvilke formater?
+
+| Register | Format | Hvorfor |
+|---|---|---|
+| BEF | Langt | Én række per person **per år** — samme person optræder 30 gange |
+| LPR (lpr_adm + lpr_diag) | Langt | Én række per **diagnose per kontakt** — en indlæggelse kan have 10 diagnoser |
+| LMDB | Langt | Én række per **ekspederet recept** — samme person kan have hundredvis |
+| DODSAARS | Bredt | Én række per **afdød person** — allerede én-per-person |
+| Dit analysedatasæt | Bredt | Én række per person — én kolonne per kovariat |
+
+**Registre er oftest i langt format. Dit analysedatasæt skal typisk være i bredt format.**
+
+---
+
+## Pivots — skift mellem langt og bredt
+
+### Langt → bredt med `pivot_wider()`
+
+```r
+library(tidyr)
+
+df_bredt <- df_langt |>
+  pivot_wider(
+    names_from  = "tidspunkt",  # hvilken kolonne skal blive til kolonnenavne?
+    values_from = "vaegt"       # hvilken kolonne indeholder værdierne?
+  )
+```
+
+<details>
+<summary>Praktisk eksempel: HbA1c-målinger fra langt til bredt</summary>
+
+Forestil dig tre diabetespatienter med HbA1c-målinger (et blodprøvemål for langtidsblodsukker) ved to tidspunkter.
+I registret gemmes de i langt format — én måling per række.
+Til analysen vil vi have bredt format — én række per patient.
+
+```r
+library(dplyr)
+library(tidyr)
+
+# Langt format — som det ser ud i registret:
+hba1c_langt <- data.frame(
+  pnr       = c("001", "001", "002", "002", "003", "003"),
+  tidspunkt = c("baseline", "6mdr", "baseline", "6mdr", "baseline", "6mdr"),
+  hba1c     = c(72, 58, 65, 54, 80, 61)   # mmol/mol
+)
+
+# Konverter til bredt — én række per patient, én kolonne per tidspunkt:
+hba1c_bredt <- hba1c_langt |>
+  pivot_wider(
+    names_from   = tidspunkt,
+    values_from  = hba1c,
+    names_prefix = "hba1c_"   # giver kolonner: hba1c_baseline, hba1c_6mdr
+  )
+
+# Resultat:
+#   pnr   hba1c_baseline  hba1c_6mdr
+#   001             72          58
+#   002             65          54
+#   003             80          61
+```
+
+</details>
+
+### Bredt → langt med `pivot_longer()`
+
+```r
+df_langt <- df_bredt |>
+  pivot_longer(
+    cols      = c(vaegt_baseline, vaegt_6mdr),  # kolonner der skal "foldes ind"
+    names_to  = "tidspunkt",                    # navn på den nye tidspunkt-kolonne
+    values_to = "vaegt"                         # navn på den nye værdi-kolonne
+  )
+```
+
+---
+
+## Én række per person — `group_by()` + `slice()`
+
+En meget hyppig opgave: du har et langt register og vil have én repræsentativ række per person.
+
+```r
+# BEF: behold kun den nyeste post per person
+bef_en_per_person <- bef |>
+  group_by(pnr) |>         # gruppér på personnummer
+  arrange(desc(aar)) |>    # desc() = faldende rækkefølge = nyeste år først
+                            # uden desc() ville det være stigende = ældste år først
+  slice(1) |>              # tag første række per gruppe — med desc() er det det nyeste år
+  ungroup()                # frigiv gruppering
+```
+
+```r
+# LPR: find første demensdiagnose per person
+foerste_demens <- lpr_dx |>
+  group_by(pnr) |>
+  arrange(date_contact) |>    # ældste dato først
+  slice(1) |>                 # første diagnose per person
+  ungroup()
+```
+
+---
+
+## Joins — kobl to tabeller sammen
+
+I registerbaseret forskning arbejder du næsten altid med data fra **to eller flere tabeller**, der skal kobles sammen.
+Alle joins i `dplyr` tager to tabeller og én nøgle-kolonne, de deler (fx `pnr`).
+
+### De joins du vil bruge
+
+```r
+library(dplyr)
+
+# left_join: behold ALLE rækker fra x, tilføj kolonner fra y
+# Personer i x uden match i y får NA.
+resultat <- kohort %>%
+  left_join(udfald, by = "pnr")   # alle kohort-medlemmer bevares; udfald = NA hvis ingen hændelse
+
+# inner_join: behold kun rækker med match i BEGGE tabeller
+resultat <- lpr_adm %>%
+  inner_join(lpr_diag, by = "recnum")   # kun kontakter med mindst én diagnose
+
+# right_join: behold alle rækker fra y (sjældent brugt)
+# full_join: behold alle rækker fra begge (sjældent brugt)
+```
+
+### Filtreringsjoins — ændr ikke kolonner, kun rækker
+
+```r
+# semi_join: behold rækker i x SOM HAR match i y
+bef_i_kohort <- bef %>%
+  semi_join(kohort, by = "pnr")   # kun BEF-rækker for kohort-medlemmer
+
+# anti_join: behold rækker i x SOM IKKE HAR match i y
+bef_ikke_i_kohort <- bef %>%
+  anti_join(kohort, by = "pnr")   # kun BEF-rækker for ikke-kohort-medlemmer
+```
+
+<details>
+<summary>Oversigt: alle joins i én tabel</summary>
+
+| Funktion | Beholder rækker fra | Brugt til |
+|---|---|---|
+| `left_join(x, y)` | Alle fra x | Tilføj udfald/kovariater til kohorte — NA hvis ingen match |
+| `inner_join(x, y)` | Kun match i begge | Join kontakter og diagnoser — vil kun have rækker med begge |
+| `right_join(x, y)` | Alle fra y | Sjældent |
+| `full_join(x, y)` | Alle fra begge | Sjældent |
+| `semi_join(x, y)` | Kun x med match i y | Filtrer et register til kun kohortemedlemmer |
+| `anti_join(x, y)` | Kun x uden match i y | Find alle i BEF der IKKE er i kohorten |
+
+</details>
+
+### Join med flere nøgler
+
+Når to tabeller deler mere end én kolonne som nøgle:
+
+```r
+# Join på pnr OG år
+bef_akm <- bef %>%
+  left_join(akm, by = c("pnr", "aar"))
+```
+
+---
+
+## Bind rækker fra to tabeller — `bind_rows()`
+
+Bruges til at kombinere fx LPR2 og LPR3 til én samlet diagnosetabel:
+
+```r
+alle_dx <- bind_rows(lpr2_dx, lpr3_dx)   # kræver at kolonnerne hedder det samme
+```
+
+Kolonner der mangler i den ene tabel fyldes automatisk med `NA`.
+
+---
+
+## Praktisk eksempel: kohorte + dødsdato
+
+```r
+# Kohort-data (én række per person):
+kohort <- readRDS("datasets/full_cohort.rds")
+
+# Dødsdatoer fra DODSAARS:
+dodsaars <- load_database("dodsaars") %>%
+  rename_with(tolower) %>%
+  filter(pnr %in% !!kohort$pnr) %>%
+  select(pnr, death_date = d_dodsdto) %>%
+  collect()
+
+# Join: alle kohort-medlemmer bevares; de levende får death_date = NA
+kohort_med_dod <- kohort %>%
+  left_join(dodsaars, by = "pnr")
+```
+
+---
+
+## Næste skridt
+
+Du kan nu forme og kombinere dine udtræk. Næste skridt er de socioøkonomiske variable:
+
+→ [Fase 11 — Socioøkonomiske variable](11a_socioekonomiske-variable.qmd)
+
+## Se også
+
+- [Fase 13 — Funktioner: oversigt](13a_guide_til_funktioner.qmd) — alle funktioner du bruger til at transformere data
+- [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — praktisk eksempel på langt registerdata og inner_join

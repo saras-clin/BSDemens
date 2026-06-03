@@ -65,8 +65,7 @@ website:
 
         - section: "Fase 10 — Dataformater og manipulation"
           contents:
-            - da/10a_datastrukturer.qmd
-            - da/10b_joins-og-pivots.qmd
+            - da/10_data-manipulation.qmd
 
         - section: "Fase 11 — Socioøkonomiske variable"
           contents:

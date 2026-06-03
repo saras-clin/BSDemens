@@ -311,7 +311,7 @@ saveRDS(alle_cvd, "datasets/extract_cvd.rds")                # gem — skift sti
 
 Du har nu trukket diagnoser fra to LPR-generationer. Næste skridt er at forme og kombinere dine udtræk:
 
-→ [Fase 10 — Dataformater og manipulation](10a_datastrukturer.qmd)
+→ [Fase 10 — Dataformater og manipulation](10_data-manipulation.qmd)
 
 ## Se også
 

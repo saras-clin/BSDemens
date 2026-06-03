@@ -3,6 +3,9 @@ $font-size-base: 0.95rem;
 $link-color: #1558b0;
 $link-hover-color: #0d3d7a;
 
+// Bredere venstre sidebar så fase-overskrifterne kan stå på én linje (standard 250px)
+$grid-sidebar-width: 340px;
+
 /*-- scss:rules --*/
 
 /* Stribede tabeller */

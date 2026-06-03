@@ -54,7 +54,7 @@ LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
 `lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_forloeb` — **`dw_ek_kontakt` er NA for alle rækker på DST og kan ikke bruges som join-nøgle**.
 :::
 
-Selve mekanikken bag joins gennemgås i [Fase 10 — Joins og pivots](10b_joins-og-pivots.qmd).
+Selve mekanikken bag joins gennemgås i [Fase 10 — Joins og pivots](10_data-manipulation.qmd).
 
 ---
 
