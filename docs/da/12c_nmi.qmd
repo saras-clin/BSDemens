@@ -34,8 +34,16 @@ NMI er valideret til at forudsige 5-årig mortalitet i nordiske populationer og 
 ## Algoritme under udvikling
 
 ::: {.callout-warning}
-**En implementering af NMI-algoritmen til dette projekt er under udvikling og kommer snart.**
+**En R-implementering af NMI-algoritmen til dette projekt er under udvikling og kommer snart.**
 Siden opdateres med kodeeksempler, når algoritmen er klar.
+:::
+
+::: {.callout-note}
+**Eksisterende implementering: Stata .do-fil**
+SDU's Pharmacoepidemiology Unit har publiceret en Stata-implementering af NMI:
+[pharmacoepi.sdu.dk/nmi/](https://pharmacoepi.sdu.dk/nmi/)
+
+Der kendes ikke til en officiel R-pakke. Overvej at kontakte SDU direkte for at høre, om de har R-kode under udvikling eller er interesserede i at samarbejde om en R-version.
 :::
 
 NMI kræver:
