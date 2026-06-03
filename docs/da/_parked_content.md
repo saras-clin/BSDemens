@@ -48,6 +48,61 @@ der nu er erstattet af sidebar-navigationens fase-struktur.
 
 ---
 
+## Fra 02a_r-intro.qmd: "Opret dit R-projekt" (DST-specifik — flyttes til Fase 3)
+
+Et R-projekt er en mappe på computeren, der samler alle dine scripts, outputfiler og indstillinger.
+**Hvert studie bør have sit eget projekt.**
+
+**Sådan gør du:**
+
+1. Åbn RStudio
+2. **File → New Project → New Directory → New Project**
+3. Giv projektet et navn og vælg en placering — på DST typisk under `E:/workdata/[projektnummer]/workspaces/[ditNavn]/`
+4. Klik **Create Project**
+
+Anbefalet mappestruktur:
+```
+mit-projekt/
+  R/              ← alle dine scripts
+  datasets/       ← mellemregninger og analysedatasæt (.rds filer)
+  output/         ← tabeller og figurer klar til hjemsendelse
+```
+
+---
+
+## Fra 02a_r-intro.qmd: Keyboard genveje-tabel (reference — evt. til Fase 13)
+
+| Genvej (Windows/Mac i Remote Desktop) | Hvad den gør |
+|---|---|
+| **Ctrl+Enter** | Kør markeret linje/kode |
+| **Ctrl+S** | Gem filen |
+| **Alt + –** | Skriv tildelingsoperatoren `<-` (Mac: Option + –) |
+| **Ctrl+Shift+M** | Skriv pipe-tegnet `|>` |
+| **Ctrl+Shift+R** | Indsæt script-sektion |
+| **Ctrl+Shift+A** | Formater/indenter kode automatisk |
+| **Ctrl+Z / Ctrl+Shift+Z** | Fortryd / Gentag |
+| **Alt+Shift+K** | Vis alle genveje |
+
+---
+
+## Fra 02a_r-intro.qmd: "Gem ikke workspace" tip
+
+RStudio spørger ved lukning: *"Save workspace image?"* — **vælg altid Nej**.
+Indstil det permanent under **Tools → Global Options → General → "Save workspace to .RData" → Never**.
+
+---
+
+## Fra 02b_ressourcer-og-hjaelp.qmd: DST-dokumentation (flyttes til Fase 3)
+
+**TIMES — variabelbeskrivelser**
+Slå op hvad en variabel betyder:
+[dst.dk/da/Statistik/dokumentation/Times](https://www.dst.dk/da/Statistik/dokumentation/Times)
+
+**Stjernen på skrivebordet**
+Inde på DST-serveren: den stjerne-genvej på Windows-skrivebordet åbner DST's formateringstabel-guide.
+
+---
+
 ## "Hvad er SDS og DST?" (fra 01_studieforberedelse.qmd, afsnit 3)
 
 Som forsker arbejder du på **Danmarks Statistiks (DST) servere**.

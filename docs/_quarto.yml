@@ -33,8 +33,7 @@ website:
 
         - section: "Fase 2 — R: det allermest nødvendige"
           contents:
-            - da/02a_r-intro.qmd
-            - da/02b_ressourcer-og-hjaelp.qmd
+            - da/02_r-intro.qmd
 
         - section: "Fase 3 — Log ind på DST"
           contents:

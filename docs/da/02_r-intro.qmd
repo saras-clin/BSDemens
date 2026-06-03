@@ -1,0 +1,152 @@
+---
+title: "R: det allermest nødvendige"
+subtitle: "Hvad du skal kende, inden du logger på DST"
+date: last-modified
+---
+
+Du behøver ikke at lære R fra bunden.
+Denne fase giver dig det minimum, du skal have, for ikke at føle dig fortabt, når du ser din første linje kode i Fase 6.
+Datastrukturer og basiskommandoer til udforskende analyse kommer i Fase 7 og 10 — de giver ingen mening, før du har data at kigge på.
+
+---
+
+## Download R og RStudio
+
+R og RStudio er allerede installeret på DST-serveren — du behøver ikke installere dem nu.
+Men hvis du vil øve dig lokalt, inden du logger ind for første gang:
+
+- **R:** [cran.r-project.org](https://cran.r-project.org/) — download den nyeste version til dit styresystem
+- **RStudio:** [posit.co/download/rstudio-desktop](https://posit.co/download/rstudio-desktop/) — gratis desktop-version
+
+### Læringsressourcer
+
+| Ressource | Hvad det er |
+|---|---|
+| [DDEA Introductory Course](https://r-cubed-intro.rostools.org/) | Begynderkursus i R fra Danish Diabetes and Endocrine Academy — holdes én gang om året, men materialet er frit tilgængeligt |
+| [R for Data Science](https://r4ds.hadley.nz/) | Gratis e-bog — det bredest brugte introduktionsværk til moderne R |
+| [Zheers R Coding Café](https://r-coding-cafe.zheer.dk/) | Noter og eksempler specifikt til registerdata — lokalt lavet, meget relevant |
+| [The Epidemiologist R Handbook](https://www.epirhandbook.com/en/) | Praktisk opslagsværk med sundhedsvidenskabeligt fokus |
+
+---
+
+## RStudio første gang
+
+RStudio er opdelt i fire paneler:
+
+| Panel | Placering | Hvad det er |
+|---|---|---|
+| **Script-editor** | øverst til venstre | Her skriver du din kode og gemmer den |
+| **Konsol** | nederst til venstre | Her kører koden og her vises output og fejlmeddelelser |
+| **Environment** | øverst til højre | Viser alle objekter der er i din R-session |
+| **Files / Plots / Help** | nederst til højre | Fil-browser, grafer, hjælpedokumentation |
+
+![RStudio's fire paneler](images/RStudio_IDE_screenshot.png){fig-alt="RStudio-interface med fire paneler"}
+
+*Kilde: [Wikipedia / RStudio](https://en.wikipedia.org/wiki/RStudio), CC BY-SA 4.0*
+
+**Kør kode:** placer cursoren på en linje og tryk **Ctrl+Enter**.
+
+---
+
+## Åbn et script, skriv én linje, kør den
+
+**File → New File → R Script**
+
+Skriv disse tre linjer og kør dem én ad gangen med Ctrl+Enter:
+
+```r
+x <- 5        # tildel værdien 5 til variablen x
+x             # skriv variabelnavnet for at se indholdet
+x * 2         # brug variablen i en beregning
+```
+
+Du har nu skrevet, kørt og brugt din første linje R-kode.
+
+---
+
+## Hvad er en funktion? En pakke? Hvad gør library()?
+
+**En funktion** er en kommando der udfører en handling.
+`filter(data, alder > 50)` er en funktion. `sum(c(1, 2, 3))` er en funktion.
+Du genkender funktioner på parenteserne.
+
+**En pakke** er en samling af funktioner skrevet af andre, som du kan hente ind.
+R kommer med basisfunktioner, men det meste vi bruger er i pakker som `dplyr` og `arrow`.
+
+**`library()`** indlæser en pakke, så dens funktioner er tilgængelige i din session.
+
+```r
+install.packages("dplyr")   # installer pakken én gang (eller efter server-nulstilling)
+library(dplyr)               # indlæs pakken i starten af hver session
+```
+
+Du vil se `library(dplyr)` øverst i næsten alle scripts.
+
+---
+
+## De 6 vigtigste funktioner
+
+Du vil se disse i næsten alle udtræk. Du behøver ikke forstå dem i detaljer nu — bare genkende dem.
+
+| Funktion | Hvad den gør | Eksempel |
+|---|---|---|
+| `filter()` | Behold rækker der opfylder et krav | `filter(df, alder > 50)` |
+| `select()` | Vælg hvilke kolonner du vil beholde | `select(df, pnr, alder, koen)` |
+| `mutate()` | Opret en ny kolonne eller ændr en eksisterende | `mutate(df, alder_kat = alder > 65)` |
+| `\|>` | Send resultatet videre til næste funktion (pipen) | `df \|> filter(alder > 50) \|> select(pnr)` |
+| `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `left_join(kohort, bef, by = "pnr")` |
+| `collect()` | Hent parquet-data ind i R-hukommelsen | `register \|> filter(...) \|> collect()` |
+
+`collect()` forklares grundigt i [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd).
+
+---
+
+## Når du sidder fast
+
+Følg denne rækkefølge. AI er nederst af en god grund.
+
+| # | Hvor | Hvornår |
+|---|---|---|
+| 1 | **Kollega eller vejleder** | Spørg først — de kender jeres data og workflow |
+| 2 | **Google** | Kopier fejlmeddelelsen præcist — inklusiv `Error:` |
+| 3 | **Stack Overflow** | Verdens største samling af kode-spørgsmål og -svar |
+| 4 | **Zheers R Coding Café** | [r-coding-cafe.zheer.dk](https://r-coding-cafe.zheer.dk/) — registerdata-specifikt |
+| 5 | **Officiel pakkdokumentation** | Søg pakkens navn + "documentation" |
+| 6 | **AI (Claude, ChatGPT)** | God til kodeproblemer, men let at tro på forkerte svar — brug kun, når du forstår svaret |
+
+::: {.callout-warning}
+**Undgå AI som første stop, hvis du er ny.**
+AI kan generere plausibel-lydende kode, der ikke virker — eller virker, men giver forkerte resultater.
+Brug det som supplement til din egen forståelse, ikke som erstatning.
+:::
+
+<details>
+<summary>Sådan stiller du et godt hjælp-spørgsmål (minimalt reproducerbart eksempel)</summary>
+
+Et godt hjælp-spørgsmål er **minimalt** (mindste kode der viser fejlen), **komplet** og **reproducerbart**.
+
+**Dårligt:** "Min kode fejler, hvad er galt?" *(ingen kode, ingen fejlbesked)*
+
+**Godt:**
+> "Jeg får fejlen `Error: object 'pnr' not found` — hvad mangler?"
+>
+> ```r
+> library(dplyr)
+> df <- data.frame(PNR = 1:5, alder = 20:24)
+> df |> filter(pnr > 3)   # fejl her
+> ```
+>
+> Forventet: rækker hvor PNR > 3. Faktisk: fejl om at 'pnr' ikke findes.
+
+Fejlen: kolonnen hedder `PNR`, koden spørger efter `pnr`. R skelner mellem store og små bogstaver.
+
+</details>
+
+---
+
+## Næste skridt
+
+Du har nu de begreber du skal bruge for at forstå koden.
+Fase 3 er dit første login på DST-serveren.
+
+→ [Fase 3 — Log ind på DST](03_getting-started-dst.qmd)

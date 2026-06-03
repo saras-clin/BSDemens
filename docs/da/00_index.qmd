@@ -62,7 +62,7 @@ Guiden er struktureret efter disse trin. Følg faserne i rækkefølge, eller spr
 Følg faserne fra begyndelsen.
 
 → [Fase 1 — Planlæg dit studie](01_studieforberedelse.qmd)\
-→ [Fase 2 — R: det allermest nødvendige](02a_r-intro.qmd)\
+→ [Fase 2 — R: det allermest nødvendige](02_r-intro.qmd)\
 → [Fase 3 — Log ind på DST](03_getting-started-dst.qmd)
 :::
 

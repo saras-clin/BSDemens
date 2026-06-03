@@ -1,6 +1,6 @@
 ---
-title: "Kom i gang på DST"
-subtitle: "De første trin på Danmarks Statistiks forskningsserver"
+title: "Log ind på DST"
+subtitle: "Fra Remote Desktop-download til kørende RStudio"
 date: last-modified
 format:
   html:
@@ -8,70 +8,154 @@ format:
     toc-depth: 3
     toc-title: "På denne side"
     code-fold: false
-    theme: cosmo 
     highlight-style: github
 ---
 
-Denne side guider dig igennem de første ting, du skal have styr på, når du logger ind på DST-serveren for første gang.
+Denne side guider dig fra det allerførste login til du har RStudio kørende og er klar til at køre kode.
+
+---
+
+## Forbind til serveren
+
+DST's server tilgås via Microsoft Remote Desktop — et program der giver dig et Windows-skrivebord over internettet.
+
+### Trin 1 — Download Microsoft Remote Desktop (kun Mac)
+
+Åbn **App Store** på din Mac og søg efter **"Microsoft Remote Desktop"**.
+Download og installer gratis.
+
+Windows-brugere har Remote Desktop indbygget — søg efter "Remote Desktop Connection" i startmenuen.
+
+### Trin 2 — Opret forbindelse
+
+Åbn Microsoft Remote Desktop og opret en ny forbindelse.
+**Serveradressen får du af din vejleder eller institutionens IT-support** — adressen er projektspecifik.
+
+Du logger ind med dine DST-brugeroplysninger (brugernavn + adgangskode fra din adgangsansøgning).
+
+### Trin 3 — Valg-skrivebordet
+
+Første gang du forbinder, lander du på et **valg-skrivebord**.
+Her vælger du hvilket program du vil arbejde i. Klik på **R/RStudio**.
+
+Et nyt skrivebord åbner med RStudio klar til brug.
+
+### Trin 4 — Find din projektmappe
+
+Fra det nye skrivebord kan du åbne **Stifinder** (File Explorer) og navigere til din projektmappe.
 
 ::: {.callout-note}
-**Mac-brugere: sæt tastaturet til Unicode-tilstand ved hver forbindelse**
+**Mappestruktur på DST — placeholder**
 
-Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Microsoft Remote Desktop som standard, fordi Mac'ens Option-tast sender scancodes, som Windows fortolker forkert.
+Den præcise sti til din projektmappe varierer og skal bekræftes med din vejleder.
+Typisk format: `E:/workdata/[projektnummer]/workspaces/[ditNavn]/`
 
-**Løsning (gøres én gang pr. forbindelse):** Skift til Unicode-tilstand:
+*Opdatér dette afsnit efter din første DST-session med den bekræftede sti og undermappestruktur.*
+:::
 
-- **Via genvej inde i Remote Desktop-vinduet: ⌃⌘U (Ctrl + Cmd + U)** ← brug denne
-- Via menuen: **Connections → Keyboard Mode → Unicode** *(kan være blokeret af manglende administratorrettigheder)*
+### Trin 5 — Mac-tastaturfix (gøres ved hver forbindelse)
 
-I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter — RStudio kører på Windows-serveren).
+Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Remote Desktop som standard på Mac.
 
-| Tegn | Mac-genvej |
+**Løsning:** Skift til Unicode-tilstand med **⌃⌘U (Ctrl + Cmd + U)** inde i Remote Desktop-vinduet.
+
+| Tegn | Mac-genvej i Unicode-tilstand |
 |---|---|
 | Pipe `\|` | Option + i |
 | `[` | Option + 8 |
 | `]` | Option + 9 |
 | `{` | Option + Shift + 8 |
 | `}` | Option + Shift + 9 |
-:::
 
-::: {.callout-important}
-**Geninstaller `duckplyr` i starten af hver session**
+I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter).
 
-Den forudinstallerede version på DST er forældet og mangler funktioner.
-Kør dette **allerførst**, inden du indlæser andre pakker:
+### Trin 6 — Åbn RStudio og kør en testlinje
+
+Åbn RStudio fra skrivebordet og kør disse to linjer:
 
 ```r
-install.packages("duckplyr")   # skal køres inden library()
+getwd()                      # vis stien til din projektmappe
+packageVersion("duckplyr")   # tjek version — skal være 1.1 eller højere
 ```
 
-Installationen nulstilles ved logout. Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
-:::
+Kører begge linjer uden fejl, er du klar.
 
-Støder du på en funktion du ikke genkender?
-Slå den op i [Funktioner — oversigt](13a_guide_til_funktioner.qmd).
+<details>
+<summary>DARTER-specifikt setup (projekt 708421)</summary>
 
-::: {.callout-tip}
-**Arbejder du på DARTER / projekt 708421?**
-Der er ekstra setup-trin (dstDataPrep-pakken skal bygges) specifikke til projektet.
-[Gå til DARTER — oversigt og pipeline →](darter/00_index.qmd)
+Projekt 708421 bruger pakken `dstDataPrep`, som ikke er på CRAN og skal bygges manuelt.
+Den giver adgang til `load_database()` og alle DARTER-registerdata.
+
+Se den komplette vejledning: [DARTER — oversigt og pipeline →](darter/00_index.qmd)
+
+</details>
+
+---
+
+## Opret dit R-projekt
+
+Et R-projekt samler alle dine scripts, outputfiler og indstillinger i én mappe.
+**Hvert studie bør have sit eget projekt.**
+
+1. Åbn RStudio
+2. **File → New Project → New Directory → New Project**
+3. Giv projektet et navn og vælg placering — typisk under din workspace-mappe på DST
+4. Klik **Create Project**
+
+Anbefalet mappestruktur inden for projektet:
+
+```
+mit-projekt/
+  R/              ← alle dine scripts (.R-filer)
+  datasets/       ← mellemregninger og analysedatasæt (.rds-filer, gitignored)
+  output/         ← tabeller og figurer klar til hjemsendelse
+```
+
+::: {.callout-note}
+**Gem ikke workspace**
+RStudio spørger ved lukning: *"Save workspace image?"* — **vælg altid Nej**.
+Indstil det permanent: **Tools → Global Options → General → "Save workspace to .RData" → Never**.
 :::
 
 ---
 
-## 1. Dine første 10 minutter på DST
+## DST-specifikke pakkeindstillinger
 
-### Trin 1 — Geninstaller `duckplyr` i starten af hver session
+::: {.callout-important}
+**Geninstaller `duckplyr` i starten af hver session**
 
-Den version af `duckplyr`, der er forudinstalleret på DST, er forældet og mangler funktioner.
-Kør dette i starten af hver DST-session, inden du indlæser nogen biblioteker:
+DST har forudinstalleret et ældre snapshot af alle R-pakker. `duckplyr` er typisk forældet og mangler funktioner.
+Kør dette **allerførst**, inden du indlæser andre pakker:
 
 ```r
-install.packages("duckplyr")
+install.packages("duckplyr")   # nulstilles ved logout — kør ved hver session
 ```
 
-Tjek hvilken version du har: `packageVersion("duckplyr")`.
-Du skal have version 1.1 eller højere.
+Tjek version: `packageVersion("duckplyr")` — du skal have 1.1 eller højere.
+Mærkelige fejl fra dplyr-operationer? En forældet `duckplyr` er den hyppigste årsag.
+:::
+
+---
+
+## DST-dokumentation på serveren
+
+**TIMES — variabelbeskrivelser**
+Slå op hvad en variabel i et register betyder: søg på registernavnet på [dst.dk/da/Statistik/dokumentation/Times](https://www.dst.dk/da/Statistik/dokumentation/Times)
+
+**Stjernen på skrivebordet**
+Den stjerne-genvej på Windows-skrivebordet inde på DST-serveren åbner DST's formateringstabel-guide — bruges til at finde SAS-filer der oversætter koder til tekst (fx kommunenumre til kommunenavne).
+Mere: [Fase 13b — Formateringstabeller](13b_formateringstabeller.qmd)
+
+Støder du på en funktion du ikke genkender?
+Slå den op i [Fase 13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd).
+
+---
+
+## Første session — quick checklist
+
+### Trin 1 — Geninstaller `duckplyr`
+
+Se afsnittet ovenfor — det skal gøres inden du indlæser andre pakker.
 
 ### Trin 2 — Åbn dit projekt
 
