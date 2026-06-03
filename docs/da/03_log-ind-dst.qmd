@@ -211,7 +211,7 @@ Filerne er gitignored og ligger under `datasets/` i din workspace.
 
 ---
 
-## 3. Struktur/mønster, du vil bruge igen og igen
+## 3. Struktur og mønster, du vil bruge igen og igen
 
 Alle registerforespørgsler i dette projekt følger det samme femtrins-mønster.
 
