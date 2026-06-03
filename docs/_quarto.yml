@@ -77,8 +77,8 @@ website:
           href: da/14_eksport-hjemsendelse.qmd
 
         - section: "DARTER — Projekt 708421"
+          href: da/darter/00_index.qmd
           contents:
-            - da/darter/00_index.qmd
             - da/darter/01_registersti-datastores.qmd
             - da/darter/02_darter-faldgruber.qmd
 

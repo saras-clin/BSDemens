@@ -8,9 +8,17 @@ Denne sektion er **kun** for dem der arbejder på DARTER-projektet (projekt 7084
 Indholdet her bygger ovenpå den generelle DST-vejledning og tilføjer det projekt-specifikke.
 
 Ny på projektet? Start med den generelle vejledning og vend tilbage hertil:
-→ [Studieforberedelse](../01_studieforberedelse.qmd)
-→ [Kom i gang med R](../02_r-intro.qmd)
-→ [Log ind på DST](../03_log-ind-dst.qmd)
+→ [Fase 1 — Planlæg dit studie](../01_studieforberedelse.qmd)
+→ [Fase 2 — R: det allermest nødvendige](../02_r-intro.qmd)
+→ [Fase 3 — Log ind på DST](../03_log-ind-dst.qmd)
+
+### I denne sektion
+
+| Side | Indhold |
+|---|---|
+| Denne side | Setup (`dstDataPrep` + `duckplyr`) og en genanvendelig LPR-udtræksfunktion |
+| [Registersti og datastores](01_registersti-datastores.qmd) | Bekræftede stier og adgangsmetoder til alle registre på 708421 |
+| [DARTER-specifikke faldgruber](02_darter-faldgruber.qmd) | Quirks der er specifikke for dette projekt |
 
 ---
 
@@ -55,6 +63,9 @@ Det betaler sig at samle dette i én genanvendelig funktion fremfor at kopiere k
 - Fejl introduceres ét sted i stedet for i hver kopi
 
 **Sådan laver du funktionen** — definer den øverst i dit script eller i en separat `functions.R`-fil:
+
+<details>
+<summary>Se den fulde <code>get_lpr_diagnoses()</code>-funktion</summary>
 
 ```r
 library(dstDataPrep)
@@ -118,6 +129,8 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
 }
 ```
 
+</details>
+
 **Brug funktionen** — ét kald pr. udtræk, skift kun `KODER`:
 
 ```r
@@ -148,7 +161,10 @@ saveRDS(resultat, "datasets/extract_dementia.rds")
 
 ---
 
-## Næste skridt i denne sektion
+## Se også
 
-- [Registersti og datastores](01_registersti-datastores.qmd) — bekræftede stier til alle registre på 708421
-- [DARTER-specifikke faldgruber](02_darter-faldgruber.qmd) — quirks der er specifikke for dette projekt
+`get_lpr_diagnoses()` ovenfor pakker mønstret fra den generelle vejledning ind:
+
+- [Fase 9 — Hospitalskontakter (LPR)](../09_hospitalskontakter-lpr.qmd) — forklaringen bag to-fase strategien, LPR2/LPR3 og D-præfikset
+- [Fase 8 — Kend dine registre](../08_kend-dine-registre.qmd) — hvilket register indeholder hvad
+- [Registersti og datastores](01_registersti-datastores.qmd) — de bekræftede stier på 708421
