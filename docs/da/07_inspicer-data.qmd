@@ -49,19 +49,11 @@ class(data)        # objekttype — er data faktisk i R, eller er det stadig en 
 class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 ```
 
-**Hvad `class(data)` kan returnere:**
-
-| Resultat | Hvad det betyder |
-|---|---|
-| `"data.frame"` eller `"tbl_df"` | Data er i R's hukommelse. Du kan bruge det normalt. |
-| `"tbl_duckdb_connection"` | Data er **ikke** hentet ind i R endnu — det er stadig en usendt forespørgsel til DuckDB. De fleste kommandoer (som `nrow()`, `head()`) fejler på dette. Løsning: tilføj `%>% collect()` til sidst i koden. |
-| `"Table"` / `"ArrowObject"` | Samme situation som ovenfor, men for Arrow-format. |
+`class(data)` fortæller om du har rigtige data (`"data.frame"`/`"tbl_df"`) eller stadig bare en usendt forespørgsel (`"tbl_duckdb_connection"` / `"Table"`).
 
 ::: {.callout-tip}
 **`class()` kan hjælpe dig med at fejlfinde**
-Fejler din kode med en mystisk besked, eller ser objektet ud som data men opfører sig mærkeligt?
-Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`.
-Se [Det universelle mønster](05_universelle-moenster.qmd) for den fulde forklaring på hvorfor.
+Ser objektet ud som data men opfører sig mærkeligt, eller fejler din kode med en mystisk besked? Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`. Den fulde tabel over hvad `class()` kan returnere — og hvorfor — står i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd#tjek-har-du-data-eller-bare-en-forbindelse).
 :::
 
 ---

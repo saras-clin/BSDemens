@@ -158,233 +158,35 @@ Slå den op i [Fase 13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd).
 
 ## Første session — quick checklist
 
-### Trin 1 — Geninstaller `duckplyr`
-
-Se afsnittet ovenfor — det skal gøres inden du indlæser andre pakker.
-
-### Trin 2 — Åbn dit projekt
-
-```
-File → Open Project → naviger til din workspace-mappe
-E:/workdata/[projektnummer]/workspaces/[ditNavn]/[projektmappe]/[projekt].Rproj
-```
-
-Opret en `datasets/`-mappe i projektmappen til mellemregninger, hvis den ikke eksisterer.
-
-### Trin 3 — Verificer at alt virker
-
-```r
-getwd()                      # bør vise stien til din projektmappe
-packageVersion("duckplyr")   # bør vise 1.1 eller højere
-```
-
-Hvis begge linjer kører uden fejl, er du klar.
+1. **Geninstaller `duckplyr`** — `install.packages("duckplyr")` inden du indlæser andre pakker (se ovenfor).
+2. **Åbn dit projekt** — File → Open Project → din `.Rproj` i workspace-mappen.
+3. **Verificér** — `getwd()` og `packageVersion("duckplyr")` kører uden fejl.
 
 ---
 
-## 2. Sådan er data faktisk gemt
+## Hvor data ligger på DST
 
-På DST er de rigtige data allerede klargjort og klar til brug.
+På DST er registrene allerede klargjort som parquet og ligger i to datavarehuse:
 
-### De to datavarehuse
-
-| Lager | Sti (eksempel) | Hvad er der | Sådan indlæses det |
-|---|---|---|---|
-| `parquet-registers` | `E:/workdata/[proj]/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... | `load_database("navn")` |
-| `parquet-external` | `E:/workdata/[proj]/cleaned-data/parquet-external/` | Registre der ikke er i parquet-registers, fx SKS-procedurekoder (LPR3) | `load_database("navn")` |
+| Lager | Sti (eksempel) | Hvad er der |
+|---|---|---|
+| `parquet-registers` | `E:/workdata/[proj]/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... |
+| `parquet-external` | `E:/workdata/[proj]/cleaned-data/parquet-external/` | Registre der ikke er i parquet-registers, fx SKS-procedurekoder (LPR3) |
 
 ::: {.callout-note}
-**Du behøver ikke at samle årsfiler manuelt.**
-Hvert register er gemt som mange separate filer — én per år.
-`load_database()` samler dem automatisk til én tabel, som du kan forespørge som helhed.
-Data læses ikke ind i hukommelsen, før du eksplicit beder om det med `collect()` — det kaldes doven evaluering og er forklaret på siden [Det universelle mønster](05_universelle-moenster.qmd).
+Hvert register er gemt som mange filer — én per år. `load_database("navn")` (DARTER) eller `open_dataset("sti")` samler dem automatisk til én tabel. Data læses først ind i hukommelsen, når du kalder `collect()` — forklaret i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
 :::
 
-### Hvad er en `.rds`-fil?
-
-Pipeline-scripts sender data videre til hinanden via `.rds`-filer.
-`.rds` er R's eget filformat til at gemme data — hurtigere og mere kompakt end CSV,
-og det bevarer alle R-objekters egenskaber (datatyper, kolonnenavne, faktorniveauer) perfekt.
-
-| Funktion | Hvad den gør |
-|---|---|
-| `saveRDS(objekt, "sti/fil.rds")` | Gemmer et R-objekt til disk |
-| `readRDS("sti/fil.rds")` | Læser det tilbage ind i hukommelsen |
-
-Hvert script gemmer sit resultat med `saveRDS()`, og det næste script åbner det med `readRDS()`.
-Filerne er gitignored og ligger under `datasets/` i din workspace.
+Dine egne mellemresultater gemmer du som `.rds`-filer — se [Fase 4 — Filtyper og indlæsning](04_filformater.qmd).
 
 ---
 
-## 3. Struktur og mønster, du vil bruge igen og igen
+## Videre herfra
 
-Alle registerforespørgsler i dette projekt følger det samme femtrins-mønster.
+Du er nu logget ind og sat op. Resten af guiden lærer dig at arbejde med data:
 
-```r
-# Trin 1: åbn en doven forbindelse til registret
-lpr_adm <- load_database("lpr_adm") %>% rename_with(tolower)
-
-# Trin 2: filtrer rækker — sker i DuckDB, ingen data i R-hukommelsen endnu
-# Trin 3: vælg kolonner — reducerer hvad der trækkes over
-# (Trin 4: join — se sektion 8 for et eksempel)
-# Trin 5: collect() — HER kommer data ind i R-hukommelsen
-result <- lpr_adm %>%
-  filter(pnr %in% !!min_pnr_vektor) %>%                  # Trin 2
-  select(pnr, recnum, date_contact = d_inddto) %>%        # Trin 3
-  collect()                                               # Trin 5
-```
-
-### Hvorfor `rename_with(tolower)` på linje 1
-
-Rå kolonnenavne i DST-registre har inkonsistent store/små bogstaver.
-`lpr_adm` kan have `PNR`, `BEF` kan have `pnr`, et andet register kan have `Pnr`.
-`rename_with(tolower)` konverterer alt til små bogstaver straks efter indlæsning,
-så resten af din kode kan bruge `pnr` overalt uden at bekymre sig om bogstavsstørrelse.
-
-**Kald altid `rename_with(tolower)` på samme linje som `load_database()`.**
-
-### Hvorfor `!!` (bang-bang) optræder i hvert filter
-
-Forespørgsler via `open_dataset()` udføres af **DuckDB** — et hurtigt databasesystem der kører *adskilt* fra R. Det betyder at DuckDB ikke automatisk kender dine lokale R-variabler.
-
-```r
-filter(pnr %in% !!min_pnr_vektor)
-```
-
-Uden `!!` ville DuckDB lede efter en kolonne kaldet `min_pnr_vektor` inde i registret.
-Den kolonne eksisterer ikke — `min_pnr_vektor` er en lokal R-vektor, du definerede tidligere.
-`!!` fortæller DuckDB: *"dette er et R-objekt, ikke et kolonnenavn — slå det op i R, og brug derefter værdierne"*.
-
-Du vil se `!!` foran næsten hver lokal variabel, der bruges inde i et `filter()`-kald.
-Det er påkrævet, når du refererer til et R-objekt (ikke en kolonne) inde i en doven forespørgsel.
-
-[Se mere om `!!` og doven evaluering i Funktionsguiden →](13a_guide_til_funktioner.qmd#bang-bang-to-udråbstegn)
-
-### Hvad sker der i de fem trin — visuelt
-
-```{mermaid}
-flowchart TD
-    P[("Parquet-fil på DST")]
-    L["load_database()"]
-    F["filter() + select()"]
-    C["collect()"]
-    R[("R-hukommelse · data.frame")]
-
-    P -->|"doven forbindelse — ingenting flyttes til R"| L
-    L -->|"instruktioner staplet op i DuckDB"| F
-    F -->|"send nu!"| C
-    C -->|"kun nødvendige rækker + kolonner"| R
-```
-
-`load_database()`, `filter()` og `select()` er rene instruktioner — de koster næsten ingen RAM.
-`collect()` er den eneste linje, der faktisk flytter data fra parquet ind i R-hukommelsen.
-
-### Den vigtigste regel: filtrer FØR collect
-
-```r
-# KORREKT — filtrer først, derefter collect et lille resultat
-result <- stort_register %>%
-  filter(pnr %in% !!kohort_pnrs) %>%
-  collect()
-
-# FORKERT — gør ikke dette
-result <- stort_register %>%
-  collect() %>%    # trækker millioner af rækker ind i R-hukommelsen
-  filter(pnr %in% kohort_pnrs)
-```
-
-BEF har millioner af rækker. LMDB har hundredvis af millioner.
-At kalde collect() før filter() vil crashe din session og gøre serveren langsom for alle.
-
-### Sådan tjekker du, om du har husket `collect()`
-
-Mange fejl opstår, fordi man tror, man har data i R — men i virkeligheden har man stadig bare en instruktion til DuckDB.
-Kald `class()` for at se, hvad du faktisk har — se [Inspicér din data](07_inspicer-data.qmd#forstå-strukturen) for kodeeksempler.
-
-| Hvad `class()` returnerer | Hvad det betyder | Hvad du skal gøre |
-|---|---|---|
-| `"tbl_df" "data.frame"` | Data er i R. Du kan bruge det normalt. | Ingenting — du er klar. |
-| `"tbl_duckdb_connection"` | Stadig en usendt forespørgsel til DuckDB. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
-| `"Table" "ArrowObject"` | Stadig en usendt forespørgsel til Arrow. Data er ikke i R endnu. | Tilføj `%>% collect()` til sidst i din kode. |
-
----
-
-## 4. ICD-koder: D-præfikset og LPR2 vs LPR3
-
-Dette afsnit dækker de to ting ved hospitalsregisterdata, der er specifikke for DST
-og ikke forklares i den generelle onboarding.
-
-### D-præfikset
-
-Alle ICD-10-koder gemt i DST-registre har et foranstillet `"D"`:
-`"DG30"` (Alzheimers), `"DF00"` (demens), `"DE78"` (dyslipidæmi).
-
-Dette præfiks eksisterer ikke i standard ICD-10 — det er en DST-konvention.
-**Sammenlign aldrig med koder med D-præfikset.**
-
-Fjern det med `substr()` inden sammenligning — se [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) for kodeeksempel.
-
-### LPR2 vs LPR3: opdelingen i marts 2019
-
-Det Nationale Patientregister skiftede format i marts 2019.
-Ethvert studie, der dækker en periode, som spænder over denne dato,
-skal forespørge begge systemer separat og kombinere resultaterne.
-
-Se den fulde oversigt over tabeller, join-nøgler, diagnosetyper og LPR3-specifikke kolonner i [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
-
----
-
-## 5. DST-specifikke faldgruber
-
-Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlmeddelelser.
-
-| # | Faldgrube | Konsekvens |
-|---|---|---|
-| 1 | Brug `dodsaasg` i stedet for `dodsaars` til dødsdato | Forkerte censureringsdatoer |
-| 2 | Glem at geninstallere `duckplyr` | Mærkelige fejl fra dplyr-operationer |
-| 3 | `collect()` før `filter()` på store registre | Session crasher; server langsom for alle |
-| 4 | Glem `rename_with(tolower)` | "Column `pnr` not found" selvom kolonnen eksisterer |
-| 5 | Datokolonner er ikke altid i Date-format | Datoaritmetik fejler stille |
-| 6 | BEF er et årsstart-snapshot — ikke et levende register | Forkerte tællinger ved dato-filtrering |
-| 7 | Tro at `lpr_a_diagnose` kun har A-type diagnoser | Fejl i diagnosetypefilter |
-| 8 | Kategoriske koder er ikke konsistente på tværs af registre | Stille mismatch ved join |
-| 9 | Glem `!!` i lazy filter (`filter(pnr %in% min_liste)`) | Forkert resultat eller fejl |
-| 10 | Forveksle `nmi_count` med `nmi_score` | Forkert kovariat i modellen |
-
-[Se alle 10 faldgruber med kodeeksempler →](13c_dst_faldgruber.qmd)
-
----
-
-## 6. Registerreference
-
-Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](13d_register_reference.qmd).
-
-::: {.callout-tip}
-**Arbejder du på DARTER?** Se den projektspecifikke registeroversigt med bekræftede stier: [Registersti og datastores →](darter/01_registersti-datastores.qmd)
-:::
-
----
-
-## 7. Diagnoseudtræk fra LPR
-
-Det komplette mønster for at trække diagnoser fra LPR2 + LPR3 — inkl. to-fase strategien for at genbruge udtrækkene til flere udfald — er dokumenteret på [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
-
-::: {.callout-tip}
-**Arbejder du på DARTER?** `get_lpr_diagnoses()` i pakker hele mønstret ind. Se [DARTER — pipeline →](darter/00_index.qmd)
-:::
-
----
-
-## Hurtig reference
-
-| Spørgsmål | Svar |
-|---|---|
-| `duckplyr`-fejl | Kør `install.packages("duckplyr")` i starten af sessionen |
-| Kolonne ikke fundet: `pnr` | Du har glemt `rename_with(tolower)` |
-| Objektet opfører sig mærkeligt | Tjek `class()` — du har måske ikke kaldt `collect()` |
-| ICD-filter matcher ingenting | Tjek D-præfikset: brug `substr(c_diag, 2, 4)` inden filtrering |
-| Manglende diagnoser før 2019 | Du har glemt at forespørge `t_psyk_adm`/`t_psyk_diag` |
-| Forkert censureringsdato | Brug `dodsaars` (`d_dodsdto`) — aldrig `dodsaasg` |
-| Session crasher / rød hukommelsesbjælke | Filtrer tidligere; tilføj `rm(objekt); gc()` efter store udtræk |
-| `!!` giver en fejl | Sørg for at du er inde i et `dplyr`-verbum på et dovent objekt |
-| DARTER: pakke ikke fundet: `dstDataPrep` | Se [DARTER-setup →](darter/00_index.qmd) |
+- [Fase 4 — Filtyper og indlæsning](04_filformater.qmd) — hvilke filer du møder, og hvad der åbner dem
+- [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd) — åbn → filtrér → vælg → `collect()`; den vigtigste regel; hvad `!!` er
+- [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd) — hvilket register indeholder hvad
+- [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — ICD-koder, D-præfiks, LPR2 vs LPR3
+- [Fase 13 — Reference](13_reference.qmd) — funktioner, faldgruber og registerreference når du sidder fast

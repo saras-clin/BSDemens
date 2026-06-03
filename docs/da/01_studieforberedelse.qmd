@@ -70,7 +70,48 @@ En komplet beskrivelse af alle registre med kolonnenavne og join-nøgler finder 
 
 ---
 
-## 3. Lav en analyseplan
+## 3. Vælg dine kovariater med en DAG
+
+Hvilke variable skal du justere for? Det er ikke "så mange som muligt". At justere for de forkerte variable kan **indføre** bias i stedet for at fjerne den.
+
+Et **DAG** (directed acyclic graph — et kausalt diagram) er en tegning af dine antagelser om, hvordan eksponering, udfald og øvrige variable hænger sammen. Det gør dine antagelser eksplicitte og hjælper dig med at vælge det rigtige sæt kovariater.
+
+Tommelfingerregler:
+
+- **Justér for confoundere** — variable der påvirker både eksponering og udfald (fx alder, comorbiditet).
+- **Justér IKKE for mediatorer** — variable der ligger *på* årsagsvejen mellem eksponering og udfald (det fjerner en del af den effekt du vil måle).
+- **Justér IKKE for colliders** — fælles effekter af to variable (det åbner en falsk sammenhæng).
+
+::: {.callout-tip}
+**Værktøjer**
+
+- [dagitty.net](https://dagitty.net/) — tegn dit diagram i browseren; det udregner automatisk det minimale sæt af kovariater du skal justere for.
+- [Causal Diagrams: Draw Your Assumptions Before Your Conclusions](https://pll.harvard.edu/course/causal-diagrams-draw-your-assumptions-your-conclusions) — gratis HarvardX-kursus af Miguel Hernán om netop dette.
+- Baggrund: [Hernán & Robins, *Causal Inference: What If*](https://miguelhernan.org/whatifbook) (gratis PDF) — også i [Fase 2's ressourcer](02_r-intro.qmd#læringsressourcer).
+:::
+
+---
+
+## 4. Sammenligningskohorten (komparator)
+
+De fleste studier sammenligner en eksponeret gruppe med en **komparator**. Hvordan du bygger den, er en designbeslutning du skal tage på papir — inden koden.
+
+Det skal du overveje:
+
+- **Hvem er en passende komparator?** Fx for bariatrisk kirurgi: personer med svær overvægt der *ikke* blev opereret, eller en matchet baggrundsbefolkning. Valget afhænger af spørgsmålet.
+- **Index-dato til komparatorer.** En komparator har ingen operationsdato — den skal tildeles en index-dato (typisk den matchede eksponerede persons dato), så de to grupper følges fra et sammenligneligt tidspunkt.
+- **Eligibilitet ved index.** Komparatoren skal være "i risiko" og opfylde inklusionskriterierne på sin index-dato — ellers risikerer du *immortal time bias*.
+- **Matchingvariable og -ratio.** Fx alder, køn og kalenderår; beslut forholdet (fx 1:5).
+- **Kan en komparator senere blive eksponeret?** Beslut hvordan (fx risk-set/incidence-density sampling, hvor en komparator kan opereres senere og selv blive case).
+- **Samme eksklusioner** anvendes på begge grupper.
+
+::: {.callout-warning}
+**Under udvikling.** En konkret kodeskabelon til at bygge og matche komparatorkohorten kommer her senere. Indtil da kan `heaven::riskSetMatch()` og `heaven::incidenseMatch()` ([Fase 12](12a_pakker-oversigt.qmd)) bruges til selve matchingen.
+:::
+
+---
+
+## 5. Lav en analyseplan
 
 En analyseplan er et dokument, du skriver **inden** du ser på dine data.
 Det tvinger dig til at tage stilling til design, statistik og variable, før resultaterne farver dine beslutninger.
@@ -83,7 +124,7 @@ Det tvinger dig til at tage stilling til design, statistik og variable, før res
 
 ---
 
-## 4. Dan et overblik — pen og papir
+## 6. Dan et overblik — pen og papir
 
 Inden du åbner R, svar på disse spørgsmål skriftligt:
 
@@ -118,7 +159,7 @@ Censurering:  Død (DODSAARS)
 
 ---
 
-## 5. Næste skridt
+## 7. Næste skridt
 
 Når du har dit overblik på plads:
 

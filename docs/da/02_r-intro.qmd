@@ -26,6 +26,7 @@ Men hvis du vil øve dig lokalt, inden du logger ind for første gang:
 | [R for Data Science](https://r4ds.hadley.nz/) | Gratis e-bog — det bredest brugte introduktionsværk til moderne R |
 | [Zheers R Coding Café](https://r-coding-cafe.zheer.dk/) | Noter og eksempler specifikt til registerdata — lokalt lavet, meget relevant |
 | [The Epidemiologist R Handbook](https://www.epirhandbook.com/en/) | Praktisk opslagsværk med sundhedsvidenskabeligt fokus |
+| [Causal Inference: What If (Hernán & Robins)](https://miguelhernan.org/whatifbook) | Gratis PDF — standardværket om kausal inferens (confounding, DAGs, metode). Epidemiologisk metode, ikke R. |
 
 ---
 
