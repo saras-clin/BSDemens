@@ -66,6 +66,7 @@ website:
             - da/12c_nmi.qmd
 
         - section: "Fase 13 — Reference"
+          href: da/13_reference.qmd
           contents:
             - da/13a_guide_til_funktioner.qmd
             - da/13b_formateringstabeller.qmd

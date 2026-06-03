@@ -2,12 +2,6 @@
 title: "Faldgruber på DST"
 subtitle: "10 fejl der koster tid og giver uinformative fejlmeddelelser"
 date: last-modified
-format:
-  html:
-    toc: true
-    toc-depth: 2
-    toc-title: "På denne side"
-    highlight-style: github
 ---
 
 Denne side samler de fejl, der hyppigst rammer nye brugere af DST-registrene.
