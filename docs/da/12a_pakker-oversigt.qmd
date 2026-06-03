@@ -1,51 +1,66 @@
 ---
-title: "Pakker og algoritmer"
-subtitle: "Færdige redskaber til registerbaseret forskning"
+title: "Pakker, algoritmer og hjælp"
+subtitle: "Hvilken pakke til hvilken opgave — og hvad der er på DST"
 date: last-modified
 ---
 
-Denne side samler to typer redskaber: **validerede algoritmer** med publicerede metoder til klinisk klassifikation og komorbiditet, og **R-pakker** der løser praktiske problemer specifikke for dansk registerdata og DST-miljøet.
+Dette er et opslags-hub: hvilket redskab løser hvilken opgave, om det er tilgængeligt på DST, og hvor du finder mere hjælp.
+Guiden tager dig frem til et analyseklart datasæt og peger dig mod de rigtige værktøjer til selve analysen — men **underviser ikke i de statistiske metoder**. Til det skal du bruge en statistiker, et kursus eller pakkernes egen dokumentation.
 
 ---
 
-## Validerede algoritmer
+## 1. Tjek først: hvad er på DST?
 
-Disse algoritmer er publicerede, peer-reviewede metoder du kan bruge direkte i din analyse.
+DST har et stort CRAN-snapshot forudinstalleret. Tjek hvad du har, inden du planlægger:
+
+```r
+pkgs <- c("EpiForsk", "heaven", "riskRegression", "prodlim", "pec", "Publish", "BuyseTest")
+pkgs %in% rownames(installed.packages())   # TRUE = klar med library()
+```
+
+::: {.callout-note}
+- **CRAN-pakker** kan installeres med `install.packages()`, hvis de ikke allerede er der (snapshot kan være forældet — se duckplyr-noten i [Fase 3](03_log-ind-dst.qmd#dst-specifikke-pakkeindstillinger)).
+- **GitHub-pakker** kan *ikke* installeres direkte: DST har ingen internetadgang, så `pak`/`install_github` fejler. Kilden skal importeres via din datamanager og installeres fra lokal fil (`install.packages("sti/pakke.tar.gz", repos = NULL, type = "source")`).
+:::
+
+**Status (bekræftet juni 2026):**
+
+| Klar på DST | Kun GitHub / lokalt |
+|---|---|
+| EpiForsk · heaven · riskRegression · prodlim · pec · Publish · BuyseTest | fakeregs *(kun lokalt)* · fastreg · osdc *(præberegnet på DARTER)* |
+
+---
+
+## 2. Validerede algoritmer og kovariater
+
+Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovariater.
 
 | Algoritme | Hvad den gør | Artikel |
 |---|---|---|
-| **OSDC** | Klassificerer alle personer i Danmark som T1D, T2D eller ingen diabetes | [doi:10.2147/CLEP.S407019](https://doi.org/10.2147/CLEP.S407019) |
-| **NMI** | Beregner en vægtet comorbiditetsscore (Nordic Multimorbidity Index) ud fra 50 prediktorer | [doi:10.2147/CLEP.S353398](https://doi.org/10.2147/CLEP.S353398) |
-| **SEPLINE** | Vejledning til valg og kodning af socioøkonomiske variable i registerdata | [doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772) |
+| **OSDC** | Klassificerer alle i Danmark som T1D, T2D eller ingen diabetes | [doi:10.2147/CLEP.S407019](https://doi.org/10.2147/CLEP.S407019) |
+| **NMI** | Vægtet comorbiditetsscore (Nordic Multimorbidity Index, 50 prediktorer) | [doi:10.2147/CLEP.S353398](https://doi.org/10.2147/CLEP.S353398) |
+| **SEPLINE** | Vejledning til socioøkonomiske variable | [doi:10.2147/CLEP.S520772](https://doi.org/10.2147/CLEP.S520772) |
 
-**Hvornår bruger du hvilken?**
+- **OSDC** — definér en diabetes-population, type og debutdato → [Fase 12 — OSDC](12b_osdc.qmd)
+- **NMI** — justér for comorbiditet i en model eller beskriv comorbiditetsbyrde → [Fase 12 — NMI](12c_nmi.qmd)
+- **SEPLINE** — uddannelse, indkomst, beskæftigelse som kovariater → [Fase 11 — Socioøkonomiske variable](11_socioekonomiske-variable.qmd)
 
-- **OSDC** — hvis du vil definere en diabetes-population, vide hvornår en person fik diabetes og hvilken type, eller ekskludere personer med diabetes
-- **NMI** — hvis du vil justere for comorbiditet i en regressionsmodel eller beskrive comorbiditetsbyrden (Table 1)
-- **SEPLINE** — hvis du vil inkludere uddannelse, indkomst eller beskæftigelse som kovariater
-
-Klik på en algoritme i sidebaren for fuld dokumentation.
-
----
-
-## R-pakker til registerdata-arbejde
-
-Disse pakker løser praktiske problemer der er særlige for dansk registerdata eller DST-miljøet.
+::: {.callout-tip}
+**Charlson som alternativ til NMI:** både `heaven::charlsonIndex()` og `EpiForsk` (se nedenfor) beregner Charlson comorbiditetsscore fra LPR-diagnoser — begge er på DST.
+:::
 
 ---
 
-### Statistik og analyse
+## 3. Datahåndtering og udtræk
 
-**`heaven` — dansk registerdata-toolkit**
-45 funktioner bygget specifikt til danske registerdata af Thomas Gerds (Københavns Universitet, Biostatistik). Dækker Lexis-splitting til tidsvarerende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson comorbiditetsscore. Også på CRAN.
+**`heaven` — dansk registerdata-toolkit** *(forudinstalleret på DST; ikke på CRAN)*
+Funktioner bygget specifikt til danske registerdata af Thomas Gerds (KU, Biostatistik): Lexis-splitting til tidsvarierende kovariater, drug exposure-vinduer fra LMDB, risikoset-matching og Charlson-score.
 [github.com/tagteam/heaven](https://github.com/tagteam/heaven)
 
 <details>
 <summary>Hvad heaven kan — og hvornår du bruger det</summary>
 
-**Lexis-splitting** — opdel opfølgningstid på flere tidsakser
-
-Bruges når en kovariat ændrer sig over tid (fx alder, kalenderperiode, tid siden eksponering) og opfølgningstiden skal opdeles tilsvarende.
+**Lexis-splitting** — opdel opfølgningstid på flere tidsakser, når en kovariat ændrer sig over tid (alder, kalenderperiode, tid siden eksponering).
 
 ```r
 library(heaven)
@@ -58,63 +73,39 @@ df_split <- lexisTwo(
 )
 ```
 
----
-
-**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata
-
-Bruges til at bygge tidsvarerende eksponeringsvariable fra receptdata — fx "var personen i behandling med metformin på index-dato?"
+**Drug exposure fra LMDB** — beregn eksponeringsperioder fra receptdata (fx "var personen i metformin-behandling på index-dato?").
 
 ```r
 exp_tabel <- medicinMacro(
-  indat    = lmdb_data,    # receptdata
-  id       = "pnr",
-  atc      = "atc",
-  eksd     = "eksd",       # ekspeditionsdato
-  ddds     = "ddds",       # definerede daglige doser
-  maxdepot = 3             # maks. dages lagerbeholdning
-)
-# Returnerer: pnr | start_exp | stop_exp per eksponeringsperiode
-```
-
----
-
-**Charlson comorbiditetsscore** — fra LPR-diagnoser
-
-```r
-charlson_data <- charlsonIndex(
-  indat     = lpr_diag_data,
-  id        = "pnr",
-  code      = "c_diag",
-  code_type = "icd10"
+  indat    = lmdb_data, id = "pnr", atc = "atc", eksd = "eksd",
+  ddds = "ddds", maxdepot = 3
 )
 ```
 
----
-
-**Risikoset-matching** — match cases til kontroller på index-dato
+**Charlson comorbiditetsscore** fra LPR-diagnoser:
 
 ```r
-matched <- riskSetMatch(
-  ptid  = "pnr",
-  event = "event",
-  terms = c("koen", "foedselsaar"),   # matchingsvariable
-  dat   = kohort,
-  ratio = 5                            # 5 kontroller per case
-)
+charlson_data <- charlsonIndex(indat = lpr_diag_data, id = "pnr",
+                               code = "c_diag", code_type = "icd10")
+```
+
+**Risikoset-matching** — match cases til kontroller på index-dato:
+
+```r
+matched <- riskSetMatch(ptid = "pnr", event = "event",
+                        terms = c("koen", "foedselsaar"), dat = kohort, ratio = 5)
 ```
 
 ::: {.callout-note}
-**Er `heaven` på DST-serveren?** Det er sandsynligt da det er en CRAN-pakke brugt af mange danske registerforskere.
-Kør `find.package("heaven")` for at tjekke — er den der, behøver du ikke installere den manuelt.
-Ellers: `install.packages("heaven")`.
+`heaven` er bekræftet tilgængelig på DST — brug `library(heaven)` direkte. Den er ikke på CRAN, så uden for DST skal den hentes fra [GitHub](https://github.com/tagteam/heaven).
 :::
 
 </details>
 
 ---
 
-**`EpiForsk` — registerdata-hjælpefunktioner fra SSI**
-Kode-delingspakke fra Statens Serum Institut med dansk-kalibrerede funktioner til LPR-data. Særligt nyttigt: `flatten_date_intervals()` der smelter overlappende hospitalskontakter til sammenhængende perioder — nødvendigt inden comorbiditetslookback. Dansk Charlson-score inkluderet. Også på CRAN.
+**`EpiForsk` — registerdata-hjælpefunktioner fra SSI** *(CRAN; på DST)*
+Kode-delingspakke fra Statens Serum Institut. Særligt nyttig: `flatten_date_intervals()` der smelter overlappende hospitalskontakter til sammenhængende perioder — nødvendigt inden comorbiditetslookback. Dansk Charlson-score inkluderet.
 [github.com/Laksafoss/EpiForsk](https://github.com/Laksafoss/EpiForsk)
 
 <details>
@@ -122,157 +113,59 @@ Kode-delingspakke fra Statens Serum Institut med dansk-kalibrerede funktioner ti
 
 **`flatten_date_intervals()` — overlappende kontakter**
 
-En person kan have to indlæggelser der overlapper i LPR (fx en overflytning). Inden du beregner comorbiditetslookback, skal overlappende perioder smeltes:
+En person kan have to indlæggelser der overlapper i LPR (fx en overflytning). Inden comorbiditetslookback skal overlappende perioder smeltes:
 
 ```r
 library(EpiForsk)
 
-# LPR-kontakter: pnr, start_dato, slut_dato
 lpr_flat <- flatten_date_intervals(
-  data       = lpr_kontakter,
-  id         = "pnr",
-  start_date = "d_inddto",
-  end_date   = "d_uddto"
+  data = lpr_kontakter, id = "pnr",
+  start_date = "d_inddto", end_date = "d_uddto"
 )
-# Overlappende perioder er nu smeltet til én sammenhængende periode
 ```
 
----
-
-**`charlson_score()` — dansk-kalibreret comorbiditetsscore**
-
-Beregner Charlson-score fra ICD-10 diagnoser inkl. D-præfiks — kalibreret til dansk LPR-data:
+**`charlson_score()` — dansk-kalibreret comorbiditetsscore** fra ICD-10 (inkl. D-præfiks):
 
 ```r
-charlson <- charlson_score(
-  data      = lpr_diag_data,
-  id        = "pnr",
-  icd_codes = "c_diag"    # kolonnen med ICD-koder (med D-præfiks)
-)
-# Returnerer: pnr | charlson_score
+charlson <- charlson_score(data = lpr_diag_data, id = "pnr", icd_codes = "c_diag")
 ```
-
-::: {.callout-note}
-**Er `EpiForsk` på DST-serveren?** Sandsynligvis ja (CRAN-pakke fra SSI, bredt brugt).
-Kør `find.package("EpiForsk")` for at tjekke. Ellers: `install.packages("EpiForsk")`.
-:::
 
 </details>
 
 ---
 
-**`icdR` — slå danske ICD-10 og SKS-koder op programmatisk**
-R-interface til det danske SKS-browser. Returnerer ICD-10-koder, NOMESCO-procedurekoder, dansk diagnosetekst og gyldighedsperiode siden 1995. Bruges *inden* DST-login til at bygge og verificere kodelister.
-[github.com/evpatora/icdR](https://github.com/evpatora/icdR)
+**`fakeregs` — syntetiske danske registerdata** *(kun GitHub — kun lokalt)*
+Opdigtede, men strukturelt realistiske data for ni DST-registre. Til at øve og teste kode lokalt *uden* DST-adgang. Bruges ikke på serveren.
+[github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs) — Anders Aasted Isaksen (SDCA). Se [Fase 6 — Første udtræk](06_foerste-udtraek.qmd).
 
-<details>
-<summary>Hvad icdR løser — og hvornår du bruger det</summary>
-
-**Problem 1: Du vil finde alle koder for en diagnose**
-
-I stedet for at browse SKS-hjemmesiden manuelt kan du søge i R:
-
-```r
-library(icdR)
-
-# Søg på dansk diagnosetekst
-atrieflimren <- search_sks("atrieflimren")
-#   code    | description               | valid_from | valid_to
-#   DI48    | Atrieflimren og -flagren  | 1994-01-01 | NA
-#   DI480   | Paroxysmal atrieflimren   | ...
-
-# Hent alle underkoder til en kode
-alle_I48 <- get_children("DI48")
-```
+**`fastreg` — SAS → parquet** *(kun GitHub)*
+Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun relevant hvis du selv bygger et parquet-workspace fra bunden. Se den korte note i [Fase 6's SAS → parquet-fold-ud](06_foerste-udtraek.qmd).
 
 ---
 
-**Problem 2: Var min kode gyldig i studieperioden?**
+## 4. Analyse: regression, overlevelse og competing risks
 
-ICD-koder ændres over tid — en kode kan være indført, ændret eller udgået:
+Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **på DST** og dokumenteret hos [tagteam (Thomas Gerds, KU)](https://github.com/tagteam).
 
-```r
-# Tjek gyldighedsperiode
-kode_info <- get_sks_code("DI484")
-# valid_from: 2019-01-01 → koden fandtes ikke i studier der slutter før 2019
-```
-
----
-
-**Problem 3: Byg en procedurekode-liste til lpr_sksopr**
-
-```r
-# Søg NOMESCO-procedurekoder (bruges i lpr_sksopr og procedurer_kirurgi)
-bypass_koder <- search_sks("bypass", type = "procedure")
-```
-
-::: {.callout-warning}
-**`icdR` kræver internetadgang** og bruges lokalt på din computer *inden* DST-login.
-Brug den til at forberede og verificere dine kodelister, og gem dem som en vektor i dit script.
-:::
-
-</details>
+| Pakke | Brug den til | Relevans |
+|---|---|---|
+| **`prodlim`** | Kaplan-Meier og **Aalen-Johansen** kumulativ incidens | Kerne — korrekt deskriptiv kurve når død er konkurrerende risiko (KM alene overestimerer) |
+| **`riskRegression`** | cause-specific Cox (`CSC`), Fine-Gray (`FGR`), absolut risiko (`predictRisk`), modelvalidering (`Score`: Brier, tidsafh. AUC) | Kerne — hovedanalysen: demens med død som competing risk |
+| **`Publish`** | `regressionTable()` → HR-tabeller med KI, `plotConfidence()` forest plots | Kerne — Table 2 hurtigt |
+| **`pec`** | prediction error curves (Brier over tid) | Situationsbestemt — kun ved prædiktionsmodeller; `riskRegression::Score()` dækker ofte behovet |
+| **`BuyseTest`** | generalized pairwise comparisons (win ratio, net benefit, prioriterede endpoints) | Mest **Studie 2 (T1D)**; niche for demens |
 
 ---
 
-### Syntetiske data og testmiljø
+## 5. Hvor får du mere hjælp?
 
-**`fakeregs` — syntetiske danske registerdata**
-Genererer opdigtede, men strukturelt realistiske data for ni DST-registre (BEF, LPR2, LPR3, LMDB, UDDA, FAIK, AKM m.fl.). Bruges til at øve sig og teste kode *uden* at have adgang til DST. MIT-licens.
-[github.com/steno-aarhus/fakeregs](https://github.com/steno-aarhus/fakeregs) — Anders Aasted Isaksen, Steno Diabetes Center Aarhus
+**Community og kurser** — se den prioriterede hjælpeliste og kursuslinks i [Fase 2 — R: det allermest nødvendige](02_r-intro.qmd) (Stack Overflow, Zheers R Coding Café, DDEA, R for Data Science, Epi R Handbook).
 
-<details>
-<summary>Installation og hurtig brug</summary>
+**Institutionelt referencemateriale:**
 
-```r
-# Installer fra GitHub (ikke på CRAN)
-install.packages("pak")
-pak::pak("steno-aarhus/fakeregs")
-
-library(fakeregs)
-library(arrow)
-library(dplyr)
-
-# Åbn et syntetisk register — samme mønster som på DST
-bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
-bef %>% filter(year == 2015) %>% collect() %>% head()
-```
-
-Se [Første udtræk](06_foerste-udtraek.qmd) for et komplet gennemgående eksempel med fakeregs.
-</details>
-
----
-
-### Referencehåndtering på DST
-
-**`pubmedciteR` — PubMed-referencer fra lukkede servere**
-DST-serveren har ingen internetadgang. `pubmedciteR` lader dig hente og formatere PubMed-referencer — giv den en liste af DOI'er, og den returnerer formaterede referencer til Word eller tekst. MIT-licens.
-[github.com/Aastedet/pubmedciteR](https://github.com/Aastedet/pubmedciteR) — Anders Aasted Isaksen, Steno Diabetes Center Aarhus
-
-<details>
-<summary>Installation og workflow</summary>
-
-```r
-# Installer fra GitHub
-pak::pak("Aastedet/pubmedciteR")
-
-library(pubmedciteR)
-
-# Definer dine DOI'er
-dois <- c("10.2147/CLEP.S407019", "10.2147/CLEP.S353398")
-
-# Hent og formatér (kræver internet — kør INDEN du logger på DST)
-referencer <- fetch_references(dois)
-write_references(referencer, "mine_referencer.docx")
-```
-
-::: {.callout-tip}
-Kør `fetch_references()` og gem `.docx`-filen på din computer **inden** du logger på DST-serveren, eller overfør filen til serveren via DST's filoverførsel.
-:::
-
-::: {.callout-warning}
-**Tjek tilgængelighed på DST:** `pubmedciteR` er kun på GitHub og skal muligvis installeres manuelt.
-Kør `find.package("pubmedciteR")` på serveren for at se om den allerede er installeret.
-:::
-
-</details>
+| Kilde | Hvad du finder |
+|---|---|
+| [ctpteam/RDST](https://github.com/ctpteam/RDST) | "R on DST"-manual: projektopsætning, dataadgang, god kodepraksis på DST-serveren |
+| [ctpteam/DST](https://github.com/ctpteam/DST) | Guide til LPR3, DST-manualer, slides og en heaven-PDF |
+| [steno-aarhus/registers-project-database](https://steno-aarhus.github.io/registers-project-database/) | SDCA's egen database: variabellister, registerbeskrivelser og ansøgningsskabeloner til Sundhedsdatastyrelsen |
+| [github.com/tagteam](https://github.com/tagteam) | Dokumentation for `riskRegression`, `prodlim`, `Publish`, `pec`, `heaven` |

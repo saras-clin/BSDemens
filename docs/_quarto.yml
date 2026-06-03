@@ -60,8 +60,8 @@ website:
           href: da/11_socioekonomiske-variable.qmd
 
         - section: "Fase 12 — Algoritmer og specialpakker"
+          href: da/12a_pakker-oversigt.qmd
           contents:
-            - da/12a_pakker-oversigt.qmd
             - da/12b_osdc.qmd
             - da/12c_nmi.qmd
 
