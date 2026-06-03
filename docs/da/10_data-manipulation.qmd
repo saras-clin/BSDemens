@@ -62,7 +62,7 @@ Begge formater indeholder **de samme oplysninger** — de er bare arrangeret for
 ```r
 library(tidyr)
 
-df_bredt <- df_langt |>
+df_bredt <- df_langt %>%
   pivot_wider(
     names_from  = "tidspunkt",  # hvilken kolonne skal blive til kolonnenavne?
     values_from = "vaegt"       # hvilken kolonne indeholder værdierne?
@@ -88,7 +88,7 @@ hba1c_langt <- data.frame(
 )
 
 # Konverter til bredt — én række per patient, én kolonne per tidspunkt:
-hba1c_bredt <- hba1c_langt |>
+hba1c_bredt <- hba1c_langt %>%
   pivot_wider(
     names_from   = tidspunkt,
     values_from  = hba1c,
@@ -107,7 +107,7 @@ hba1c_bredt <- hba1c_langt |>
 ### Bredt → langt med `pivot_longer()`
 
 ```r
-df_langt <- df_bredt |>
+df_langt <- df_bredt %>%
   pivot_longer(
     cols      = c(vaegt_baseline, vaegt_6mdr),  # kolonner der skal "foldes ind"
     names_to  = "tidspunkt",                    # navn på den nye tidspunkt-kolonne
@@ -123,20 +123,20 @@ En meget hyppig opgave: du har et langt register og vil have én repræsentativ 
 
 ```r
 # BEF: behold kun den nyeste post per person
-bef_en_per_person <- bef |>
-  group_by(pnr) |>         # gruppér på personnummer
-  arrange(desc(aar)) |>    # desc() = faldende rækkefølge = nyeste år først
+bef_en_per_person <- bef %>%
+  group_by(pnr) %>%         # gruppér på personnummer
+  arrange(desc(aar)) %>%    # desc() = faldende rækkefølge = nyeste år først
                             # uden desc() ville det være stigende = ældste år først
-  slice(1) |>              # tag første række per gruppe — med desc() er det det nyeste år
+  slice(1) %>%              # tag første række per gruppe — med desc() er det det nyeste år
   ungroup()                # frigiv gruppering
 ```
 
 ```r
 # LPR: find første demensdiagnose per person
-foerste_demens <- lpr_dx |>
-  group_by(pnr) |>
-  arrange(date_contact) |>    # ældste dato først
-  slice(1) |>                 # første diagnose per person
+foerste_demens <- lpr_dx %>%
+  group_by(pnr) %>%
+  arrange(date_contact) %>%    # ældste dato først
+  slice(1) %>%                 # første diagnose per person
   ungroup()
 ```
 

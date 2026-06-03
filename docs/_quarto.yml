@@ -23,49 +23,38 @@ website:
       style: "docked"
       collapse-level: 1
       contents:
-        - section: "Fase 0 — Orienter dig"
-          contents:
-            - da/00_index.qmd
+        - text: "Fase 0 — Orienter dig"
+          href: da/00_index.qmd
 
-        - section: "Fase 1 — Planlæg dit studie"
-          contents:
-            - da/01_studieforberedelse.qmd
+        - text: "Fase 1 — Planlæg dit studie"
+          href: da/01_studieforberedelse.qmd
 
-        - section: "Fase 2 — R: det allermest nødvendige"
-          contents:
-            - da/02_r-intro.qmd
+        - text: "Fase 2 — R: det allermest nødvendige"
+          href: da/02_r-intro.qmd
 
-        - section: "Fase 3 — Log ind på DST"
-          contents:
-            - da/03_log-ind-dst.qmd
+        - text: "Fase 3 — Log ind på DST"
+          href: da/03_log-ind-dst.qmd
 
-        - section: "Fase 4 — Filtyper og indlæsning"
-          contents:
-            - da/04_filformater.qmd
+        - text: "Fase 4 — Filtyper og indlæsning"
+          href: da/04_filformater.qmd
 
-        - section: "Fase 5 — Det universelle mønster"
-          contents:
-            - da/05_universelle-moenster.qmd
+        - text: "Fase 5 — Det universelle mønster"
+          href: da/05_universelle-moenster.qmd
 
-        - section: "Fase 6 — Første udtræk"
-          contents:
-            - da/06_foerste-udtraek.qmd
+        - text: "Fase 6 — Første udtræk"
+          href: da/06_foerste-udtraek.qmd
 
-        - section: "Fase 7 — Inspicér din data"
-          contents:
-            - da/07_inspicer-data.qmd
+        - text: "Fase 7 — Inspicér din data"
+          href: da/07_inspicer-data.qmd
 
-        - section: "Fase 8 — Kend dine registre"
-          contents:
-            - da/08_kend-dine-registre.qmd
+        - text: "Fase 8 — Kend dine registre"
+          href: da/08_kend-dine-registre.qmd
 
-        - section: "Fase 9 — Hospitalskontakter (LPR)"
-          contents:
-            - da/09_hospitalskontakter-lpr.qmd
+        - text: "Fase 9 — Hospitalskontakter (LPR)"
+          href: da/09_hospitalskontakter-lpr.qmd
 
-        - section: "Fase 10 — Dataformater og manipulation"
-          contents:
-            - da/10_data-manipulation.qmd
+        - text: "Fase 10 — Dataformater og manipulation"
+          href: da/10_data-manipulation.qmd
 
         - section: "Fase 11 — Socioøkonomiske variable"
           contents:
@@ -85,9 +74,8 @@ website:
             - da/13c_dst_faldgruber.qmd
             - da/13d_register_reference.qmd
 
-        - section: "Fase 14 — Eksport og hjemsendelse"
-          contents:
-            - da/14_eksport-hjemsendelse.qmd
+        - text: "Fase 14 — Eksport og hjemsendelse"
+          href: da/14_eksport-hjemsendelse.qmd
 
         - section: "DARTER — Projekt 708421"
           contents:

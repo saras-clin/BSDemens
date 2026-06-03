@@ -162,10 +162,10 @@ colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele 
 **Tæl og sortér** (dplyr):
 
 ```r
-data |> count(koen)               # antal rækker per kategori
-data |> count(koen, alder_gruppe) # per kombination af to variable
-data |> arrange(dato)             # sortér stigende efter dato
-data |> arrange(desc(dato))       # sortér faldende
+data %>% count(koen)               # antal rækker per kategori
+data %>% count(koen, alder_gruppe) # per kombination af to variable
+data %>% arrange(dato)             # sortér stigende efter dato
+data %>% arrange(desc(dato))       # sortér faldende
 ```
 
 **Hurtige visualiseringer** — til at danne sig et overblik, ikke til publikation:

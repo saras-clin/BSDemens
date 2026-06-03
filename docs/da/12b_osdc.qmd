@@ -51,7 +51,7 @@ names(dm_pop)
 
 # Omdøb PNR til pnr (lowercase) for at matche øvrige registre:
 library(dplyr)
-dm_pop <- dm_pop |> rename(pnr = PNR)
+dm_pop <- dm_pop %>% rename(pnr = PNR)
 
 # diabetes_type: 1 = T1D, 2 = T2D
 # do_dm: debutdato
@@ -61,9 +61,9 @@ dm_pop <- dm_pop |> rename(pnr = PNR)
 <summary>Eksempel: filtrer til T1D-patienter</summary>
 
 ```r
-t1d <- dm_pop |>
-  filter(diabetes_type == 1) |>              # behold kun T1D
-  select(pnr, diabetes_type, do_dm) |>       # behold relevante kolonner
+t1d <- dm_pop %>%
+  filter(diabetes_type == 1) %>%              # behold kun T1D
+  select(pnr, diabetes_type, do_dm) %>%       # behold relevante kolonner
   rename(date_diabetes = do_dm)              # omdøb til et mere sigende navn
 
 # Dine variable kan se anderledes ud — kig med names(dm_pop) og str(dm_pop)

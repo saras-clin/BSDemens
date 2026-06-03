@@ -93,11 +93,11 @@ Du vil se disse i næsten alle udtræk. Du behøver ikke forstå dem i detaljer 
 | `filter()` | Behold rækker der opfylder et krav | `filter(df, alder > 50)` |
 | `select()` | Vælg hvilke kolonner du vil beholde | `select(df, pnr, alder, koen)` |
 | `mutate()` | Opret en ny kolonne eller ændr en eksisterende | `mutate(df, alder_kat = alder > 65)` |
-| `\|>` | Send resultatet videre til næste funktion (pipen) | `df \|> filter(alder > 50) \|> select(pnr)` |
+| `%>%` | Røret — sender resultatet videre til næste funktion | `df %>% filter(alder > 50) %>% select(pnr)` |
 | `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `left_join(kohort, bef, by = "pnr")` |
-| `collect()` | Hent parquet-data ind i R-hukommelsen | `register \|> filter(...) \|> collect()` |
+| `collect()` | Hent parquet-data ind i R-hukommelsen | `register %>% filter(...) %>% collect()` |
 
-`collect()` forklares grundigt i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
+Røret `%>%` forklares grundigt i [Fase 13 — Funktioner: oversigt](13a_guide_til_funktioner.qmd#røret), og `collect()` i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
 
 ---
 
@@ -133,7 +133,7 @@ Et godt hjælp-spørgsmål er **minimalt** (mindste kode der viser fejlen), **ko
 > ```r
 > library(dplyr)
 > df <- data.frame(PNR = 1:5, alder = 20:24)
-> df |> filter(pnr > 3)   # fejl her
+> df %>% filter(pnr > 3)   # fejl her
 > ```
 >
 > Forventet: rækker hvor PNR > 3. Faktisk: fejl om at 'pnr' ikke findes.
