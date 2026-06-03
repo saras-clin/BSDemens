@@ -37,7 +37,7 @@ website:
 
         - section: "Fase 3 — Log ind på DST"
           contents:
-            - da/03_getting-started-dst.qmd
+            - da/03_log-ind-dst.qmd
 
         - section: "Fase 4 — Filtyper og indlæsning"
           contents:
@@ -45,7 +45,7 @@ website:
 
         - section: "Fase 5 — Det universelle mønster"
           contents:
-            - da/05_parquet-arrow-duckdb.qmd
+            - da/05_universelle-moenster.qmd
 
         - section: "Fase 6 — Første udtræk"
           contents:
@@ -53,7 +53,7 @@ website:
 
         - section: "Fase 7 — Inspicér din data"
           contents:
-            - da/07_basiskommandoer.qmd
+            - da/07_inspicer-data.qmd
 
         - section: "Fase 8 — Kend dine registre"
           contents:

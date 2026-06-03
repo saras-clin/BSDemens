@@ -97,7 +97,7 @@ Du vil se disse i næsten alle udtræk. Du behøver ikke forstå dem i detaljer 
 | `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `left_join(kohort, bef, by = "pnr")` |
 | `collect()` | Hent parquet-data ind i R-hukommelsen | `register \|> filter(...) \|> collect()` |
 
-`collect()` forklares grundigt i [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd).
+`collect()` forklares grundigt i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
 
 ---
 
@@ -149,4 +149,4 @@ Fejlen: kolonnen hedder `PNR`, koden spørger efter `pnr`. R skelner mellem stor
 Du har nu de begreber du skal bruge for at forstå koden.
 Fase 3 er dit første login på DST-serveren.
 
-→ [Fase 3 — Log ind på DST](03_getting-started-dst.qmd)
+→ [Fase 3 — Log ind på DST](03_log-ind-dst.qmd)

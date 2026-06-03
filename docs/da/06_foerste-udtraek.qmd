@@ -167,7 +167,7 @@ head(recepter)                               # de første seks rækker
 - `filter()` og `select()` sendte instruktioner til Arrow/DuckDB — stadig ingen data i R
 - `collect()` udførte forespørgslen og hentede kun de nødvendige rækker ind i R
 
-Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd) for en detaljeret forklaring af doven evaluering.
+Se [Det universelle mønster](05_universelle-moenster.qmd) for en detaljeret forklaring af doven evaluering.
 
 ---
 
@@ -216,7 +216,7 @@ colSums(is.na(recepter))            # manglende værdier per kolonne
 class(recepter$eksd)                # er datokolonnen Date? (ikke character)
 ```
 
-Dette er en hurtig fornuftskontrol. Den fulde værktøjskasse til at udforske data — `summary()`, `table()`, krydstabeller og NA-håndtering — gennemgås i [Fase 7 — Inspicér din data](07_basiskommandoer.qmd).
+Dette er en hurtig fornuftskontrol. Den fulde værktøjskasse til at udforske data — `summary()`, `table()`, krydstabeller og NA-håndtering — gennemgås i [Fase 7 — Inspicér din data](07_inspicer-data.qmd).
 
 ---
 
@@ -276,7 +276,7 @@ mit_reg <- open_dataset(parq_sti) %>% rename_with(tolower)
 
 Du har nu lavet et komplet udtræk og gemt det. Næste skridt er at lære at udforske data grundigt:
 
-- [Fase 7 — Inspicér din data](07_basiskommandoer.qmd) — den fulde værktøjskasse til at forstå hvad du har
+- [Fase 7 — Inspicér din data](07_inspicer-data.qmd) — den fulde værktøjskasse til at forstå hvad du har
 - [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
 - [Fase 10 — Joins og pivots](10b_joins-og-pivots.qmd) — kobl to udtræk sammen
 

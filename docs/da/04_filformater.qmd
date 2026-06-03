@@ -7,7 +7,7 @@ date: last-modified
 Når du åbner Stifinder på DST-serveren, møder du filer med forskellige endelser.
 Denne side er dit opslagsværktøj: hvilken filtype er det, hvilken funktion åbner den, og kommer dataene ind i hukommelsen med det samme eller ej?
 
-Det sidste — **doven vs. fuld indlæsning** — er den vigtigste skelnen på denne side. Mekanismen bag forklares i [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd); her skal du bare vide, *hvilke* filtyper der opfører sig hvordan.
+Det sidste — **doven vs. fuld indlæsning** — er den vigtigste skelnen på denne side. Mekanismen bag forklares i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd); her skal du bare vide, *hvilke* filtyper der opfører sig hvordan.
 
 ---
 
@@ -104,4 +104,4 @@ Filen åbnes som en *forbindelse*, ikke som data. Du kan filtrere og vælge kolo
 
 Hvorfor det fungerer, og hvordan `collect()` virker, er emnet for næste fase.
 
-→ [Fase 5 — Det universelle mønster](05_parquet-arrow-duckdb.qmd)
+→ [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd)

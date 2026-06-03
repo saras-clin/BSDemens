@@ -153,7 +153,7 @@ resultat <- stort_register %>%
 ```
 
 ::: {.callout-note}
-Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt på siden [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd).
+Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `collect()` — er forklaret grundigt på siden [Det universelle mønster](05_universelle-moenster.qmd).
 :::
 
 ---

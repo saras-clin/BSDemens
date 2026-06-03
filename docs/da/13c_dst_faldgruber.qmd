@@ -14,7 +14,7 @@ Denne side samler de fejl, der hyppigst rammer nye brugere af DST-registrene.
 Fælles for dem: fejlmeddelelserne er enten forvirrende, eller der er slet ingen fejlmeddelelse —
 resultatet er bare stille forkert.
 
-Se også den korte hurtigreference i bunden af [Kom i gang](03_getting-started-dst.qmd#hurtig-reference).
+Se også den korte hurtigreference i bunden af [Log ind på DST](03_log-ind-dst.qmd#hurtig-reference).
 
 ---
 
@@ -85,7 +85,7 @@ Rå kolonnenavne varierer efter register og år: `PNR`, `pnr`, `Pnr`, `V_CPR`.
 Glemmer du det, fejler `filter(pnr %in% ...)` stille med "Column `pnr` not found" — selvom kolonnen er der.
 
 **Reglen:** hvert `load_database()`-kald ender med `%>% rename_with(tolower)`, altid på samme linje.
-Se [Kom i gang på DST](03_getting-started-dst.qmd#struktur-mønster-du-vil-bruge-igen-og-igen) for forklaring og eksempel.
+Se [Log ind på DST](03_log-ind-dst.qmd#struktur-mønster-du-vil-bruge-igen-og-igen) for forklaring og eksempel.
 
 ---
 

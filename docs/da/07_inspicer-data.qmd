@@ -61,7 +61,7 @@ class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 **`class()` kan hjælpe dig med at fejlfinde**
 Fejler din kode med en mystisk besked, eller ser objektet ud som data men opfører sig mærkeligt?
 Kør `class(dit_objekt)` — er det ikke `"data.frame"`, mangler du formentlig et `collect()`.
-Se [Parquet, Arrow og DuckDB](05_parquet-arrow-duckdb.qmd) for den fulde forklaring på hvorfor.
+Se [Det universelle mønster](05_universelle-moenster.qmd) for den fulde forklaring på hvorfor.
 :::
 
 ---
