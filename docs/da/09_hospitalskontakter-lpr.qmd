@@ -307,6 +307,6 @@ saveRDS(alle_cvd, "datasets/extract_cvd.rds")                # gem — skift sti
 
 ## Se også
 
-- [Registerreference](08_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
+- [Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for alle LPR-registre
 - [Faldgruber](13c_dst_faldgruber.qmd) — kendte problemer med LPR på DST
 - [Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin introduktion til open_dataset, collect og saveRDS

@@ -51,4 +51,4 @@ undgås for at forhindre cirkulær logik, da demens er studieudfaldet.
 ## Mere information
 
 Se [artiklen](https://doi.org/10.2147/CLEP.S353398) for fuld prædiktorliste og vægte.
-Se [Registerreference](08_register_reference.qmd) for bekræftede kolonnenavne i LPR og LMDB.
+Se [Registerreference](13d_register_reference.qmd) for bekræftede kolonnenavne i LPR og LMDB.

@@ -28,7 +28,7 @@ Spring fase 2 over og start med serveren.
 
 → [Fase 3 — Log ind på DST](03_log-ind-dst.qmd)\
 → [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd)\
-→ [Fase 8 — Registerreference](08_register_reference.qmd)
+→ [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd)
 :::
 
 ::: {.g-col-4}

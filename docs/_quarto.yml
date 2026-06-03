@@ -57,7 +57,7 @@ website:
 
         - section: "Fase 8 — Kend dine registre"
           contents:
-            - da/08_register_reference.qmd
+            - da/08_kend-dine-registre.qmd
 
         - section: "Fase 9 — Hospitalskontakter (LPR)"
           contents:
@@ -84,6 +84,7 @@ website:
             - da/13a_guide_til_funktioner.qmd
             - da/13b_formateringstabeller.qmd
             - da/13c_dst_faldgruber.qmd
+            - da/13d_register_reference.qmd
 
         - section: "Fase 14 — Eksport og hjemsendelse"
           contents:

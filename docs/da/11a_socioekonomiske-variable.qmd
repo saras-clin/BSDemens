@@ -169,4 +169,4 @@ kohort_ses <- kohort %>%
 
 - [SEPLINE](11b_sepline.qmd) — metodebeskrivelse og anbefalede kategoriseringer
 - [Formateringstabeller](13b_formateringstabeller.qmd) — DST's SAS-filer til label-oversættelse
-- [Registerreference](08_register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA
+- [Registerreference](13d_register_reference.qmd) — bekræftede kolonnenavne for AKM, FAIK og UDDA

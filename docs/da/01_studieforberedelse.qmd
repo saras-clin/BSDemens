@@ -28,7 +28,7 @@ Den faktor du undersøger effekten af — fx en operation, et lægemiddel eller 
 Det du måler — fx debut af en sygdom, en indlæggelse, eller død.
 
 **Kovariater**
-Variable du inkluderer for at tage højde for confounding — faktorer der påvirker både eksponering og udfald.
+Variable du inkluderer for at tage højde for bl.a. confounding — faktorer der påvirker både eksponering og udfald.
 Eksempler: alder, køn, komorbiditet, socioøkonomisk status.
 
 ---
@@ -44,7 +44,7 @@ Stil dig selv disse spørgsmål:
 |---|---|
 | Hvem er min population? | Alle voksne med T2D i Danmark, 2010–2020 |
 | Hvad er min eksponering? | Bariatrisk kirurgi |
-| Hvad er mit udfald? | Demensdebut |
+| Hvad er mit udfald? | Demens |
 | Hvornår starter opfølgningen? | Operationsdato (index-dato) |
 | Hvornår stopper den? | Diagnose, død, emigration eller studieperiode slut |
 | Hvilke confoundere skal justeres for? | Alder, køn, komorbiditet, SES |
@@ -66,7 +66,7 @@ Inden du kortlægger din datamodel er det nyttigt at vide hvilke registre der ek
 | Indkomst | FAIK |
 | Beskæftigelse | AKM |
 
-En komplet beskrivelse af alle registre med kolonnenavne og join-nøgler finder du i [Fase 8 — Registerreference →](08_register_reference.qmd)
+En komplet beskrivelse af alle registre med kolonnenavne og join-nøgler finder du i [Fase 13 — Registerreference →](13d_register_reference.qmd)
 
 ---
 
@@ -78,7 +78,7 @@ Det tvinger dig til at tage stilling til design, statistik og variable, før res
 **Brug STROBE-checklisten** som skelet:
 [STROBE Statement — checklist (PDF)](https://www.equator-network.org/wp-content/uploads/2015/10/STROBE_checklist_v4_combined.pdf)
 
-**Pre-registrer din analyseplan på OSF** — det er god videnskabelig praksis og kræves af mange tidsskrifter:
+**Pre-registrer din analyseplan på fx OSF** — det er god videnskabelig praksis og kræves af mange tidsskrifter:
 [Open Science Framework — registreringsskabeloner](https://help.osf.io/article/330-welcome-to-registrations)
 
 ---
@@ -87,10 +87,9 @@ Det tvinger dig til at tage stilling til design, statistik og variable, før res
 
 Inden du åbner R, svar på disse spørgsmål skriftligt:
 
-1. **Hvilke kolonner skal jeg bruge?** (patientinformation — alder, køn, diagnoser mv.)
-2. **Hvilke rækker skal jeg bruge?** (hvilken patienttype, hvilke år)
-3. **Hvilke registre indeholder disse oplysninger?** (LPR, BEF, LMDB, ...)
-4. **I hvilken rækkefølge skal data samles?** (definer population → hent udfald → hent kovariater)
+1. **Hvilke variable skal jeg bruge?** (patientinformation — alder, køn, diagnoser mv. - og for hvilke år)
+2. **Hvilke registre indeholder disse oplysninger?** (LPR, BEF, LMDB, ...)
+3. **I hvilken rækkefølge skal data samles?** (definer population → hent udfald → hent kovariater)
 
 Et godt overblik på papiret sparer mange timers fejlretning i koden.
 

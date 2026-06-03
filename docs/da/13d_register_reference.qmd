@@ -33,33 +33,8 @@ Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
 Se [Faldgruber](13c_dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
 Kolonnenavne gælder efter `rename_with(tolower)` — inspicér dit eget register med `colnames()` hvis noget ikke stemmer.
 
-## Hvad vil jeg finde? — omvendt opslagstabel
-
-Kend dit spørgsmål. Find registret. Kig i kolonnen.
-
-| Jeg vil finde... | Register | Nøglekolonne(r) |
-|---|---|---|
-| Fødselsdato og køn | BEF | `foed_dag`, `koen` |
-| Om personen er død — og hvornår | DODSAARS | `d_dodsdto` |
-| Om personen er emigreret | VNDS | `haend_dato`, `indud_kode` |
-| En somatisk hospitalskontakt (før 2019) | lpr_adm | `d_inddto`, `recnum`, `c_pattype` |
-| En somatisk diagnose (før 2019) | lpr_diag | `c_diag`, `c_diagtype`, `recnum` |
-| En psykiatrisk diagnose (fx demens, før 2019) | t_psyk_adm + t_psyk_diag | `d_inddto`, `c_diag`, `c_diagtype` |
-| En hospitalskontakt eller diagnose (2019+) | lpr_a_kontakt + lpr_a_diagnose | `kont_starttidspunkt`, `diag_kode`, `diag_kode_type` |
-| En udskrevet recept | LMDB | `atc`, `eksd` |
-| Uddannelsesniveau | UDDA | `hfaudd`, `aar` |
-| Husstandsindkomst | FAIK | `famaekvivadisp_13`, `familie_id` |
-| Beskæftigelsesstatus | AKM | `socio13`, `aar` |
-| Projekt-specifik klinisk variabel (fx operationsdato) | Dit projekts kvalitetsregister | Se projektvejledning |
-| En operationsprocedure / SKS-kode (frem til 2018) | lpr_sksopr | `c_opr`, `recnum` |
-| En operationsprocedure / SKS-kode (2019 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_forloeb` |
-
-::: {.callout-note}
-**Join-nøgler:**
-BEF, DODSAARS, VNDS, LMDB, UDDA, AKM joines alle på `pnr`.
-FAIK joines via `familie_id` — hent den fra BEF.
-LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
-`lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_forloeb` — **`dw_ek_kontakt` er NA for alle rækker på DST og kan ikke bruges som join-nøgle**.
+::: {.callout-tip}
+**Leder du efter "hvilket register indeholder X?"** — start med beslutningstabellen i [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd). Denne side er den dybe reference med fulde kolonnenavne, typer og kodeeksempler.
 :::
 
 ---

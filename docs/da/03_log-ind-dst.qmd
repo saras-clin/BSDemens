@@ -352,7 +352,7 @@ Der er 10 fejl, der typisk koster mest tid og giver de mindst informative fejlme
 
 ## 6. Registerreference
 
-Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](08_register_reference.qmd).
+Alle registre der typisk bruges i et DST-kohortestudie er beskrevet med kolonnenavne, join-nøgler og dækningsperioder i [Registerreference →](13d_register_reference.qmd).
 
 ::: {.callout-tip}
 **Arbejder du på DARTER?** Se den projektspecifikke registeroversigt med bekræftede stier: [Registersti og datastores →](darter/01_registersti-datastores.qmd)

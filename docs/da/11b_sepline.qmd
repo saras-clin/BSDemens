@@ -71,4 +71,4 @@ Se artiklen for fuld begrundelse og anbefalede referencegrupper.
 ## Mere information
 
 Se [Socioøkonomiske variable](11a_socioekonomiske-variable.qmd) for kodeeksempler.
-Se [Registerreference](08_register_reference.qmd) for bekræftede kolonnenavne i UDDA, FAIK og AKM.
+Se [Registerreference](13d_register_reference.qmd) for bekræftede kolonnenavne i UDDA, FAIK og AKM.
