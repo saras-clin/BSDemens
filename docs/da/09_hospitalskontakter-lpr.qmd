@@ -137,7 +137,7 @@ Forespørg LPR2 og LPR3 **én enkelt gang** og byg en samlet tabel med *alle* di
 
 Resultatet er `alle_dx`: én stor tabel med én række per diagnose per person, D-præfiks fjernet. Kolonnerne `pnr`, `date_contact` og `icd3` er alt, hvad du behøver til alle efterfølgende udfald.
 
-**Hvorfor?** LPR er meget store registre. At forespørge dem gentagne gange — én gang per udfald — er langsomt og øger risikoen for fejl: en stille copy-paste-fejl i ét udtræk er svær at opdage, fordi koden stadig kører. Byg `alle_dx` én gang og genrug den.
+**Hvorfor?** LPR er meget store registre. At forespørge dem gentagne gange — én gang per udfald — er langsomt og øger risikoen for fejl: en stille copy-paste-fejl i ét udtræk er svær at opdage, fordi koden stadig kører. Byg `alle_dx` én gang og genbrug den.
 
 ### Fase 2 — filtrer på det specifikke udfald
 
