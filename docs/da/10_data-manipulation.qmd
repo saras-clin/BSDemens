@@ -45,7 +45,7 @@ Begge formater indeholder **de samme oplysninger** — de er bare arrangeret for
 
 | Register | Format | Hvorfor |
 |---|---|---|
-| BEF | Langt | Én række per person **per år** — samme person optræder 30 gange |
+| BEF | Langt | Én række per person **per snapshot** — kvartalsvis siden 2008, ellers årligt |
 | LPR (lpr_adm + lpr_diag) | Langt | Én række per **diagnose per kontakt** — en indlæggelse kan have 10 diagnoser |
 | LMDB | Langt | Én række per **ekspederet recept** — samme person kan have hundredvis |
 | DODSAARS | Bredt | Én række per **afdød person** — allerede én-per-person |

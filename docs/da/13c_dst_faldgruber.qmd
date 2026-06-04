@@ -93,15 +93,24 @@ class(bef$foed_dag)   # "Date" — kan bruges direkte
 
 ---
 
-## 5. BEF er et årsstart-snapshot — ikke et levende register
+## 5. BEF er et status-snapshot — ikke et levende register
 
-BEF registrerer befolkningens status pr. **1. januar** i det pågældende år.
-Det betyder, at en person der dør i juni 2020 stadig optræder i BEF for år 2020.
+BEF er et **statusregister**: det opgør befolkningens sammensætning på et givet referencetidspunkt — ikke løbende.
+DST's referencetid er **ultimo** (typisk 31. december for et årssnap). Siden 2008 leveres BEF desuden **kvartalsvist** (marts, juni, september, december).
+
+::: {.callout-note}
+**"aar == 2020 = 1. januar 2020" er en projektkonvention.**
+I mange projekter omdøbes BEF's snapshots så `aar == 2020` konventionelt refererer til befolkningens sammensætning pr. 1. januar 2020 — men dette fremgår ikke af DST's leverancenavngivning. Bekræft konventionen i din projektvejledning.
+
+Se DST's officielle BEF-dokumentation: [statistikdokumentation/befolkningen →](https://www.dst.dk/da/Statistik/dokumentation/statistikdokumentation/befolkningen)
+:::
+
+Det betyder, at en person der dør i juni 2020 stadig optræder i BEF-snapshottet for starten af 2020.
 
 ```r
 # FEJL: brug ikke BEF til at tjekke "levende på en specifik dato"
 bef_2020 <- bef %>%
-  filter(aar == 2020)   # inkluderer alle der var i live 1. jan 2020
+  filter(aar == 2020)   # inkluderer alle i snapshottet for 2020
                         # — også dem der dør i løbet af 2020
 
 # KORREKT: kombiner med dodsaars for at ekskludere dødsfald

@@ -6,107 +6,92 @@ date: last-modified
 
 Du har bygget dit datasæt og kørt din analyse (Fase 0–13). Tilbage er det sidste skridt: at få resultaterne sikkert ud af DST.
 
-Data fra Danmarks Statistik er mikrodata og underlagt GDPR og særlige regler for forskningsdata.
-Du kan **ikke** kopiere rå data ud — alt skal igennem en outputkontrolproces.
+Data fra Danmarks Statistik er mikrodata underlagt GDPR og særlige regler for forskningsdata.
+Du kan **ikke** kopiere rå data ud — alt skal igennem outputkontrol ved DST's Forskningsservice.
+
+**Autoritativ kilde:** [dst.dk — Adgang til data (Forskningsservice) →](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data)
 
 ---
 
 ## Hvad må du eksportere?
 
-**Du må:**
-- Aggregerede resultater (tabeller med summarized data)
+**Ja:**
+- Aggregerede tabeller (summarized data)
 - Grafer og figurer
-- Modeloutput (koefficienter, konfidensintervaller, p-værdier)
-- Kode (scripts — men ikke data)
+- Modeloutput — koefficienter, konfidensintervaller, p-værdier
+- Kode og scripts (aldrig data)
 
-**Du må ikke:**
-- Rå dataframes med individdata
-- Tabeller med for små celler (tommelfingerregel: n < 5 i en celle er problematisk)
-- Resultater der kan bruges til at identificere enkeltpersoner
+**Nej:**
+- Individdata i nogen form
+- Celler med færre end 5 observationer
+- Resultater der kan identificere enkeltpersoner
 
-::: {.callout-warning}
-**Brug altid versionsstyring (GitHub) til dine scripts — men aldrig til data.**
-Data på DST-serveren er fortroligt og må ikke ligge på GitHub.
+---
+
+## Outputkontrol — processen i fire trin
+
+1. **Gem filer i outputmappen** — typisk `E:/workdata/[projektnummer]/output/`
+2. **Skriv en README** — kort beskrivelse af hvad hver fil indeholder; DST skal forstå hvad de ser på
+3. **Anmod om outputkontrol** — kontakt DST Forskningsservice ([forskning@dst.dk](mailto:forskning@dst.dk)); aftal med din datamanager om der er en projektspecifik procedure
+4. **Download efter godkendelse** — filer frigives via DSTs sikre downloadfunktion
+
+::: {.callout-important}
+**n < 5 er en tommelfingerregel — DST har det sidste ord.**
+Reglerne kan inkludere dominansregler, krav til afrunding og krav til kontinuerte mål. Spørg Forskningsservice **inden** du indsender hvis du er i tvivl.
 :::
 
 ---
 
-## Outputkontrolprocessen
+## Afrunding til nærmeste 5
 
-Når du er klar til at hjemsende resultater, følger du denne proces:
-
-1. **Gem filer i outputmappen**
-   Placer de filer du vil hjemsende i den godkendte outputmappe på DST-serveren.
-   Typisk: `E:/workdata/[projektnummer]/output/` eller den mappe jeres projekt har fået tildelt.
-
-2. **Dokumentér indholdet**
-   Skriv en kort beskrivelse af hvad filerne indeholder — DST skal forstå hvad de ser på.
-   En simpel `README.txt` eller `README.md` i outputmappen er tilstrækkeligt.
-
-3. **Anmod om outputkontrol**
-   Kontakt DST's Forskningsservice og anmod om outputkontrol af dine filer.
-   De gennemgår dem og sikrer, at ingen persondata eller for detaljerede oplysninger forlader miljøet.
-
-4. **Download efter godkendelse**
-   Når DST har godkendt, kan du hente filerne via den sikre downloadfunktion.
-
----
-
-## Gem filer klar til hjemsendelse
+DST kræver typisk at tælleværdier afrundes til nærmeste 5 inden hjemsendelse.
 
 ```r
-# Gem en aggregeret tabel som CSV:
-write.csv(min_tabel, "output/tabel1.csv", row.names = FALSE)
+# Manuel afrunding:
+round(antal / 5) * 5   # 23 → 25, 12 → 10
 
-# Gem en figur:
-ggsave("output/figur1.png", plot = min_figur, width = 8, height = 6, dpi = 300)
-
-# Gem en simpel tekstfil med modeloutput:
-sink("output/cox_model_summary.txt")
-print(summary(cox_model))
-sink()
+# Med gtsummary (kræver Z.gtsummary.addons — ikke på DST endnu):
+# round_5_gtsummary(tabel)
 ```
 
 ---
 
-## Hvad tæller som "for detaljerede oplysninger"?
+## Gem filer til outputmappen
 
-- Tabeller med celler under 5 observationer
-- Gennemsnit beregnet på under 5 personer
-- Resultater der afspejler specifikke enkeltpersoner (fx "den eneste 95-årige kvinde i Thy med demens")
+```r
+library(readr)   # write_csv
 
-Som tommelfingerregel: tænk om en person i din population ville kunne genkende sig selv i resultatet.
+# Aggregeret tabel:
+write_csv(min_tabel, "output/tabel1_deskriptiv.csv")   # brug sigende filnavne
 
-::: {.callout-important}
-**`n < 5` er kun en tommelfingerregel — DST har det sidste ord.**
-De autoritative regler fastsættes af DST's Forskningsservice og kan omfatte mere end blot celletællinger (fx dominans-regler, afrunding og krav til kontinuerte mål). Er du i tvivl, så spørg Forskningsservice **inden** du indsender — det er hurtigere end at få et afslag.
-:::
+# Figur:
+ggsave("output/figur1_km.png", plot = min_figur, width = 8, height = 6, dpi = 300)
 
-<details>
-<summary>Praktisk tjekliste inden outputkontrol</summary>
-
-- [ ] Ingen rå dataframes — kun aggregerede resultater
-- [ ] Alle celler i tabeller har n ≥ 5
-- [ ] Kontinuerte variable: tjek at middelværdi/median ikke afsløres for meget
-- [ ] Scripts er rene og kommenterede — DST skal kunne følge hvad der er gjort
-- [ ] README-fil forklarer indholdet af outputmappen
-- [ ] Filnavne er sigende (`tabel1_deskriptiv.csv`, ikke `temp123.csv`)
-
-</details>
+# Modeloutput som tekst:
+sink("output/cox_resultater.txt")   # omdirigér output til fil
+print(summary(cox_model))           # skriv model-sammenfatning
+sink()                              # stop omdirigering
+```
 
 ---
 
-## God praksis
+## Tjekliste inden du sender
 
-- **Kode på GitHub, data på DST** — script-repositoriet og data holdes altid adskilt
-- **Dokumentér din kode** — outputkontrollen foregår nemmere hvis DST kan følge din metode
-- **Aggregér tidligt** — undgå at have individdata i outputmappen overhovedet
+- [ ] Ingen individdata — kun aggregerede resultater
+- [ ] Alle celler ≥ 5 (eller afrundet til nærmeste 5)
+- [ ] README beskriver hvad hver fil er
+- [ ] Filnavne er sigende
+- [ ] Scripts er rene og kommenterede
 
 ---
 
 ## Mere information
 
-Se DST's egne retningslinjer for outputkontrol på [dst.dk](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data).
+| Kilde | Hvad du finder |
+|---|---|
+| [DST — Adgang til data](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data) | Regler for adgang, outputkontrol og hjemsendelse |
+| [DST — Registerstatistik dokumentation](https://www.dst.dk/da/Statistik/dokumentation) | Officiel dokumentation for alle DST-registre |
+| [ctpteam/RDST](https://github.com/ctpteam/RDST) | "R on DST"-manual inkl. outputkontrol-praksis |
 
 ---
 
@@ -114,5 +99,5 @@ Se DST's egne retningslinjer for outputkontrol på [dst.dk](https://www.dst.dk/d
 
 Når dine resultater er hjemsendt, har du været hele vejen — fra forskningsspørgsmål og kohorte til analyseklart datasæt og publikationsklare resultater.
 
-- Skal du slå en funktion, et register eller en faldgrube op? → [Fase 13 — Reference](13_reference.qmd)
+- Skal du slå en funktion, et register eller en faldgrube op? → [13 — Reference](13_reference.qmd)
 - Arbejder du på DARTER / projekt 708421? → [DARTER — oversigt og pipeline](darter/00_index.qmd)
