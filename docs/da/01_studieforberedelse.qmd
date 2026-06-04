@@ -57,14 +57,14 @@ Inden du kortlægger din datamodel er det nyttigt at vide hvilke registre der ek
 
 | Hvad skal du finde? | Register |
 |---|---|
-| Demografi (alder, køn, bopæl) | BEF |
-| Hospitalsdiagnoser og -kontakter | LPR (LPR2 + LPR3) |
-| Receptordinerede lægemidler | LMDB |
-| Dødsdato (til censurering) | DODSAARS |
-| Emigration (til censurering) | VNDS |
-| Uddannelse | UDDA |
-| Indkomst | FAIK |
-| Beskæftigelse | AKM |
+| Demografi (alder, køn, bopæl) | BEF — Befolkningsregistret |
+| Hospitalsdiagnoser og -kontakter | LPR — Landspatientregistret (LPR2 + LPR3) |
+| Receptordinerede lægemidler | LMDB — Lægemiddelstatistikregistret |
+| Dødsdato (til censurering) | DODSAARS — Dødsregistret |
+| Emigration (til censurering) | VNDS — Migrationsregistret |
+| Uddannelse | UDDA — Uddannelsesregistret |
+| Indkomst | FAIK — Familieindkomstregistret |
+| Beskæftigelse | AKM — Arbejdsklassifikationsmodulet |
 
 En komplet beskrivelse af alle registre med kolonnenavne og join-nøgler finder du i [Fase 13 — Registerreference →](13d_register_reference.qmd)
 
@@ -92,17 +92,17 @@ Tommelfingerregler:
 
 ---
 
-## 4. Sammenligningskohorten (komparator) {#sammenligningskohorten-komparator}
+## 4. Sammenligningskohorten {#sammenligningskohorten-komparator}
 
-De fleste studier sammenligner en eksponeret gruppe med en **komparator**. Hvordan du bygger den, er en designbeslutning du skal tage på papir — inden koden.
+Mange studier sammenligner en eksponeret gruppe med en **sammenligningskohorte**. Hvordan du bygger den, er en designbeslutning du skal tage på papir — inden koden.
 
 Det skal du overveje:
 
-- **Hvem er en passende komparator?** Fx for bariatrisk kirurgi: personer med svær overvægt der *ikke* blev opereret, eller en matchet baggrundsbefolkning. Valget afhænger af spørgsmålet.
-- **Index-dato til komparatorer.** En komparator har ingen operationsdato — den skal tildeles en index-dato (typisk den matchede eksponerede persons dato), så de to grupper følges fra et sammenligneligt tidspunkt.
-- **Eligibilitet ved index.** Komparatoren skal være "i risiko" og opfylde inklusionskriterierne på sin index-dato — ellers risikerer du *immortal time bias* (en skævvridning der opstår, når en person tildeles eksponeringstid, hvori de per definition ikke kunne have fået udfaldet endnu).
+- **Hvem er en passende sammenligningskohorte?** Fx for bariatrisk kirurgi: personer med svær overvægt der *ikke* blev opereret, eller en matchet baggrundsbefolkning. Valget afhænger af spørgsmålet.
+- **Index-dato til sammenligningskohorten.** Din eksponerede kohorte har en index-dato der er bestemt af eksponeringen (fx operationsdatoen). Det har sammenligningskohorten ikke — den skal *tildeles* en dato, typisk den samme dato som den matchede eksponerede person, så begge grupper følges fra et sammenligneligt tidspunkt.
+- **Eligibilitet ved index.** Sammenligningskohorten skal opfylde inklusionskriterierne på sin tildelte index-dato — ellers risikerer du *immortal time bias* (en skævvridning der opstår, når en person tildeles eksponeringstid, hvori de per definition ikke kunne have fået udfaldet endnu).
 - **Matchingvariable og -ratio.** Fx alder, køn og kalenderår; beslut forholdet (fx 1:5).
-- **Kan en komparator senere blive eksponeret?** Beslut hvordan (fx risk-set/incidence-density sampling, hvor en komparator kan opereres senere og selv blive case).
+- **Kan nogen i sammenligningskohorten blive eksponeret senere?** Fx: kan en person der startede som kontrol, få operationen på et tidspunkt? Beslut hvad der sker i det tilfælde — om de forbliver kontrol, eller overgår til den eksponerede gruppe.
 - **Samme eksklusioner** anvendes på begge grupper.
 
 → Et kodeskelet til matching og studiepopulationsbygning ligger i [Fase 10 — Byg din studiepopulation](10_data-manipulation.qmd#byg-din-studiepopulation).
@@ -115,7 +115,7 @@ En analyseplan er et dokument, du skriver **inden** du ser på dine data.
 Det tvinger dig til at tage stilling til design, statistik og variable, før resultaterne farver dine beslutninger.
 
 **Brug STROBE-checklisten** som skelet:
-[STROBE Statement — checklist (PDF)](https://www.equator-network.org/wp-content/uploads/2015/10/STROBE_checklist_v4_combined.pdf)
+[STROBE Statement — checklists →](https://www.strobe-statement.org/checklists/)
 
 **Pre-registrer din analyseplan på fx OSF** — det er god videnskabelig praksis og kræves af mange tidsskrifter:
 [Open Science Framework — registreringsskabeloner](https://help.osf.io/article/330-welcome-to-registrations)
@@ -136,8 +136,8 @@ Et godt overblik på papiret sparer mange timers fejlretning i koden.
 <summary>Eksempel: overblik for et demensstudie</summary>
 
 ```
-Population:   Voksne opereret for fedme (DBSO), 2010–2024
-              Matchede kontroller fra befolkningsregistret (BEF)
+Population:   Voksne der har fået bariatrisk kirurgi (identificeret via Databasen for Behandling af Svær Overvægt — DBSO), 2010–2024
+              Matchede kontroller fra Befolkningsregistret (BEF)
 
 Udfald:       Første demensdiagnose (LPR — ICD-10: F00–F03, G30–G31)
               Dato: første kontakt med demenskode efter operationsdato
