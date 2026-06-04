@@ -103,10 +103,7 @@ sink()                                            # stop — output går igen ti
 
 ## Mere information
 
-De præcise regler for hjemsendelse og outputkontrol fastsættes af DST Forskningsservice og kan variere mellem projekter. Den sikre vej er at spørge direkte:
-
-- **[DST — Forskning (dst.dk)](https://www.dst.dk/da/TilSalg/Forskning)** — udgangspunkt for al information om adgang og outputkontrol
-- **[forskning@dst.dk](mailto:forskning@dst.dk)** — stil spørgsmål inden du indsender, ikke efter
+[Sundhedsdatastyrelsen — Udtræk fra forskermaskinen →](https://sundhedsdatastyrelsen.dk/data-og-registre/forskerservice/ansoeg-om-data/udtraek-fra-forskermaskinen)
 
 ---
 
