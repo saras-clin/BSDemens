@@ -145,28 +145,15 @@ lpr_a_diagnose %>%
 
 ## 7. Kategoriske koder er ikke konsistente på tværs af registre
 
-Samme variabel kan have forskellig kodning i forskellige registre.
-Tjek altid med `table()` og `class()` inden du joiner eller sammenligner på tværs.
+Samme variabel kan have forskellig kodning i forskellige registre — forskellig type (numeric vs. character), forskellige værdier, eller begge dele.
 
-**Køn er et godt eksempel:**
-
-| Register | Kolonne | Kodning |
-|---|---|---|
-| BEF | `koen` | `1` = mand, `2` = kvinde (numeric) |
-| LPR2 (`lpr_adm`) | `c_sex` | `"1"` = mand, `"2"` = kvinde (character) |
+I praksis trækker du demografiske variable (køn, alder) fra BEF og behøver sjældent at sammenligne med samme variabel i et andet register. Men hvis du gør, så tjek altid med `table()` og `class()` inden du bruger variablen:
 
 ```r
-# Tjek altid inden join:
-table(register_a$koen)   # hvad er de faktiske værdier?
+table(register_a$koen)   # hvad er de faktiske værdier og typer?
+class(register_a$koen)
 table(register_b$koen)
-
-# Eksempel: recode character til numeric for at matche BEF
-register_b <- register_b %>%
-  mutate(koen = case_when(
-    koen == "M" ~ 1L,
-    koen == "K" ~ 2L,
-    TRUE ~ NA_integer_
-  ))
+class(register_b$koen)
 ```
 
 ---
