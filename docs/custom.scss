@@ -59,6 +59,11 @@ details > summary:hover {
   font-size: 0.9rem;
 }
 
+/* Aktiv side i sidebar: fed skrift */
+#quarto-sidebar .sidebar-link.active {
+  font-weight: 700;
+}
+
 /* Back-to-top knap */
 #quarto-back-to-top {
   display: none;

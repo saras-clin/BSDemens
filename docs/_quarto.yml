@@ -6,8 +6,19 @@ website:
   title: "Registerbaseret forskning på DST"
   description: "Vejledning til registerbaseret kohortestudie på Danmarks Statistik"
   search: true
+  page-navigation: true
+  back-to-top-navigation: true
+  breadcrumbs: true
+
+  announcement:
+    content: "Guiden er under aktiv udvikling — indhold tilføjes og revideres løbende."
+    type: primary
+    dismissable: true
+    position: below-navbar
 
   navbar:
+    logo: da/images/logo.svg
+    logo-alt: "DST+R — Registerbaseret forskning"
     left:
       - href: index.qmd
         text: Forside
@@ -93,13 +104,15 @@ website:
         - en/index.qmd
 
   page-footer:
-    center: "Steno Diabetes Center Aarhus"
+    left: "Steno Diabetes Center Aarhus · Sara Schwartz · [saras@clin.au.dk](mailto:saras@clin.au.dk)"
+    right: "[Fejl eller forslag?](mailto:saras@clin.au.dk)"
 
 format:
   html:
     theme:
       - flatly
       - custom.scss
+    smooth-scroll: true
     toc: true
     toc-depth: 3
     toc-title: "På denne side"

@@ -12,6 +12,17 @@ Ny på projektet? Start med den generelle vejledning og vend tilbage hertil:
 → [Fase 2 — R: det allermest nødvendige](../02_r-intro.qmd)
 → [Fase 3 — Log ind på DST](../03_log-ind-dst.qmd)
 
+::: {.callout-tip}
+**Praktisk introduktion fra projektet selv**
+I Lukes mappe på serveren finder du en grundig vejledning til at arbejde med data på DST skrevet specifikt til dette projekt:
+
+```
+E:/workdata/708421/workspaces/luke/dstDataPrep/
+```
+
+Find `.qmd`-filen i denne mappe — den gennemgår `dstDataPrep`, `load_database()` og det praktiske workflow på DARTER trin for trin med rigtige eksempler fra projektet. God supplerende læsning til denne vejledning.
+:::
+
 ### I denne sektion
 
 | Side | Indhold |

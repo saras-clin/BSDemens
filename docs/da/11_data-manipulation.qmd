@@ -173,8 +173,18 @@ bef_en_per_person <- bef %>%
   group_by(pnr) %>%          # gruppér: alle rækker med samme pnr behandles sammen
   arrange(desc(aar)) %>%     # sortér inden for gruppen: nyeste år øverst (desc = faldende)
   slice(1) %>%               # tag kun den første række per gruppe — dvs. det nyeste år
-  ungroup()                  # frigiv gruppering — vigtigt: glem ikke ungroup()
+  ungroup()                  # VIGTIGT: frigiv gruppering efter du er færdig
 ```
+
+::: {.callout-important}
+**Husk `ungroup()` — altid.**
+`group_by()` sætter et "grouped_df"-mærke på din data.frame, som *alle* efterfølgende operationer arver. Det betyder:
+- `mutate()` beregner per gruppe, ikke per hele datasæt
+- `n()` tæller rækker per gruppe, ikke i alt
+- `summarize()` giver ét resultat per gruppe
+
+Disse fejl er svære at opdage, fordi koden kører uden fejlbeskeder og giver tilsyneladende fornuftige tal. `ungroup()` fjerner mærket og gør data.frame normal igen. Tommelfingerregel: afslut altid en `group_by()`-kæde med `ungroup()`.
+:::
 
 ```r
 # LPR / alle_dx: find første diagnose per person (til udfaldsdefinition)
