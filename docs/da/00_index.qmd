@@ -51,7 +51,7 @@ DST modtager og bearbejder data fra bl.a. Sundhedsdatastyrelsen (SDS), som har d
 
 ## Vejen fra spørgsmål til analyseklar datasæt
 
-Registerforskning følger typisk disse trin — i denne rækkefølge:
+Registerforskning følger typisk disse trin — i denne rækkefølge. Ordene *kohorte*, *index-dato*, *eksponering* og *udfald* forklares i [Fase 1](01_studieforberedelse.qmd#nøglebegreber).
 
 1. **Formuler et præcist forskningsspørgsmål** — hvem, hvad, hvornår, sammenlignet med hvem
 2. **Kortlæg din datamodel** — hvilke registre dækker eksponering, udfald og kovariater?

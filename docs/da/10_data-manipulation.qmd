@@ -235,6 +235,36 @@ kohort_med_dod <- kohort %>%
 
 ---
 
+## Beregn opfølgningstid og hændelsesvariabel
+
+Inden du kan analysere, skal hvert kohortemedlem have en **censureringsdato** (hvornår opfølgningen slutter) og en **hændelsesvariabel** (fik de udfaldet?).
+
+Censureringsdatoen er den *tidligste* af: hændelses-dato, dødsdato, emigrationsdato og studieslutningstidspunkt.
+
+```r
+studie_slut <- as.Date("2024-12-31")   # erstat med din faktiske studieslutningstidspunkt
+                                        # format: "åååå-mm-dd" (ISO 8601 — R's standard)
+
+kohort <- kohort %>%
+  mutate(
+    # Censureringsdato = det tidligst indtrufne af alle mulige stopårsager
+    censor_date = pmin(event_date, death_date, emigration_date,
+                       studie_slut, na.rm = TRUE),
+
+    # Opfølgningstid i år
+    followup_years = as.numeric(censor_date - index_date) / 365.25,
+
+    # Hændelsesvariabel: 1 = udfald indtruffet inden censurering, 0 = censureret
+    event = as.integer(!is.na(event_date) & event_date <= censor_date)
+  )
+```
+
+::: {.callout-note}
+`pmin()` sammenligner vektorer position for position og returnerer den mindste værdi per person — det er den vektoriserede version af `min()`. `na.rm = TRUE` sikrer at en manglende dødsdato (= levende) ikke gør censureringsdatoen til `NA`.
+:::
+
+---
+
 ## Byg din studiepopulation
 
 Nu har du alle byggeklodserne — udtræk (Fase 6), registre (Fase 8), LPR/SKS (Fase 9) og joins (ovenfor) — til at samle din studiepopulation. Det sker i fire trin:

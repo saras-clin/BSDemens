@@ -22,10 +22,10 @@ Denne side viser, hvordan du udtrækker og kategoriserer dem efter **SEPLINE**-g
 Se artiklen for fuld begrundelse, anbefalede referencegrupper og kategoriseringer.
 
 ::: {.callout-important}
-**Denne algoritme er under udvikling.**
-Kodningen nedenfor er et arbejdsudkast og er endnu ikke endeligt valideret.
+**Under udvikling — kode-eksempler, ikke valideret kode.**
+Kategoriseringerne nedenfor er **ikke** valideret og bør ikke bruges direkte i analyser uden gennemgang. De vises som strukturelle eksempler på, hvordan man kan kode variablerne — ikke som en godkendt implementering.
 Har du kode der allerede virker, eller input til kategoriseringerne, så hører jeg meget gerne fra dig:
-**Sara Schwartz — [saras@clin.au.dk](mailto:saras@clin.au.dk)**. Så kan det komme alle til gode her.
+**Sara Schwartz — [saras@clin.au.dk](mailto:saras@clin.au.dk)**
 :::
 
 ::: {.callout-note}
