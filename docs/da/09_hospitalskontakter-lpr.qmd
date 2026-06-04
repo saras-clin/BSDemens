@@ -178,35 +178,9 @@ alle_dx <- bind_rows(lpr2_dx, lpr3_dx)   # én diagnosetabel der dækker begge p
 
 ---
 
-## Udtræk et specifikt udfald (Fase 2)
-
-Skift `KODER` til de ICD-koder du vil have. Alt andet er uændret.
-
-```r
-KODER <- c("G30", "F00", "F01", "F02", "F03")   # demens — skift til dit udfald
-
-udfald <- alle_dx %>%
-  filter(icd3 %in% KODER) %>%                                       # behold kun de ønskede koder
-  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%   # tilføj index-dato fra kohort
-  filter(date_contact > index_date) %>%   # post-index; brug < for baseline-kovariat
-  group_by(pnr) %>%                                                  # gruppér for at finde første hændelse
-  arrange(date_contact) %>%                                          # ældste dato først
-  slice(1) %>%                            # første forekomst per person
-  ungroup() %>%                                                      # frigiv gruppering
-  select(pnr, event_date = date_contact)                             # omdøb til event_date
-
-# Join til kohort — NA = ingen hændelse (fortsat i risiko, censureres ved studieafslutning)
-resultat <- kohort %>%
-  select(pnr) %>%                         # behold kun pnr fra kohort
-  left_join(udfald, by = "pnr")           # tilknyt event_date — NA = censureret
-
-saveRDS(resultat, "datasets/extract_demens.rds")   # skift filnavn for hvert nyt udfald
-```
-
 ## Ekskluder prævalente tilfælde
 
-Et standard eksklusionskriterium er at fjerne personer, der allerede havde diagnosen *inden* index-dato.
-Det er den modsatte operation af udfaldsudtrækket — brug `<` i stedet for `>`.
+Inden du udtrækker nye hændelser, skal du ekskludere personer der allerede havde diagnosen *inden* index-dato — ellers tæller de som nye tilfælde, selvom de ikke er det.
 
 ```r
 EKSKL_KODER <- c("G30", "F00", "F01", "F02", "F03")   # samme koder som udfaldet
@@ -218,7 +192,7 @@ praevalente <- alle_dx %>%
   filter(date_contact < index_date) %>%                                 # KUN pre-index diagnoser
   distinct(pnr)                                                         # én række per person
 
-# Ekskluder fra kohorten
+# Ekskluder fra kohorten — gøres FØR udfaldsudtrækket
 cat("Kohort inden ekskludering:  ", nrow(kohort),                       "\n")
 kohort_renset <- kohort %>%
   anti_join(praevalente, by = "pnr")                                    # fjern prævalente tilfælde
@@ -229,6 +203,34 @@ cat("Ekskluderede:               ", nrow(kohort) - nrow(kohort_renset), "\n")
 ::: {.callout-tip}
 **Lookback-periode:** Overvej at begrænse `date_contact < index_date` yderligere — fx kun de 5 år inden index — for at undgå falske eksklusioner baseret på meget gamle diagnoser. Det afhænger af din definition af "prævalent".
 :::
+
+---
+
+## Udtræk et specifikt udfald (Fase 2)
+
+Nu hvor kohorten er renset for prævalente tilfælde, kan du trække nye hændelser.
+Skift `KODER` til de ICD-koder du vil have — brug `kohort_renset` i stedet for `kohort`.
+
+```r
+KODER <- c("G30", "F00", "F01", "F02", "F03")   # demens — skift til dit udfald
+
+udfald <- alle_dx %>%
+  filter(icd3 %in% KODER) %>%                                                # behold kun de ønskede koder
+  inner_join(kohort_renset %>% select(pnr, index_date), by = "pnr") %>%      # brug den rensede kohort
+  filter(date_contact > index_date) %>%   # post-index; brug < for baseline-kovariat
+  group_by(pnr) %>%                                                           # gruppér for at finde første hændelse
+  arrange(date_contact) %>%                                                   # ældste dato først
+  slice(1) %>%                            # første forekomst per person
+  ungroup() %>%                                                               # frigiv gruppering
+  select(pnr, event_date = date_contact)                                      # omdøb til event_date
+
+# Join til kohort — NA = ingen hændelse (fortsat i risiko, censureres ved studieafslutning)
+resultat <- kohort_renset %>%
+  select(pnr) %>%                         # behold kun pnr fra renset kohort
+  left_join(udfald, by = "pnr")           # tilknyt event_date — NA = censureret
+
+saveRDS(resultat, "datasets/extract_demens.rds")   # skift filnavn for hvert nyt udfald
+```
 
 ---
 

@@ -93,11 +93,11 @@ Et symbol du vil se overalt er **`%>%`** (røret). Det sender resultatet fra én
 
 | Funktion | Hvad den gør | Eksempel |
 |---|---|---|
-| `filter()` | Behold rækker der opfylder et krav | `filter(df, alder > 50)` |
-| `select()` | Vælg hvilke kolonner du vil beholde | `select(df, pnr, alder, koen)` |
-| `mutate()` | Opret en ny kolonne eller ændr en eksisterende | `mutate(df, alder_kat = alder > 65)` |
+| `filter()` | Behold rækker der opfylder et krav | `df %>% filter(alder > 50)` |
+| `select()` | Vælg hvilke kolonner du vil beholde | `df %>% select(pnr, alder, koen)` |
+| `mutate()` | Opret en ny kolonne eller ændr en eksisterende | `df %>% mutate(alder_kat = alder > 65)` |
 | `%>%` | Røret — sender resultatet videre til næste funktion | `df %>% filter(alder > 50) %>% select(pnr)` |
-| `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `left_join(kohort, bef, by = "pnr")` |
+| `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `kohort %>% left_join(bef, by = "pnr")` |
 | `collect()` | Hent parquet-data ind i R-hukommelsen | `register %>% filter(...) %>% collect()` |
 
 Røret `%>%` forklares grundigt i [Fase 13 — Funktioner: oversigt](13a_guide_til_funktioner.qmd#røret), og `collect()` i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
@@ -111,7 +111,7 @@ Følg denne rækkefølge. AI er nederst af en god grund.
 | # | Hvor | Hvornår |
 |---|---|---|
 | 1 | **Kollega eller vejleder** | Spørg først — de kender jeres data og workflow |
-| 2 | **Google** | Kopier fejlmeddelelsen præcist — inklusiv `Error:` |
+| 2 | **Google** | Søg på fejlbeskeden — skriv den ned præcist, inklusiv `Error:` |
 | 3 | **Stack Overflow** | Verdens største samling af kode-spørgsmål og -svar |
 | 4 | **Zheers R Coding Café** | [r-coding-cafe.zheer.dk](https://r-coding-cafe.zheer.dk/) — registerdata-specifikt |
 | 5 | **Officiel pakkdokumentation** | Søg pakkens navn + "documentation" |

@@ -207,8 +207,8 @@ recepter <- readRDS("datasets/extract_recepter.rds")
 ```
 
 ::: {.callout-warning}
-**`datasets/`-mappen er gitignored** — resultater gemmes lokalt på DST-serveren
-og hjemsends separat via outputkontrol. De må ikke pushes til GitHub.
+**`datasets/`-mappen gemmes kun lokalt på DST-serveren.**
+Mellemresultater hjemsendres via outputkontrol — se [14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd).
 :::
 
 ---
@@ -228,7 +228,7 @@ class(recepter$eksd)                # er datokolonnen Date? (ikke character)
 Hvis dit udtræk inkluderer eksklusionstrin — fx "fjern personer med tidlig diagnose" — er det god praksis at tælle N for hvert trin:
 
 ```r
-cat("Rå udtræk:           ", nrow(raa),                         "\n")   # alle rækker før eklusion
+cat("Rå udtræk:           ", nrow(raa),                         "\n")   # alle rækker før eksklusion
 cat("Efter eksklusioner:  ", nrow(renset),                      "\n")   # efter hvert trin
 cat("Ekskluderede i alt:  ", nrow(raa) - nrow(renset),          "\n")   # forskel
 ```

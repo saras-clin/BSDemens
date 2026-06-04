@@ -56,7 +56,7 @@ Anbefalet struktur inden for din mappe:
 [ditNavn]/
   mit-projekt/
     R/              ← alle dine scripts (.R-filer)
-    datasets/       ← mellemresultater (.rds-filer, gitignored)
+    datasets/       ← mellemresultater (.rds-filer, kun lokalt på DST)
     output/         ← tabeller og figurer klar til hjemsendelse
 ```
 
