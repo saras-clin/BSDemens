@@ -59,8 +59,8 @@ De tre du faktisk arbejder med i hverdagen:
 RDS er R's eget format. Det er hurtigt, kompakt og bevarer alle R-egenskaber (datatyper, faktorniveauer, kolonnenavne) perfekt. Det er sådan dine pipeline-scripts sender data videre til hinanden.
 
 ```r
-saveRDS(mit_datasaet, "datasets/full_cohort.rds")   # gem et R-objekt til disk
-full_cohort <- readRDS("datasets/full_cohort.rds")   # læs det ind igen
+saveRDS(kohort, "datasets/full_cohort.rds")   # gem et R-objekt til disk
+kohort <- readRDS("datasets/full_cohort.rds")   # læs det ind igen
 ```
 
 <details>

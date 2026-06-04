@@ -116,7 +116,7 @@ bef_2020 <- bef %>%
 # KORREKT: kombiner med dodsaars for at ekskludere dødsfald
 deaths <- load_database("dodsaars") %>%
   rename_with(tolower) %>%
-  filter(pnr %in% !!min_kohort) %>%
+  filter(pnr %in% !!kohort_pnrs) %>%
   select(pnr, d_dodsdto) %>%
   collect()
 

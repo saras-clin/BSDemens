@@ -134,14 +134,14 @@ Vil du køre koden lokalt med syntetiske data? Se fold-ud'en **Prøv det selv** 
 library(dstDataPrep)   # load_database() — adgang til DST-registre
 library(dplyr)         # filter, select, mutate, inner_join, bind_rows
 
-pnr_liste <- unique(kohort$pnr)   # erstat kohort med din population
+kohort_pnrs <- unique(kohort$pnr)   # erstat kohort med din population
 
 # ── LPR2 somatisk (frem til marts 2019) ─────────────────────────────────
 lpr_adm  <- load_database("lpr_adm")  %>% rename_with(tolower)   # LPR2 kontakttabel — doven forbindelse
 lpr_diag <- load_database("lpr_diag") %>% rename_with(tolower)   # LPR2 diagnosetabel — doven forbindelse
 
 lpr2_dx <- lpr_adm %>%
-  filter(pnr %in% !!pnr_liste) %>%               # kun kohortens pnr'er
+  filter(pnr %in% !!kohort_pnrs) %>%               # kun kohortens pnr'er
   select(pnr, recnum, date_contact = d_inddto) %>%   # recnum er join-nøglen til lpr_diag
   inner_join(
     lpr_diag %>%
@@ -157,7 +157,7 @@ lpr3_k <- load_database("lpr_a_kontakt")  %>% rename_with(tolower)   # LPR3 kont
 lpr3_d <- load_database("lpr_a_diagnose") %>% rename_with(tolower)   # LPR3 diagnosetabel — doven forbindelse
 
 lpr3_dx <- lpr3_k %>%
-  filter(pnr %in% !!pnr_liste) %>%                              # kun kohortens pnr'er
+  filter(pnr %in% !!kohort_pnrs) %>%                              # kun kohortens pnr'er
   select(pnr, dw_ek_kontakt, date_contact = kont_starttidspunkt) %>%   # dw_ek_kontakt er join-nøgle til lpr_a_diagnose
   inner_join(
     lpr3_d %>%
@@ -244,7 +244,7 @@ psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
   rename(recnum = v_recnum)                # v_recnum → recnum: gør join-nøgle ens med psyk_adm
 
 lpr2_psyk_dx <- psyk_adm %>%
-  filter(pnr %in% !!pnr_liste) %>%               # kun kohortens pnr'er
+  filter(pnr %in% !!kohort_pnrs) %>%               # kun kohortens pnr'er
   select(pnr, recnum, date_contact = d_inddto) %>%   # recnum er join-nøglen
   inner_join(
     psyk_diag %>%
