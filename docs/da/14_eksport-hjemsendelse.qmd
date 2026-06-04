@@ -62,19 +62,31 @@ round(antal / 5) * 5   # 23 → 25, 12 → 10
 
 ## Gem filer til outputmappen
 
+Når du ikke angiver en fuld sti, gemmer R filen i din **arbejdsmappe** — tjek den med:
+
+```r
+getwd()   # viser din nuværende arbejdsmappe, fx "E:/workdata/708421/myproject"
+```
+
+Gem altid til outputmappen med en fuld sti, så du er sikker på at filen havner det rigtige sted:
+
 ```r
 library(readr)   # write_csv
 
-# Aggregeret tabel:
-write_csv(min_tabel, "output/tabel1_deskriptiv.csv")   # brug sigende filnavne
+# Erstat stien med din projekts outputmappe:
+output_sti <- "E:/workdata/[projektnummer]/output/"
 
-# Figur:
-ggsave("output/figur1_km.png", plot = min_figur, width = 8, height = 6, dpi = 300)
+# Aggregeret tabel som CSV-fil:
+write_csv(min_tabel, paste0(output_sti, "tabel1_deskriptiv.csv"))
 
-# Modeloutput som tekst:
-sink("output/cox_resultater.txt")   # omdirigér output til fil
-print(summary(cox_model))           # skriv model-sammenfatning
-sink()                              # stop omdirigering
+# Figur som PNG-fil (width/height i tommer, dpi = opløsning):
+ggsave(paste0(output_sti, "figur1_km.png"),
+       plot = min_figur, width = 8, height = 6, dpi = 300)
+
+# Modeloutput som tekstfil:
+sink(paste0(output_sti, "cox_resultater.txt"))   # alt efterfølgende output skrives til filen
+print(summary(cox_model))                         # skriv resultater
+sink()                                            # stop — output går igen til konsollen
 ```
 
 ---
@@ -93,9 +105,8 @@ sink()                              # stop omdirigering
 
 | Kilde | Hvad du finder |
 |---|---|
-| [DST — Adgang til data](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data) | Regler for adgang, outputkontrol og hjemsendelse |
-| [DST — Registerstatistik dokumentation](https://www.dst.dk/da/Statistik/dokumentation) | Officiel dokumentation for alle DST-registre |
-| [ctpteam/RDST](https://github.com/ctpteam/RDST) | "R on DST"-manual inkl. outputkontrol-praksis |
+| [DST — Forskning (dst.dk)](https://www.dst.dk/da/TilSalg/Forskning) | Udgangspunktet for al information om adgang, outputkontrol og hjemsendelse |
+| [ctpteam/RDST](https://github.com/ctpteam/RDST) | "R on DST"-manual inkl. outputkontrol-praksis fra andre forskningsprojekter |
 
 ---
 
