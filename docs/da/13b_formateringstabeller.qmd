@@ -63,9 +63,9 @@ Uddannelser/             ← uddannelser
 Formateringstabeller er SAS-filer og indlæses med `haven::read_sas()`:
 
 ```r
-library(haven)
+library(haven)   # read_sas — indlæsning af SAS-filer
 
-kom_tabel <- read_sas(
+kom_tabel <- read_sas(   # hent formateringstabel som data frame
   "E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Geokoder/c_kom_v4_t.sas7bdat"
 )
 ```
@@ -89,30 +89,39 @@ kom_tabel <- read_sas(
 # Brug til år efter kommunalreformen 2007 (V4)
 
 bef_med_kommune <- bef_data %>%
-  collect() %>%   # collect INDEN join med SAS-fil
-  left_join(kom_tabel, by = c("bopkom" = "START"))
+  collect() %>%                                             # collect INDEN join med SAS-fil
+  left_join(kom_tabel, by = c("bopkom" = "START"))          # tilknyt kommunenavn via bopkom-kode
 ```
 
 ---
 
 ### Beskæftigelsesstatus (socio13)
 
+Vil du have de rå kode-labels fra DST's formateringstabel:
+
 ```r
-socio13_tabel <- read_sas(
+socio13_tabel <- read_sas(   # hent label-tabel fra formateringsmappen
   "E:/Formater/SAS formater i Danmarks Statistik/SAS_datasaet/Times_personstatistik/n_socio13_kt.sas7bdat"
 )
 # Kolonner: START (socio13-kode), N_SOCIO13_KT (label)
 
-# Kategorisering per SEPLINE-guidelines:
-library(dplyr)
+akm_med_labels <- akm_data %>%
+  left_join(socio13_tabel, by = c("socio13" = "START"))   # tilknyt label per kode
+```
+
+Vil du i stedet bruge SEPLINE-kategoriseringen direkte (anbefalet til analyse):
+
+```r
+library(dplyr)   # mutate, case_when
+
 akm_kategoriseret <- akm_data %>%
-  mutate(occupation_cat = case_when(
+  mutate(occupation_cat = case_when(             # SEPLINE-kategorier
     socio13 %in% c(110:114, 120, 131:135, 139) ~ "Beskæftiget",
     socio13 == 310                              ~ "Studerende",
     socio13 %in% c(210, 410)                   ~ "Ledig",
     socio13 %in% c(220, 321, 330)              ~ "Udenfor arbejdsmarked",
     socio13 %in% c(322, 323)                   ~ "Pensionist",
-    TRUE                                        ~ "Ukendt"
+    TRUE                                        ~ "Ukendt"   # ukendt kode eller NA
   ))
 ```
 
@@ -150,7 +159,7 @@ udda_kategoriseret <- udda_data %>%
 3. Indlæs tabellen og kig på kolonnerne med `names()` og `head()`
 
 ```r
-names(kom_tabel)   # se hvad kolonner hedder
+names(kom_tabel)   # se hvad kolonnerne hedder — find START og label-kolonnen
 head(kom_tabel)    # se de første rækker og forstå strukturen
 ```
 

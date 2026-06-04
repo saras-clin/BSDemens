@@ -92,7 +92,7 @@ Tommelfingerregler:
 
 ---
 
-## 4. Sammenligningskohorten (komparator)
+## 4. Sammenligningskohorten (komparator) {#sammenligningskohorten-komparator}
 
 De fleste studier sammenligner en eksponeret gruppe med en **komparator**. Hvordan du bygger den, er en designbeslutning du skal tage på papir — inden koden.
 

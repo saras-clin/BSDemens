@@ -13,11 +13,13 @@ format:
 
 Denne side guider dig fra det allerførste login til du har RStudio kørende og er klar til at køre kode.
 
+::: {.callout-note}
+Denne vejledning arbejder ud fra **R**. Når du logger ind på DST, vælger du "Python/R" — vælg R/RStudio.
+:::
+
 ---
 
 ## Forbind til serveren
-
-DST's server tilgås via Microsoft Remote Desktop — et program der giver dig et Windows-skrivebord over internettet.
 
 ### Trin 1 — Download Microsoft Remote Desktop (kun Mac)
 
@@ -26,32 +28,37 @@ Download og installer gratis.
 
 Windows-brugere har Remote Desktop indbygget — søg efter "Remote Desktop Connection" i startmenuen.
 
-### Trin 2 — Opret forbindelse
+### Trin 2 — Log ind
 
-Åbn Microsoft Remote Desktop og opret en ny forbindelse.
-**Serveradressen får du af din vejleder eller institutionens IT-support** — adressen er projektspecifik.
+1. Gå til **[remote.dst.dk](https://remote.dst.dk)** i din browser
+2. Log ind med din **ident** (4 bogstaver) og den **engangskode** du modtager
+3. Klik på **"FSE Windows"**
+4. Log ind med brugernavn **`dstfse\IDENT+PROJEKTNUMMER`** (fx `dstfse\abcd708421`) og din selvvalgte adgangskode
 
-Du logger ind med dine DST-brugeroplysninger (brugernavn + adgangskode fra din adgangsansøgning).
+### Trin 3 — Vælg Python/R
 
-### Trin 3 — Valg-skrivebordet
+Du lander på et valg-skrivebord. Klik på **Python/R**.
 
-Første gang du forbinder, lander du på et **valg-skrivebord**.
-Her vælger du hvilket program du vil arbejde i. Klik på **R/RStudio**.
+Et nyt skrivebord åbner — find og åbn **RStudio**.
 
-Et nyt skrivebord åbner med RStudio klar til brug.
+### Trin 4 — Find/lav din egen projektmappe
 
-### Trin 4 — Find din projektmappe
+Åbn **Stifinder** (File Explorer) og naviger til `workspaces`-mappen under dit projekt.
+Opret en mappe med dit navn eller din ident, hvis den ikke allerede eksisterer:
 
-Fra det nye skrivebord kan du åbne **Stifinder** (File Explorer) og navigere til din projektmappe.
+```
+E:/workdata/[projektnummer]/workspaces/[ditNavn]/
+```
 
-::: {.callout-note}
-**Mappestruktur på DST — placeholder**
+Anbefalet struktur inden for din mappe:
 
-Den præcise sti til din projektmappe varierer og skal bekræftes med din vejleder.
-Typisk format: `E:/workdata/[projektnummer]/workspaces/[ditNavn]/`
-
-*Opdatér dette afsnit efter din første DST-session med den bekræftede sti og undermappestruktur.*
-:::
+```
+[ditNavn]/
+  mit-projekt/
+    R/              ← alle dine scripts (.R-filer)
+    datasets/       ← mellemresultater (.rds-filer, gitignored)
+    output/         ← tabeller og figurer klar til hjemsendelse
+```
 
 ### Trin 5 — Mac-tastaturfix (gøres ved hver forbindelse)
 
@@ -67,11 +74,13 @@ Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Remote 
 | `{` | Option + Shift + 8 |
 | `}` | Option + Shift + 9 |
 
+::: {.callout-note}
+**Mangler:** genveje til `` ` `` (backtick), `$`, `\` og `@` er ikke bekræftet — opdatér tabellen når du har fundet dem på serveren.
+:::
+
 I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter).
 
 ### Trin 6 — Åbn RStudio og kør en testlinje
-
-Åbn RStudio fra skrivebordet og kør disse to linjer:
 
 ```r
 getwd()   # vis stien til din projektmappe
@@ -98,17 +107,8 @@ Et R-projekt samler alle dine scripts, outputfiler og indstillinger i én mappe.
 
 1. Åbn RStudio
 2. **File → New Project → New Directory → New Project**
-3. Giv projektet et navn og vælg placering — typisk under din workspace-mappe på DST
+3. Giv projektet et navn og vælg placering under din workspace-mappe
 4. Klik **Create Project**
-
-Anbefalet mappestruktur inden for projektet:
-
-```
-mit-projekt/
-  R/              ← alle dine scripts (.R-filer)
-  datasets/       ← mellemregninger og analysedatasæt (.rds-filer, gitignored)
-  output/         ← tabeller og figurer klar til hjemsendelse
-```
 
 ::: {.callout-note}
 **Gem ikke workspace**
@@ -118,46 +118,29 @@ Indstil det permanent: **Tools → Global Options → General → "Save workspac
 
 ::: {.callout-tip}
 **Få RStudio til at starte hurtigere på DST**
-DST's RStudio kan være langsom at åbne. Slå pakke-panelet fra: **Tools → Global Options → Packages → fjern fluebenet ved "Enable packages pane"**. Du bruger alligevel `library()` og `install.packages()` direkte i koden.
+Slå pakke-panelet fra: **Tools → Global Options → Packages → fjern fluebenet ved "Enable packages pane"**. Du bruger alligevel `library()` og `install.packages()` direkte i koden.
 :::
 
 ---
 
-## DST-dokumentation på serveren
+## DST-dokumentation
 
-**TIMES — variabelbeskrivelser**
-Slå op hvad en variabel i et register betyder: søg på registernavnet på [dst.dk/da/Statistik/dokumentation/Times](https://www.dst.dk/da/Statistik/dokumentation/Times)
+**UDEN FOR DST — TIMES (variabelbeskrivelser)**
+Slå op hvad en variabel i et register betyder: [dst.dk — TIMES dokumentation](https://www.dst.dk/da/Statistik/dokumentation/Times)
 
-**Stjernen på skrivebordet**
-Den stjerne-genvej på Windows-skrivebordet inde på DST-serveren åbner DST's formateringstabel-guide — bruges til at finde SAS-filer der oversætter koder til tekst (fx kommunenumre til kommunenavne).
-Mere: [Fase 13b — Formateringstabeller](13b_formateringstabeller.qmd)
+**PÅ DST — Stjernen på skrivebordet**
+Stjernen åbner DST's formateringstabel-guide — bruges til at finde SAS-filer der oversætter koder til tekst (fx kommunenumre til kommunenavne).
+Mere: [13b — Formateringstabeller](13b_formateringstabeller.qmd)
 
 Støder du på en funktion du ikke genkender?
-Slå den op i [Fase 13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd).
+Slå den op i [13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd).
 
 ---
 
 ## Første session — quick checklist
 
-1. **Åbn dit projekt** — File → Open Project → din `.Rproj` i workspace-mappen.
+1. **Åbn dit projekt** — File → Open Project → din `.Rproj` i workspace-mappen, eller dobbeltklik på `.Rproj`-filen i Stifinder.
 2. **Verificér** — `getwd()` kører uden fejl.
-
----
-
-## Hvor data ligger på DST
-
-På DST er registrene allerede klargjort som parquet og ligger i to datavarehuse:
-
-| Lager | Sti (eksempel) | Hvad er der |
-|---|---|---|
-| `parquet-registers` | `E:/workdata/[proj]/cleaned-data/parquet-registers/` | De fleste registre: BEF, LPR, LMDB, FAIK, AKM, ... |
-| `parquet-external` | `E:/workdata/[proj]/cleaned-data/parquet-external/` | Registre der ikke er i parquet-registers, fx SKS-procedurekoder (LPR3) |
-
-::: {.callout-note}
-Hvert register er gemt som mange filer — én per år. `load_database("navn")` (DARTER) eller `open_dataset("sti")` samler dem automatisk til én tabel. Data læses først ind i hukommelsen, når du kalder `collect()` — forklaret i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
-:::
-
-Dine egne mellemresultater gemmer du som `.rds`-filer — se [Fase 4 — Filtyper og indlæsning](04_filformater.qmd).
 
 ---
 
@@ -165,8 +148,9 @@ Dine egne mellemresultater gemmer du som `.rds`-filer — se [Fase 4 — Filtype
 
 Du er nu logget ind og sat op. Resten af guiden lærer dig at arbejde med data:
 
-- [Fase 4 — Filtyper og indlæsning](04_filformater.qmd) — hvilke filer du møder, og hvad der åbner dem
-- [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd) — åbn → filtrér → vælg → `collect()`; den vigtigste regel; hvad `!!` er
-- [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd) — hvilket register indeholder hvad
-- [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — ICD-koder, D-præfiks, LPR2 vs LPR3
-- [Fase 13 — Reference](13_reference.qmd) — funktioner, faldgruber og registerreference når du sidder fast
+- [4 — Filtyper og indlæsning](04_filformater.qmd) — hvilke filer du møder, og hvad der åbner dem
+- [5 — Det universelle mønster](05_universelle-moenster.qmd) — åbn → filtrér → vælg → `collect()`; den vigtigste regel; hvad `!!` er
+- [8 — Kend dine registre](08_kend-dine-registre.qmd) — hvilket register indeholder hvad
+- [9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — ICD-koder, D-præfiks, LPR2 vs LPR3
+- [13 — Reference](13_reference.qmd) — funktioner, faldgruber og registerreference når du sidder fast
+- **Projekt 708421:** [DARTER — Registersti og datastores](darter/01_registersti-datastores.qmd) — stier og adgang til alle registre
