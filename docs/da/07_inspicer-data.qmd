@@ -21,7 +21,7 @@ Inden du leder i koden — gør dette i rækkefølge:
 2. **Kør `class(objektet)`** — er det data (`"data.frame"`) eller stadig en forbindelse (`"tbl_duckdb_connection"`)?
 3. **Kør `names(objektet)`** — hedder kolonnen præcis det, du tror? Et enkelt bogstav eller stor/lille skrift er nok til at fejle.
 4. **Isolér den fejlende linje** — kør den alene og se hvad der sker.
-5. **Google fejlbeskeden** — skriv den ned præcist (du kan ikke kopiere tekst fra DST's Remote Desktop) og søg på den med "R dplyr".
+5. **Spørg en kollega eller søg på fejlbeskeden** — se [2 — R: det allermest nødvendige](02_r-intro.qmd#når-du-sidder-fast) for prioriteret hjælpeliste.
 
 En oversigt over hyppige fejlbeskeder og hvad de typisk betyder finder du i [Fase 13c — Faldgruber på DST](13c_dst_faldgruber.qmd#de-hyppigste-fejlbeskeder-og-hvad-de-betyder).
 
