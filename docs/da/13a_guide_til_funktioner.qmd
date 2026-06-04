@@ -101,7 +101,7 @@ Resten af dine kommandoer (`filter`, `select`) tilføjer yderligere instruktione
 
 ```r
 bef <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/bef/") %>%
-  rename_with(tolower)
+  rename_with(tolower)   # standardisér kolonnenavne til lowercase
 ```
 
 De bekræftede stier til dit projekt finder du i [Registerreference](13d_register_reference.qmd).
@@ -109,7 +109,7 @@ De bekræftede stier til dit projekt finder du i [Registerreference](13d_registe
 ## DARTER
 
 ```r
-bef <- load_database("bef") %>% rename_with(tolower)
+bef <- load_database("bef") %>% rename_with(tolower)   # doven forbindelse; kolonnenavne til lowercase
 ```
 
 `load_database()` fra `dstDataPrep` finder stien automatisk — du behøver ikke kende den fulde sti.
@@ -118,7 +118,7 @@ Se [DARTER — setup →](darter/00_index.qmd) for installation.
 ## Lokalt (fakeregs)
 
 ```r
-bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)
+bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)   # reg_sti() fra fakeregs; lowercase kolonner
 ```
 
 `reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
@@ -140,9 +140,9 @@ Kald det sent — efter alle `filter()` og `select()` trin — så kun de nødve
 
 ```r
 resultat <- stort_register %>%
-  filter(pnr %in% !!kohort_pnrs) %>%
-  select(pnr, d_inddto) %>%
-  collect()   # data trækkes ind i R-hukommelsen
+  filter(pnr %in% !!kohort_pnrs) %>%   # kun kohortens pnr'er
+  select(pnr, d_inddto) %>%            # kun de to kolonner vi bruger
+  collect()                             # data trækkes ind i R-hukommelsen
 ```
 
 ::: {.callout-note}
@@ -160,7 +160,7 @@ Konceptet med doven evaluering — hvorfor data ikke er i hukommelsen før `coll
 Det bruges til at sende data videre fra ét script til det næste i pipeline'en.
 
 ```r
-full_cohort <- readRDS("datasets/full_cohort.rds")
+full_cohort <- readRDS("datasets/full_cohort.rds")   # hent gemt datasæt fra disk
 ```
 
 ---
@@ -173,7 +173,7 @@ Det modsatte af `readRDS()`.
 Hvert pipeline-script gemmer sit resultat med `saveRDS()`, så det næste script kan hente det.
 
 ```r
-saveRDS(full_cohort, "datasets/full_cohort.rds")
+saveRDS(full_cohort, "datasets/full_cohort.rds")   # gem datasæt til disk
 ```
 
 ---
@@ -234,8 +234,7 @@ Det er det samme — men computeren behandler dem som tre helt forskellige ting.
 `rename_with(tolower)` fikser det på ét sekund: alle navne bliver ensartede.
 
 ```r
-bef <- open_dataset("sti/til/bef") %>% rename_with(tolower)
-# Alle kolonner er nu i lowercase: pnr, koen, foed_dag, ...
+bef <- open_dataset("sti/til/bef") %>% rename_with(tolower)   # alle kolonner bliver lowercase: pnr, koen, foed_dag, ...
 ```
 
 **Vigtigt:** kald det altid på samme linje som `open_dataset()` (eller `load_database()` i DARTER).
@@ -296,7 +295,7 @@ Antallet af rækker er det samme efter `mutate()` — det tilføjer information,
 
 ```r
 mutate(icd3 = substr(c_diag, 2, 4))   # ny kolonne: ICD-kode uden D-præfikset, 3 tegn
-mutate(alder = as.numeric(difftime(surgery_date, foed_dag, units = "days")) / 365.25)
+mutate(alder = as.numeric(difftime(surgery_date, foed_dag, units = "days")) / 365.25)   # alder ved operation i år
 ```
 
 ---
@@ -357,7 +356,7 @@ coalesce(mi_flag, 0L)   # NA (= ikke fundet) -> 0 (= fraværende)
 **Hvad det gør:** anvender den samme funktion på mange kolonner på én gang inde i `mutate()`.
 
 ```r
-mutate(across(all_of(nmi_variabler), ~ coalesce(.x, 0L)))
+mutate(across(all_of(nmi_variabler), ~ coalesce(.x, 0L)))   # erstat NA med 0 i alle nmi-flagkolonner
 ```
 
 `~ coalesce(.x, 0L)` er en anonym funktion: `~` betyder "funktion af", og `.x` er den aktuelle kolonne.
@@ -429,9 +428,9 @@ Du behøver kun at vide, om de nogensinde har haft den.
 **Hvad det gør:** beholder kun den n'te række inden for hver gruppe (bruges efter `group_by()`).
 
 ```r
-group_by(pnr) %>%
-  arrange(desc(aar)) %>%
-  slice(1)   # beholder den nyeste post per person
+group_by(pnr) %>%          # gruppér per person
+  arrange(desc(aar)) %>%   # nyeste år først
+  slice(1)                 # beholder den nyeste post per person
 ```
 
 ---
@@ -447,10 +446,10 @@ group_by(pnr) %>%
 Alle efterfølgende trin (`arrange`, `slice`, `summarise`) sker nu én bunke ad gangen.
 
 ```r
-group_by(pnr) %>%
-  arrange(date_contact) %>%
-  slice(1) %>%        # tidligste kontakt per person
-  ungroup()           # fjern grupperingen igen bagefter
+group_by(pnr) %>%             # gruppér per person
+  arrange(date_contact) %>%   # ældste dato først
+  slice(1) %>%                # tidligste kontakt per person
+  ungroup()                   # fjern grupperingen igen bagefter
 ```
 
 ---
@@ -477,9 +476,8 @@ Bruges typisk med `group_by() %>% slice(1)` for at finde den første eller nyest
 **Hvad det gør:** reducerer hver gruppe til én opsummeringsrække.
 
 ```r
-group_by(pnr) %>%
-  summarise(foerste_e66 = min(date_contact, na.rm = TRUE))
-# Én linje per person med den tidligste E66-dato
+group_by(pnr) %>%                                                  # gruppér per person
+  summarise(foerste_e66 = min(date_contact, na.rm = TRUE))         # tidligste E66-dato per person
 ```
 
 `.groups = "drop"` fjerner grupperingen automatisk bagefter.
@@ -512,8 +510,7 @@ Du skal stå på BEGGE lister for at komme ind.
 Bruges når en match er meningsfuld — f.eks. `inner_join(bs_kohort)` beholder kun hospitalkontakter for personer, der faktisk er i studiet.
 
 ```r
-inner_join(bs_kohort %>% select(pnr, surgery_date), by = "pnr")
-# Kun kontakter fra personer der er i BS-kohorten
+inner_join(bs_kohort %>% select(pnr, surgery_date), by = "pnr")   # kun kontakter fra BS-kohortens medlemmer
 ```
 
 ---
@@ -528,8 +525,8 @@ Alle patienter er der stadig — dem med funnet har en dato, dem uden har `NA`.
 Bruges overalt, når du tilføjer flag og kovariater til kohorten.
 
 ```r
-full_cohort %>%
-  left_join(dementia, by = "pnr")   # alle i kohorten; kun dem med demens får en dato
+full_cohort %>%                               # start med alle kohortmedlemmer
+  left_join(dementia, by = "pnr")             # alle bevares; kun dem med demens får en dato
 ```
 
 ---
@@ -542,7 +539,7 @@ full_cohort %>%
 Bruges fx til at kombinere LPR2 + psykiatrisk LPR2 + LPR3 til én samlet diagnosetabel.
 
 ```r
-bind_rows(lpr2_resultater, lpr2_psyk_resultater, lpr3_resultater)
+bind_rows(lpr2_resultater, lpr2_psyk_resultater, lpr3_resultater)   # kombinér alle tre kildetabeller
 ```
 
 ---
@@ -591,8 +588,7 @@ Men i NMI-beregningen (Nordic Multimorbidity Index) kører vi i en løkke over e
 ```r
 tilstandsnavn <- "mi"   # variablen indeholder navnet som en tekststreng
 
-mutate(!!tilstandsnavn := 1L)
-# !! injicerer værdien af tilstandsnavn — dvs. koden svarer til: mutate(mi = 1L)
+mutate(!!tilstandsnavn := 1L)   # !! injicerer variablens indhold: svarer til mutate(mi = 1L)
 # Næste iteration: tilstandsnavn <- "stroke" → mutate(stroke = 1L)
 ```
 
@@ -698,8 +694,7 @@ year(surgery_date)   # 2021-03-15 -> 2021
 **Hvad det gør:** beregner forskellen mellem to datoer.
 
 ```r
-as.numeric(difftime(surgery_date, foed_dag, units = "days")) / 365.25
-# Alder ved operation i år
+as.numeric(difftime(surgery_date, foed_dag, units = "days")) / 365.25   # alder ved operation i år
 ```
 
 ---
@@ -709,7 +704,7 @@ as.numeric(difftime(surgery_date, foed_dag, units = "days")) / 365.25
 **Hvad det gør:** finder det mindste/største element i en vektor og ignorerer `NA`.
 
 ```r
-summarise(foerste_dato = min(date_contact, na.rm = TRUE))
+summarise(foerste_dato = min(date_contact, na.rm = TRUE))   # tidligste kontaktdato per person
 ```
 
 ---
@@ -757,7 +752,7 @@ Med `set.seed(42)` blander du altid på den samme måde — og kan dermed reprod
 Kald det altid inden matching-løkker for at sikre reproducerbarhed.
 
 ```r
-set.seed(42)
+set.seed(42)                   # fastsæt tilfældighedsfrø for reproducerbarhed
 sample(pool_pnrs, size = 5)   # vælger altid de samme 5 tilfældige pnrs
 ```
 

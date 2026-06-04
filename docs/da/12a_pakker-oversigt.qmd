@@ -221,3 +221,9 @@ Pakkerne nedenfor er **ikke tilgængelige på DST** (GitHub-only; kræver import
 | [ctpteam/DST](https://github.com/ctpteam/DST) | Guide til LPR3, DST-manualer, slides og en heaven-PDF |
 | [steno-aarhus/registers-project-database](https://steno-aarhus.github.io/registers-project-database/) | SDCA's egen database: variabellister, registerbeskrivelser og ansøgningsskabeloner til Sundhedsdatastyrelsen |
 | [github.com/tagteam](https://github.com/tagteam) | Dokumentation for `riskRegression`, `prodlim`, `Publish`, `pec`, `heaven` |
+
+---
+
+## Næste skridt
+
+→ [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)

@@ -13,6 +13,20 @@ Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine 
 
 ---
 
+## Ser du en rød fejlbesked? {#ser-du-en-rød-fejlbesked}
+
+Inden du leder i koden — gør dette i rækkefølge:
+
+1. **Læs fejlbeskeden** — hvilken linje er nævnt? Hvilket objektnavn dukker op?
+2. **Kør `class(objektet)`** — er det data (`"data.frame"`) eller stadig en forbindelse (`"tbl_duckdb_connection"`)?
+3. **Kør `names(objektet)`** — hedder kolonnen præcis det, du tror? Et enkelt bogstav eller stor/lille skrift er nok til at fejle.
+4. **Isolér den fejlende linje** — kør den alene og se hvad der sker.
+5. **Google den præcise fejlbesked** — kopiér den ordret og tilføj "R dplyr".
+
+En oversigt over hyppige fejlbeskeder og hvad de typisk betyder finder du i [Fase 13c — Faldgruber på DST](13c_dst_faldgruber.qmd#de-hyppigste-fejlbeskeder-og-hvad-de-betyder).
+
+---
+
 ## Se hvad du har
 
 ```r
@@ -145,6 +159,25 @@ IQR(data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
 sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
 colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
 ```
+
+---
+
+## Tjek datoer
+
+Datokolonner kan indeholde umulige værdier — datoer langt uden for studieperioden er et tegn på en konverteringsfejl eller forkert kolonne.
+
+```r
+min(data$index_date, na.rm = TRUE)   # er den tidligste dato plausibel?
+max(data$index_date, na.rm = TRUE)   # er den seneste dato plausibel?
+
+# Tjek om der er datoer FØR studiestart:
+sum(data$index_date < as.Date("2005-01-01"), na.rm = TRUE)   # erstat datoen med din studiestart
+
+# Tjek om der er datoer EFTER studieslutt:
+sum(data$index_date > as.Date("2024-12-31"), na.rm = TRUE)   # erstat datoen med din studieslutt
+```
+
+Se [Fase 13c — Faldgruber](13c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid-i-date-format) for de hyppigste datokonverteringsfejl og hvordan du retter dem.
 
 ---
 

@@ -60,3 +60,9 @@ undgås for at forhindre cirkulær logik, da demens er studieudfaldet.
 
 Se [artiklen](https://doi.org/10.2147/CLEP.S353398) for fuld prædiktorliste og vægte.
 Se [Registerreference](13d_register_reference.qmd) for bekræftede kolonnenavne i LPR og LMDB.
+
+---
+
+## Næste skridt
+
+→ [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)

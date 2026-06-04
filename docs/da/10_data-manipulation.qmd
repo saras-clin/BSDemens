@@ -60,7 +60,7 @@ Begge formater indeholder **de samme oplysninger** — de er bare arrangeret for
 ### Langt → bredt med `pivot_wider()`
 
 ```r
-library(tidyr)
+library(tidyr)   # pivot_wider, pivot_longer
 
 df_bredt <- df_langt %>%
   pivot_wider(
@@ -77,8 +77,8 @@ I registret gemmes de i langt format — én måling per række.
 Til analysen vil vi have bredt format — én række per patient.
 
 ```r
-library(dplyr)
-library(tidyr)
+library(dplyr)   # mutate, group_by, arrange, slice
+library(tidyr)   # pivot_wider
 
 # Langt format — som det ser ud i registret:
 hba1c_langt <- data.frame(
@@ -134,10 +134,10 @@ bef_en_per_person <- bef %>%
 ```r
 # LPR: find første demensdiagnose per person
 foerste_demens <- lpr_dx %>%
-  group_by(pnr) %>%
-  arrange(date_contact) %>%    # ældste dato først
-  slice(1) %>%                 # første diagnose per person
-  ungroup()
+  group_by(pnr) %>%              # gruppér for at finde første hændelse per person
+  arrange(date_contact) %>%      # ældste dato først
+  slice(1) %>%                   # første diagnose per person
+  ungroup()                      # frigiv gruppering
 ```
 
 ---
@@ -150,7 +150,7 @@ Alle joins i `dplyr` tager to tabeller og én nøgle-kolonne, de deler (fx `pnr`
 ### De joins du vil bruge
 
 ```r
-library(dplyr)
+library(dplyr)   # left_join, inner_join, semi_join, anti_join
 
 # left_join: behold ALLE rækker fra x, tilføj kolonner fra y
 # Personer i x uden match i y får NA.
@@ -175,6 +175,7 @@ bef_i_kohort <- bef %>%
 # anti_join: behold rækker i x SOM IKKE HAR match i y
 bef_ikke_i_kohort <- bef %>%
   anti_join(kohort, by = "pnr")   # kun BEF-rækker for ikke-kohort-medlemmer
+                                  # bruges også som diagnostik — se "Validér dit join" nedenfor
 ```
 
 <details>
@@ -203,6 +204,38 @@ bef_akm <- bef %>%
 
 ---
 
+## Validér dit join
+
+Joins fejler sjældent med en fejlbesked — men de kan give stille forkerte resultater.
+Tjek altid disse tre ting efter et `left_join()`:
+
+```r
+# Inden join: hvad er nrow?
+nrow(kohort)                                   # fx 4.823
+
+# Join:
+kohort2 <- kohort %>% left_join(udfald, by = "pnr")
+
+# Tjek 1: steg rækketallet? Duplikerede nøgler i udfald giver ekstra rækker.
+nrow(kohort2)                                  # skal stadig være 4.823
+
+# Tjek 2: hvor mange fik et match?
+sum(!is.na(kohort2$event_date))                # antal med udfald
+sum(is.na(kohort2$event_date))                 # antal uden — forventede censurerede?
+
+# Tjek 3: hvem matchede IKKE? (diagnostisk — ikke nødvendigvis en fejl)
+mangler <- anti_join(kohort, udfald, by = "pnr")   # pnr'er der ikke fandtes i udfald
+nrow(mangler)                                  # 0 = alle matchede; > 0 = undersøg
+```
+
+::: {.callout-tip}
+**`anti_join()` som diagnostik**
+`anti_join(kohort, udfald, by = "pnr")` returnerer de kohortepersoner der *ikke* findes i udfald-tabellen.
+Bruges til "hvem i min kohorte har ingen dødsdato-record?" (alle levende — forventet) eller "hvem mangler i register X?" (uforventet — undersøg).
+:::
+
+---
+
 ## Bind rækker fra to tabeller — `bind_rows()`
 
 Bruges til at kombinere fx LPR2 og LPR3 til én samlet diagnosetabel:
@@ -223,14 +256,14 @@ kohort <- readRDS("datasets/full_cohort.rds")
 
 # Dødsdatoer fra DODSAARS:
 dodsaars <- load_database("dodsaars") %>%
-  rename_with(tolower) %>%
-  filter(pnr %in% !!kohort$pnr) %>%
-  select(pnr, death_date = d_dodsdto) %>%
-  collect()
+  rename_with(tolower) %>%               # standardisér kolonnenavne
+  filter(pnr %in% !!kohort$pnr) %>%     # kun kohortens pnr'er
+  select(pnr, death_date = d_dodsdto) %>%   # omdøb d_dodsdto til death_date
+  collect()                              # hent ind i R
 
 # Join: alle kohort-medlemmer bevares; de levende får death_date = NA
 kohort_med_dod <- kohort %>%
-  left_join(dodsaars, by = "pnr")
+  left_join(dodsaars, by = "pnr")       # tilknyt dødsdato — NA = fortsat i live
 ```
 
 ---

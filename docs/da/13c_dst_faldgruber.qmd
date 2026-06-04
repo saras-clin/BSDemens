@@ -192,3 +192,23 @@ Bruger du `nmi_count` i din regressionsmodel i stedet for `nmi_score`, justerer 
 
 ---
 
+## 10. De hyppigste fejlbeskeder og hvad de betyder {#de-hyppigste-fejlbeskeder-og-hvad-de-betyder}
+
+R's fejlbeskeder er korte og tekniske — her er de du oftest møder i et DST-workflow, oversat til hvad de faktisk betyder:
+
+| Fejlbesked | Typisk årsag | Løsning |
+|---|---|---|
+| `Error: Column 'pnr' not found` | `rename_with(tolower)` mangler | Tilføj `%>% rename_with(tolower)` direkte efter `load_database()` — se [faldgrube 3](#3-rename_withtolower-skal-kaldes-på-hvert-register) |
+| `Error: object 'min_liste' not found` | `!!` mangler i `filter()` på en doven forbindelse | Skriv `filter(pnr %in% !!min_liste)` — se [faldgrube 8](#8-bang-bang-glemmes-i-lazy-evaluering) |
+| `Error: could not find function "load_database"` | `library(dstDataPrep)` mangler | Tilføj `library(dstDataPrep)` øverst i scriptet |
+| `non-numeric argument to binary operator` | Datokolonne er `character`, ikke `Date` | `mutate(dato = as.Date(dato))` — se [faldgrube 4](#4-datokolonner-er-ikke-altid-i-date-format) |
+| `Error in filter.default(...)` | Filtrering på et dovent objekt uden `%>%` | Skift til `%>%` — se [røret](13a_guide_til_funktioner.qmd#røret) |
+| `Error: Can't convert ... to ...` | Join på kolonner med forskellig type (fx numeric vs. character) | Brug `mutate(pnr = as.character(pnr))` for at matche typer |
+| `object of type 'closure' is not subsettable` | Et variabelnavn overskriver en funktion (fx `data <- ...`) | Brug et unikt variabelnavn — undgå `data`, `df`, `c` som objektnavne |
+
+::: {.callout-tip}
+**Det hurtigste debugging-flow** — hvad du gør trin for trin når du ser en rød fejlbesked — er beskrevet i [Fase 7 — Ser du en rød fejlbesked?](07_inspicer-data.qmd#ser-du-en-rød-fejlbesked).
+:::
+
+---
+

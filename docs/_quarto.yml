@@ -23,49 +23,49 @@ website:
       style: "docked"
       collapse-level: 1
       contents:
-        - text: "Fase 0 — Orienter dig"
+        - text: "0 — Orienter dig"
           href: da/00_index.qmd
 
-        - text: "Fase 1 — Planlæg dit studie"
+        - text: "1 — Planlæg dit studie"
           href: da/01_studieforberedelse.qmd
 
-        - text: "Fase 2 — R: det allermest nødvendige"
+        - text: "2 — R: det allermest nødvendige"
           href: da/02_r-intro.qmd
 
-        - text: "Fase 3 — Log ind på DST"
+        - text: "3 — Log ind på DST"
           href: da/03_log-ind-dst.qmd
 
-        - text: "Fase 4 — Filtyper og indlæsning"
+        - text: "4 — Filtyper og indlæsning"
           href: da/04_filformater.qmd
 
-        - text: "Fase 5 — Det universelle mønster"
+        - text: "5 — Det universelle mønster"
           href: da/05_universelle-moenster.qmd
 
-        - text: "Fase 6 — Første udtræk"
+        - text: "6 — Første udtræk"
           href: da/06_foerste-udtraek.qmd
 
-        - text: "Fase 7 — Inspicér din data"
+        - text: "7 — Inspicér din data"
           href: da/07_inspicer-data.qmd
 
-        - text: "Fase 8 — Kend dine registre"
+        - text: "8 — Kend dine registre"
           href: da/08_kend-dine-registre.qmd
 
-        - text: "Fase 9 — Hospitalskontakter (LPR)"
+        - text: "9 — Hospitalskontakter (LPR)"
           href: da/09_hospitalskontakter-lpr.qmd
 
-        - text: "Fase 10 — Dataformater og manipulation"
+        - text: "10 — Dataformater og manipulation"
           href: da/10_data-manipulation.qmd
 
-        - text: "Fase 11 — Socioøkonomiske variable"
+        - text: "11 — Socioøkonomiske variable"
           href: da/11_socioekonomiske-variable.qmd
 
-        - section: "Fase 12 — Algoritmer og specialpakker"
+        - section: "12 — Algoritmer og specialpakker"
           href: da/12a_pakker-oversigt.qmd
           contents:
             - da/12b_osdc.qmd
             - da/12c_nmi.qmd
 
-        - section: "Fase 13 — Reference"
+        - section: "13 — Reference"
           href: da/13_reference.qmd
           contents:
             - da/13a_guide_til_funktioner.qmd
@@ -73,7 +73,7 @@ website:
             - da/13c_dst_faldgruber.qmd
             - da/13d_register_reference.qmd
 
-        - text: "Fase 14 — Eksport og hjemsendelse"
+        - text: "14 — Eksport og hjemsendelse"
           href: da/14_eksport-hjemsendelse.qmd
 
         - section: "DARTER — Projekt 708421"

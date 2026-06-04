@@ -86,3 +86,10 @@ Se dokumentation og installationsvejledning på [steno-aarhus.github.io/osdc](ht
 - Bruger LPR, LMDB og laboratoriesvar — kræver adgang til disse registre
 
 Se den fulde metodebeskrivelse i artiklen og dokumentationssitet.
+
+---
+
+## Næste skridt
+
+- **Comorbiditetsjustering med NMI?** → [Fase 12 — NMI](12c_nmi.qmd)
+- **Klar til at eksportere?** → [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)

@@ -20,3 +20,9 @@ Dette er guidens opslagsdel. Siderne her er **ikke** tænkt til at læses i ræk
 ::: {.callout-tip}
 Kender du funktionens eller registrets navn? Åbn den relevante side og brug **Ctrl+F** (Windows) / **Cmd+F** (Mac) til at søge direkte.
 :::
+
+---
+
+Færdig med analysen og klar til at sende resultater hjem?
+
+→ [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)
