@@ -21,11 +21,12 @@ Fordi registrene er for store. En CSV (eller et `readRDS`) læser hele filen ind
 Forestil dig et supermarked. Du kan enten købe hele butikken og sortere derhjemme — eller sende en indkøbsliste og kun få det på listen leveret. Doven indlæsning er det sidste: du beskriver hvad du vil have, og henter først varerne hjem til sidst med `collect()`.
 
 ```r
-library(dstDataPrep)
-library(dplyr)
+library(arrow)   # open_dataset
+library(dplyr)   # filter, select, collect
 
 # 1. Åbn doven forbindelse — ingen data flyttes
-bef <- load_database("bef") %>% rename_with(tolower)
+bef <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/bef/") %>%
+  rename_with(tolower)
 
 # 2. Filtrér rækker og vælg kolonner — stadig ingen data i R
 bef_filtreret <- bef %>%
@@ -39,9 +40,13 @@ bef_data <- bef_filtreret %>% collect()
 Trin 1–2 er rene *instruktioner* — de koster næsten ingen hukommelse.
 `collect()` i trin 3 er den eneste linje, der faktisk flytter data.
 
+::: {.callout-tip}
+**Arbejder du på DARTER?** Erstat `open_dataset("E:/workdata/...")` med `load_database("bef")` fra `dstDataPrep`. Se [DARTER — oversigt og pipeline](darter/00_index.qmd).
+:::
+
 ::: {.callout-note}
 **Hvorfor `rename_with(tolower)` som første trin?**
-Rå kolonnenavne i DST-registre har inkonsistent store/små bogstaver — `PNR`, `pnr`, `Pnr`. Ved at standardisere til små bogstaver med det samme kan resten af din kode bruge `pnr` overalt uden at tænke på det. Tilføj det umiddelbart efter `load_database()` eller `open_dataset()` som det første led i din pipe — inden du filtrerer eller vælger kolonner.
+Rå kolonnenavne i DST-registre har inkonsistent store/små bogstaver — `PNR`, `pnr`, `Pnr`. Ved at standardisere til små bogstaver med det samme kan resten af din kode bruge `pnr` overalt uden at tænke på det. Tilføj det umiddelbart efter `open_dataset()` som det første led i din pipe — inden du filtrerer eller vælger kolonner.
 :::
 
 ---

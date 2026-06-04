@@ -17,8 +17,6 @@ website:
     position: below-navbar
 
   navbar:
-    logo: da/images/logo.svg
-    logo-alt: "DST+R — Registerbaseret forskning"
     left:
       - href: index.qmd
         text: Forside
