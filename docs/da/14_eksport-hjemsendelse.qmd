@@ -19,7 +19,11 @@ Du kan **ikke** kopiere rå data ud — alt skal igennem outputkontrol ved DST's
 - Aggregerede tabeller (summarized data)
 - Grafer og figurer
 - Modeloutput — koefficienter, konfidensintervaller, p-værdier
-- Kode og scripts (aldrig data)
+
+::: {.callout-note}
+**Scripts eksporteres også via outputkontrol — ikke frit.**
+Kode/scripts kan hjemsende, men skal igennem den samme outputkontrolproces som resultatfiler. DST tjekker at scripts ikke indeholder mikrodata eller afslører individoplysninger.
+:::
 
 **Nej:**
 - Individdata i nogen form
