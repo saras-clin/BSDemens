@@ -130,12 +130,27 @@ charlson <- charlson_score(data = lpr_diag_data, id = "pnr", icd_codes = "c_diag
 Du skal selv udtrække en lookback-periode fra LPR (typisk 5 år inden index-dato) og give funktionen **alle diagnoser** i det vindue — A-, B- og G-type. Du behøver **ikke** at filtrere på specifikke ICD-koder på forhånd; funktionen matcher selv koderne til Charlson-kategorierne. D-præfikset (`DG30` osv.) håndteres af EpiForsk — det skal ikke strippes inden.
 
 ```r
-# Eksempel: udtrækker lookback selv og giver alle diagnoser videre
-lpr2_lookback <- lpr_diag %>%
+# Eksempel: udtrækker lookback og giver alle diagnoser videre
+# pnr og d_inddto sidder i lpr_adm — ikke lpr_diag
+
+# Trin 1: bredest muligt tidsvindue for hele kohorten
+min_lookback <- min(kohort$index_date) - 365.25 * 5   # tidligste lookback-start
+
+# Trin 2: hent kontakter og join til diagnoser
+lpr2_lookback <- lpr_adm %>%
   filter(pnr %in% !!kohort$pnr,
-         as.Date(d_inddto) >= index_date - 365.25*5,   # 5-årig lookback
-         as.Date(d_inddto) < index_date) %>%
-  collect()
+         d_inddto >= !!min_lookback) %>%              # bred forfiltrering
+  select(pnr, recnum, d_inddto) %>%
+  inner_join(
+    lpr_diag %>%
+      filter(c_diagtype %in% c("A", "B", "G")) %>%   # A/B/G til comorbiditet
+      select(recnum, c_diag),
+    by = "recnum"
+  ) %>%
+  collect() %>%
+  left_join(kohort %>% select(pnr, index_date), by = "pnr") %>%
+  filter(d_inddto >= index_date - 365.25 * 5,        # præcis per-person lookback
+         d_inddto < index_date)
 
 charlson <- charlson_score(data = lpr2_lookback, id = "pnr", icd_codes = "c_diag")
 ```

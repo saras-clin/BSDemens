@@ -315,7 +315,7 @@ Kolonnenavnene er blandet store/små bogstaver i rådata — kald `rename_with(t
 # SKS fra LPR2 (frem til 2018)
 opr_lpr2 <- load_database("lpr_sksopr") %>%
   rename_with(tolower) %>%
-  filter(toupper(c_opr) %in% SKS_KODER) %>%    # filtrer på relevante SKS-koder
+  filter(toupper(c_opr) %in% !!SKS_KODER) %>%   # !! sender den lokale R-vektor til DuckDB
   left_join(
     load_database("lpr_adm") %>%
       rename_with(tolower) %>%
@@ -328,7 +328,7 @@ opr_lpr2 <- load_database("lpr_sksopr") %>%
 # SKS fra LPR3 (2019 og frem) — join via dw_ek_forloeb
 opr_lpr3 <- load_database("procedurer_kirurgi") %>%
   rename_with(tolower) %>%
-  filter(toupper(procedurekode) %in% SKS_KODER) %>%
+  filter(toupper(procedurekode) %in% !!SKS_KODER) %>%   # !! sender den lokale R-vektor til DuckDB
   left_join(
     load_database("lpr_a_kontakt") %>%
       rename_with(tolower) %>%

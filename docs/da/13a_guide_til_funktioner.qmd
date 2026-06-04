@@ -70,7 +70,7 @@ lpr_adm %>%
 Du skærer løgene — og sender dem videre til gryden — som sender indholdet videre til tallerkenen.
 Røret gør præcis det: det kæder trin sammen, så du kan læse koden oppefra og ned som en opskrift.
 Uden røret ville du skulle skrive det indefra og ud, som russiske dukker:
-`collect(select(filter(lpr_adm, pnr %in% mine_pnrs), pnr, recnum))`.
+`collect(select(filter(lpr_adm, pnr %in% !!mine_pnrs), pnr, recnum))`.
 Det er svært at læse og svært at fejlsøge.
 
 ::: {.callout-note}

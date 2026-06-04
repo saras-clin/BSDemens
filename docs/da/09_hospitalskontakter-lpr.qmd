@@ -268,7 +268,7 @@ lpr2_cvd <- lpr_adm %>%
   inner_join(
     lpr_diag %>%
       filter(c_diagtype %in% c("A", "B"),                    # kun aktions- og bidiagnoser
-             substr(c_diag, 2, 4) %in% CVD_KODER) %>%        # strip D-præfiks inden sammenligning
+             substr(c_diag, 2, 4) %in% !!CVD_KODER) %>%       # !! sender den lokale R-vektor til DuckDB
       select(recnum, c_diag),                    # kun join-nøgle og diagnosekode
     by = "recnum"                                             # join-nøgle i LPR2
   ) %>%
@@ -285,7 +285,7 @@ lpr3_cvd <- lpr3_k %>%
     lpr3_d %>%
       filter(diag_kode_type %in% c("A", "B"),
              is.na(senere_afkraeftet) | senere_afkraeftet != "Ja",  # ekskluder tilbagekaldte
-             substr(diag_kode, 2, 4) %in% CVD_KODER) %>%
+             substr(diag_kode, 2, 4) %in% !!CVD_KODER) %>%   # !! sender den lokale R-vektor til DuckDB
       select(dw_ek_kontakt, c_diag = diag_kode),             # omdøb til c_diag for konsistens med LPR2
     by = "dw_ek_kontakt"                                     # join-nøgle i LPR3
   ) %>%
