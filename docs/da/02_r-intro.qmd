@@ -142,6 +142,12 @@ AI er god til at forklare fejlbeskeder og foreslå løsninger — men du skal gi
 > bef %>% filter(pnr == "001")   # fejl her
 > ```
 
+**Bed om forklaring, ikke bare løsning:**
+Skriv "forklar hvad der er galt og hvorfor" fremfor bare "fiks det". Hvis du kun får koden rettet uden at forstå hvorfor, vil den samme fejl dukke op igen næste gang.
+
+**Bed AI spørge inden det svarer:**
+Skriv "stil mig spørgsmål inden du svarer, hvis du mangler information". AI gætter ofte på kontekst den ikke har — det giver bedre svar hvis den spørger om fx din pakkeversion, registertype eller hvad du egentlig vil opnå.
+
 **Verificer altid svaret:**
 Kodeeksempler fra AI er udgangspunkter — ikke garantier. Tjek at kolonnenavne, funktionsnavne og logik passer til dine data med `names()`, `class()` og `head()`.
 

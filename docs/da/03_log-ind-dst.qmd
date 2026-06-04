@@ -74,9 +74,6 @@ Specialtegn som `` ` ``, `$`, `\`, `@`, `{` og `}` virker ikke korrekt i Remote 
 | `{` | Option + Shift + 8 |
 | `}` | Option + Shift + 9 |
 
-::: {.callout-note}
-**Mangler:** genveje til `` ` `` (backtick), `$`, `\` og `@` er ikke bekræftet — opdatér tabellen når du har fundet dem på serveren.
-:::
 
 I RStudio køres kode med **Ctrl+Enter** (ikke Cmd+Enter).
 
