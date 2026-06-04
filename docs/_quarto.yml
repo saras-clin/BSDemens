@@ -8,7 +8,7 @@ website:
   search: true
   page-navigation: true
   back-to-top-navigation: true
-  breadcrumbs: true
+  bread-crumbs: true
 
   announcement:
     content: "Guiden er under aktiv udvikling — indhold tilføjes og revideres løbende."
