@@ -59,7 +59,7 @@ Kolonnenavne gælder efter `rename_with(tolower)` — inspicér dit eget registe
 
 ### BEF — Befolkningsregistret
 
-Ét snapshot per person per år. Bruges til køn, fødselsdato og indkomstlink.
+Ét snapshot per person pr. **1. januar** i det pågældende år. Bruges til køn, fødselsdato og indkomstlink. En person der dør i juni 2020 optræder stadig i BEF for år 2020 — brug DODSAARS til at afgøre om en person var i live på en specifik dato.
 
 | Kolonne | Type | Indhold |
 |---|---|---|

@@ -16,14 +16,19 @@ Der er to registre med lignende navne:
 
 | Register | Indeholder | Bruges til |
 |---|---|---|
-| `dodsaars` | Individuelle dødsregistreringer med præcis dødsdato (`d_dodsdto`), ~1970–2001 | **Censurering ved dødsfald** |
+| `dodsaars` | Individuelle dødsregistreringer med præcis dødsdato (`d_dodsdto`) | **Censurering ved dødsfald** |
 | `dodsaasg` | Dødsårsagsklassifikation | Kun analyse af dødsårsag |
 
 `dodsaasg` har ikke dødsdatoen i det rigtige format og er ikke den autoritative kilde til individuelle dødsdatoer.
 
+::: {.callout-warning}
+**Kontrollér dodsaars' dækning i din projektvejledning.**
+`dodsaars` dækker ikke nødvendigvis hele din studieperiode — i projekt 708421 dækker det kun ~1970–2001 (pr. juni 2026), og post-2001 dødsfald kræver separat udtræk. Andre projekter kan have anden dækning.
+:::
+
 ```r
 # KORREKT
-dod <- load_database("dodsaars") %>% rename_with(tolower)   # dækker ~1970–2001
+dod <- load_database("dodsaars") %>% rename_with(tolower)   # kontrollér dækning i din projektvejledning
 dod_person <- dod %>%
   filter(pnr %in% !!kohort_pnrs) %>%
   select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto er den bekræftede kolonne

@@ -32,13 +32,19 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 | En operationsprocedure / SKS-kode (frem til 2018) | lpr_sksopr | `c_opr`, `recnum` |
 | En operationsprocedure / SKS-kode (2019 og frem) | procedurer_kirurgi | `procedurekode`, `dw_ek_forloeb` |
 
+::: {.callout-note collapse="true"}
+## Hvad er SKS-koder?
+**SKS** (Sundhedsvæsenets Klassifikations System) er det danske system til kodning af operationer og procedurer på hospital — fx `KJDF10` for Roux-en-Y gastric bypass. Svarende til de NOMESCO-koder der bruges i de øvrige nordiske lande.
+:::
+
+
 ---
 
 ## Registrene grupperet efter formål
 
 - **Demografi:** BEF — fødselsdato, køn, bopæl, familie-id (ét snapshot per person per år)
 - **Diagnoser (hospital):** LPR — somatiske og psykiatriske kontakter og diagnoser, delt i LPR2 (før 2019) og LPR3 (2019+)
-- **Recepter:** LMDB — én række per ekspederet recept, med ATC-kode og dato
+- **Recepter:** LMDB — én række per ekspederet recept, med ATC-kode (Anatomical Therapeutic Chemical — internationalt klassifikationssystem for lægemidler) og dato
 - **Censurering:** DODSAARS (dødsdato) og VNDS (emigration) — definerer hvornår opfølgningen stopper
 - **Socioøkonomi (SES):** UDDA (uddannelse), FAIK (indkomst), AKM (beskæftigelse)
 

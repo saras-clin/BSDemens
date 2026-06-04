@@ -100,7 +100,7 @@ Det skal du overveje:
 
 - **Hvem er en passende komparator?** Fx for bariatrisk kirurgi: personer med svær overvægt der *ikke* blev opereret, eller en matchet baggrundsbefolkning. Valget afhænger af spørgsmålet.
 - **Index-dato til komparatorer.** En komparator har ingen operationsdato — den skal tildeles en index-dato (typisk den matchede eksponerede persons dato), så de to grupper følges fra et sammenligneligt tidspunkt.
-- **Eligibilitet ved index.** Komparatoren skal være "i risiko" og opfylde inklusionskriterierne på sin index-dato — ellers risikerer du *immortal time bias*.
+- **Eligibilitet ved index.** Komparatoren skal være "i risiko" og opfylde inklusionskriterierne på sin index-dato — ellers risikerer du *immortal time bias* (en skævvridning der opstår, når en person tildeles eksponeringstid, hvori de per definition ikke kunne have fået udfaldet endnu).
 - **Matchingvariable og -ratio.** Fx alder, køn og kalenderår; beslut forholdet (fx 1:5).
 - **Kan en komparator senere blive eksponeret?** Beslut hvordan (fx risk-set/incidence-density sampling, hvor en komparator kan opereres senere og selv blive case).
 - **Samme eksklusioner** anvendes på begge grupper.
@@ -143,7 +143,7 @@ Udfald:       Første demensdiagnose (LPR — ICD-10: F00–F03, G30–G31)
               Dato: første kontakt med demenskode efter operationsdato
 
 Kovariater:   Alder og køn (BEF)
-              Komorbiditet (LPR — 5-års lookback)
+              Komorbiditet (LPR — 5-års lookback, dvs. diagnoser i de 5 år inden index-dato)
               Uddannelse (UDDA)
               Indkomst (FAIK via BEF familie_id)
               Beskæftigelse (AKM)

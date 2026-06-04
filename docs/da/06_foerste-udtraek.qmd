@@ -233,7 +233,7 @@ cat("Efter eksklusioner:  ", nrow(renset),                      "\n")   # efter 
 cat("Ekskluderede i alt:  ", nrow(raa) - nrow(renset),          "\n")   # forskel
 ```
 
-Mønsteret gentages for hvert ekskluderingstrin og danner grundlag for et CONSORT-flowchart.
+Mønsteret gentages for hvert ekskluderingstrin og danner grundlag for et CONSORT-flowchart (et standardiseret flowdiagram der viser, hvor mange der blev ekskluderet ved hvert trin og hvorfor).
 
 Dette er en hurtig fornuftskontrol. Den fulde værktøjskasse til at udforske data — `summary()`, `table()`, krydstabeller og NA-håndtering — gennemgås i [Fase 7 — Inspicér din data](07_inspicer-data.qmd).
 

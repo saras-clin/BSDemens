@@ -47,6 +47,8 @@ gantt
 
 ## ICD-koder og D-præfikset
 
+**ICD-10** (International Classification of Diseases, 10. revision) er WHO's internationale system til klassifikation af sygdomme og tilstande. Alle hospitaldiagnoser i Danmark kodes med ICD-10, fx `G30` for Alzheimers sygdom og `F00` for demens ved Alzheimers.
+
 Alle ICD-10-koder i DST har et foranstillet `"D"`:
 `"DG30"` (Alzheimers), `"DF00"` (demens), `"DI21"` (akut myokardieinfarkt).
 

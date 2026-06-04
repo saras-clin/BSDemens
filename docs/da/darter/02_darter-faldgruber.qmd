@@ -33,7 +33,7 @@ deaths <- dod %>%
 Procedurekoder er opdelt i to registre efter periode:
 
 - **`lpr_sksopr`** (parquet-registers) — procedurer og kirurgi 1996–2018, joines til `lpr_adm` via `recnum`
-- **`procedurer_kirurgi`** (parquet-external) — 2018 og frem, joines til `lpr_a_kontakt` via `dw_ek_forloeb`
+- **`procedurer_kirurgi`** (parquet-external) — 2019 og frem, joines til `lpr_a_kontakt` via `dw_ek_forloeb`
 
 ::: {.callout-warning}
 **`dw_ek_kontakt` er NA for alle rækker i `procedurer_kirurgi`** (bekræftet 2026-06-02).
