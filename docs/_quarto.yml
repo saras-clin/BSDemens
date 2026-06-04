@@ -53,28 +53,31 @@ website:
         - text: "9 — Hospitalskontakter (LPR)"
           href: da/09_hospitalskontakter-lpr.qmd
 
-        - text: "10 — Dataformater og manipulation"
-          href: da/10_data-manipulation.qmd
+        - text: "10 — Byg din kohorte"
+          href: da/10_byg-din-kohorte.qmd
 
-        - text: "11 — Socioøkonomiske variable"
-          href: da/11_socioekonomiske-variable.qmd
+        - text: "11 — Joins og pivots"
+          href: da/11_data-manipulation.qmd
 
-        - section: "12 — Algoritmer og specialpakker"
-          href: da/12a_pakker-oversigt.qmd
+        - text: "12 — Socioøkonomiske variable"
+          href: da/12_socioekonomiske-variable.qmd
+
+        - section: "13 — Algoritmer og specialpakker"
+          href: da/13a_pakker-oversigt.qmd
           contents:
-            - da/12b_osdc.qmd
-            - da/12c_nmi.qmd
+            - da/13b_osdc.qmd
+            - da/13c_nmi.qmd
 
-        - section: "13 — Reference"
-          href: da/13_reference.qmd
+        - section: "14 — Reference"
+          href: da/14_reference.qmd
           contents:
-            - da/13a_guide_til_funktioner.qmd
-            - da/13b_formateringstabeller.qmd
-            - da/13c_dst_faldgruber.qmd
-            - da/13d_register_reference.qmd
+            - da/14a_guide_til_funktioner.qmd
+            - da/14b_formateringstabeller.qmd
+            - da/14c_dst_faldgruber.qmd
+            - da/14d_register_reference.qmd
 
-        - text: "14 — Eksport og hjemsendelse"
-          href: da/14_eksport-hjemsendelse.qmd
+        - text: "15 — Eksport og hjemsendelse"
+          href: da/15_eksport-hjemsendelse.qmd
 
         - section: "DARTER — Projekt 708421"
           href: da/darter/00_index.qmd

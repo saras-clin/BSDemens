@@ -27,24 +27,24 @@ der nu er erstattet af sidebar-navigationens fase-struktur.
 **Kode og data**
 
 - [Første udtræk](06_foerste-udtraek.qmd) — trin-for-trin fra register til gemt datasæt
-- [Funktioner — oversigt](13a_guide_til_funktioner.qmd) — filter, select, mutate, joins
+- [Funktioner — oversigt](14a_guide_til_funktioner.qmd) — filter, select, mutate, joins
 - [Joins og pivots](10b_joins-og-pivots.qmd) — kobl datasæt sammen
-- [Formateringstabeller](13b_formateringstabeller.qmd) — oversæt koder til tekst
+- [Formateringstabeller](14b_formateringstabeller.qmd) — oversæt koder til tekst
 - [Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — LPR2 + LPR3, ICD-koder
 - [Socioøkonomiske variable](11a_socioekonomiske-variable.qmd) — uddannelse, indkomst, beskæftigelse
 
 **Pakker og algoritmer**
 
-- [Oversigt](12a_pakker-oversigt.qmd) — OSDC, NMI og SEPLINE
-- [OSDC](12b_osdc.qmd) — Open Source Diabetes Classifier
-- [NMI](12c_nmi.qmd) — Nordic Multimorbidity Index
+- [Oversigt](13a_pakker-oversigt.qmd) — OSDC, NMI og SEPLINE
+- [OSDC](13b_osdc.qmd) — Open Source Diabetes Classifier
+- [NMI](13c_nmi.qmd) — Nordic Multimorbidity Index
 - [SEPLINE](11b_sepline.qmd) — socioøkonomisk position
 
 **Reference og hjemsendelse**
 
 - [Registerreference](08_register_reference.qmd) — bekræftede kolonnenavne for alle registre
-- [Faldgruber](13c_dst_faldgruber.qmd) — 10 DST-specifikke fejl
-- [Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd) — GDPR og outputkontrol
+- [Faldgruber](14c_dst_faldgruber.qmd) — 10 DST-specifikke fejl
+- [Eksport og hjemsendelse](15_eksport-hjemsendelse.qmd) — GDPR og outputkontrol
 
 ---
 

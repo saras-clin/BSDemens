@@ -91,5 +91,5 @@ Se den fulde metodebeskrivelse i artiklen og dokumentationssitet.
 
 ## Næste skridt
 
-- **Comorbiditetsjustering med NMI?** → [Fase 12 — NMI](12c_nmi.qmd)
-- **Klar til at eksportere?** → [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)
+- **Comorbiditetsjustering med NMI?** → [Fase 13 — NMI](13c_nmi.qmd)
+- **Klar til at eksportere?** → [Fase 15 — Eksport og hjemsendelse](15_eksport-hjemsendelse.qmd)

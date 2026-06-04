@@ -139,7 +139,7 @@ Ryd altid op efter store udtræk, inden du fortsætter.
 ```{mermaid}
 flowchart TD
     P[("Parquet-filer på DST")]
-    L["open_dataset() / load_database()"]
+    L["open_dataset()"]
     F["filter() + select()"]
     C["collect()"]
     R[("R-hukommelse · data.frame")]

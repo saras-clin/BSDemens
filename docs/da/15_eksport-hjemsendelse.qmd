@@ -9,7 +9,7 @@ Du har bygget dit datasæt og kørt din analyse (Fase 0–13). Tilbage er det si
 Data fra Danmarks Statistik er mikrodata underlagt GDPR og særlige regler for forskningsdata.
 Du kan **ikke** kopiere rå data ud — alt skal igennem DST's hjemtagelsesproces.
 
-**Autoritativ kilde:** [DST — Regler for hjemtagelse af analyseresultater →](https://www.dst.dk/da/TilSalg/data-til-forskning/regler-og-datasikkerhed/regler-for-hjemtagelse-af-analyseresultater)
+**LÆS OG GENLÆS** [DST — Regler for hjemtagelse af analyseresultater →](https://www.dst.dk/da/TilSalg/data-til-forskning/regler-og-datasikkerhed/regler-for-hjemtagelse-af-analyseresultater)
 
 ---
 
@@ -27,7 +27,7 @@ Du kan **ikke** kopiere rå data ud — alt skal igennem DST's hjemtagelsesproce
 
 ::: {.callout-note}
 **Scripts eksporteres også via hjemtagelsesprocessen — ikke frit.**
-Kode/scripts kan hjemsende, men går igennem den samme proces som resultatfiler.
+Kode/scripts kan hjemsendes, men går igennem den samme proces som resultatfiler.
 :::
 
 ---
@@ -50,7 +50,7 @@ Når systemet flagger en fil, er dit bedste forsvar et sigende filnavn (`tabel1_
 
 ## Gem filer til outputmappen
 
-Når du ikke angiver en fuld sti, gemmer R filen i din **arbejdsmappe** — tjek den med:
+Når du ikke angiver en fuld sti i forbindelse med din gem-kommando, så gemmer R filen i din **arbejdsmappe** — tjek den med:
 
 ```r
 getwd()   # viser din nuværende arbejdsmappe, fx "E:/workdata/708421/myproject"
@@ -102,5 +102,5 @@ round(antal / 5) * 5   # 23 → 25, 12 → 10
 
 Når dine resultater er hjemsendt, har du været hele vejen — fra forskningsspørgsmål og kohorte til analyseklart datasæt og publikationsklare resultater.
 
-- Skal du slå en funktion, et register eller en faldgrube op? → [13 — Reference](13_reference.qmd)
+- Skal du slå en funktion, et register eller en faldgrube op? → [13 — Reference](14_reference.qmd)
 - Arbejder du på DARTER / projekt 708421? → [DARTER — oversigt og pipeline](darter/00_index.qmd)

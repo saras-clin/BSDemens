@@ -4,12 +4,15 @@ subtitle: "De vigtigste kommandoer til at se hvad du faktisk har"
 date: last-modified
 ---
 
-I Fase 6 lavede du dit første udtræk. Nu har du data — og inden du analyserer det, skal du forstå hvad du har.
+I Fase 6 lavede du dit første udtræk — med syntetiske data fra `fakeregs`. Nu har du data, og inden du analyserer det, skal du forstå hvad du har.
 Det er først her, disse kommandoer giver mening: de er værktøjer til at *kigge på* et datasæt, så de er meningsløse uden data at kigge på.
 
 Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine udtræk.
 
-`$`-tegnet bruges overalt til at tilgå én kolonne i en tabel: `data$koen` betyder "kolonnen `koen` i tabellen `data`".
+::: {.callout-note}
+**`$` — tilgå én kolonne i en tabel**
+`data$koen` betyder: "kolonnen `koen` i tabellen `data`". Erstat `data` med dit eget datasætnavn og `koen` med dit eget kolonnenavn. Du vil se `$` overalt i R-kode.
+:::
 
 ---
 
@@ -21,9 +24,10 @@ Inden du leder i koden — gør dette i rækkefølge:
 2. **Kør `class(objektet)`** — er det data (`"data.frame"`) eller stadig en forbindelse (`"tbl_duckdb_connection"`)?
 3. **Kør `names(objektet)`** — hedder kolonnen præcis det, du tror? Et enkelt bogstav eller stor/lille skrift er nok til at fejle.
 4. **Isolér den fejlende linje** — kør den alene og se hvad der sker.
-5. **Spørg en kollega eller søg på fejlbeskeden** — se [2 — R: det allermest nødvendige](02_r-intro.qmd#når-du-sidder-fast) for prioriteret hjælpeliste.
+5. **Brug `?funktionsnavn`** — skriv fx `?colSums` i konsollen for at åbne hjælpedokumentationen i **Help**-panelet (nederst til højre). Den viser hvad funktionen gør, hvilke argumenter den tager, og eksempler.
+6. **Spørg en kollega eller søg på fejlbeskeden** — se [2 — R: det allermest nødvendige](02_r-intro.qmd#når-du-sidder-fast) for prioriteret hjælpeliste.
 
-En oversigt over hyppige fejlbeskeder og hvad de typisk betyder finder du i [Fase 13c — Faldgruber på DST](13c_dst_faldgruber.qmd#de-hyppigste-fejlbeskeder-og-hvad-de-betyder).
+En oversigt over hyppige fejlbeskeder og hvad de typisk betyder finder du i [Fase 14c — Faldgruber på DST](14c_dst_faldgruber.qmd#de-hyppigste-fejlbeskeder-og-hvad-de-betyder).
 
 ---
 
@@ -84,7 +88,7 @@ tail(data)         # de sidste 6 rækker
 
 ## Udforsk indholdet
 
-`$`-tegnet er R's måde at sige "denne kolonne i denne tabel": `data$koen` betyder kolonnen `koen` i tabellen `data`.
+Som nævnt øverst på siden er `$`-tegnet R's måde at sige "denne kolonne i denne tabel": `data$koen` er kolonnen `koen` i tabellen `data`.
 
 ```r
 unique(data$koen)              # hvilke unikke værdier findes i kolonnen koen?
@@ -130,7 +134,7 @@ De fleste beregningsfunktioner returnerer `NA` hvis der er én `NA` i data — m
 Det afhænger af *hvilken* kolonne der mangler:
 
 - **NA i en nøglevariabel** (index-dato, pnr, udfald) er alvorligt — disse personer kan ikke indgå korrekt i analysen, og du skal beslutte om de skal ekskluderes.
-- **NA i en kovariat** (fx indkomst) kan ofte håndteres — fx med en separat "ukendt"-kategori eller imputation.
+- **NA i en kovariat** (fx indkomst) kan ofte håndteres — fx med en separat "ukendt"-kategori eller [imputation](https://pmc.ncbi.nlm.nih.gov/articles/PMC8499698/).
 - **NA fra et join** betyder ofte, at en person ikke fandtes i det højre datasæt — fx ingen receptregistrering. Her er `NA` reelt et "nej/ingen", ikke en fejl.
 
 Tjek altid `colSums(is.na(data))` lige efter et udtræk eller et join, så du opdager uventede huller, før de forplanter sig stille gennem analysen.
@@ -160,6 +164,15 @@ sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget k
 colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
 ```
 
+`colSums(is.na(data))` returnerer én linje med en tæller per kolonne:
+
+```
+#  pnr   alder    koen  index_date  indkomst
+#    0       0       0           2        58
+```
+
+Her er `index_date` manglende for 2 og `indkomst` for 58 — alt andet er komplet. En kolonne med `0` er helt uden NA'er.
+
 ---
 
 ## Tjek datoer
@@ -177,7 +190,7 @@ sum(data$index_date < as.Date("2005-01-01"), na.rm = TRUE)   # erstat datoen med
 sum(data$index_date > as.Date("2024-12-31"), na.rm = TRUE)   # erstat datoen med din studieslutt
 ```
 
-Se [Fase 13c — Faldgruber](13c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid-i-date-format) for de hyppigste datokonverteringsfejl og hvordan du retter dem.
+Se [Fase 14c — Faldgruber](14c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid-i-date-format) for de hyppigste datokonverteringsfejl og hvordan du retter dem.
 
 ---
 
@@ -185,6 +198,8 @@ Se [Fase 13c — Faldgruber](13c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid
 <summary>Mere udforskning: tæl, sortér og hurtige plots</summary>
 
 **Tæl og sortér** (dplyr):
+
+Erstat `data` med dit eget datasætnavn — fx `recepter`, `kontakter` eller `kohort`.
 
 ```r
 data %>% count(koen)               # antal rækker per kategori
@@ -194,6 +209,8 @@ data %>% arrange(desc(dato))       # sortér faldende
 ```
 
 **Hurtige visualiseringer** — til at danne sig et overblik, ikke til publikation:
+
+Erstat `data` med dit eget datasætnavn og kolonnenavne med dine egne.
 
 ```r
 # Kontinuerte variable:
@@ -214,5 +231,5 @@ barplot(table(data$cohort))              # søjlediagram
 Du kan nu inspicere et datasæt. Næste skridt er at vide, *hvilke* registre der indeholder hvad:
 
 - [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd) — beslutningstabel: hvilket register indeholder hvad
-- [Fase 13a — Funktioner: oversigt](13a_guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
-- [`dataReporter`](12a_pakker-oversigt.qmd#datareporter-automatisk-datakvalitetsrapport) — genererer automatisk en HTML-rapport over alle kolonner (fordeling, missingness, outliers). Bekræftet på DST.
+- [Fase 13a — Funktioner: oversigt](14a_guide_til_funktioner.qmd) — `filter()`, `select()`, `mutate()`, `left_join()` og mere
+- [`dataReporter`](13a_pakker-oversigt.qmd#datareporter-automatisk-datakvalitetsrapport) — genererer automatisk en HTML-rapport over alle kolonner (fordeling, missingness, outliers). Bekræftet på DST.

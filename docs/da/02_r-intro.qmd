@@ -34,16 +34,34 @@ Men hvis du vil øve dig lokalt, inden du logger ind for første gang:
 
 RStudio er opdelt i fire paneler:
 
-| Panel | Placering | Hvad det er |
-|---|---|---|
-| **Script-editor** | øverst til venstre | Her skriver du din kode og gemmer den |
-| **Konsol** | nederst til venstre | Her kører koden og her vises output og fejlmeddelelser |
-| **Environment** | øverst til højre | Viser alle objekter der er i din R-session |
-| **Files / Plots / Help** | nederst til højre | Fil-browser, grafer, hjælpedokumentation |
-
 ![RStudio's fire paneler](images/RStudio_IDE_screenshot.png){fig-alt="RStudio-interface med fire paneler"}
 
 *Kilde: [Wikipedia / RStudio](https://en.wikipedia.org/wiki/RStudio), CC BY-SA 4.0*
+
+**Øverst til venstre — Script-editor**
+
+Her skriver og gemmer du din kode. Du kan have flere scripts åbne på én gang og skifte mellem dem via fanerne øverst i panelet. Husk at gemme ændringer løbende — **Ctrl+S** (Windows) / **CMD+S** (Mac).
+
+**Øverst til højre — Environment / History / Connections**
+
+- **Environment:** viser alle objekter du har oprettet i den aktuelle R-session — data frames, vektorer, lister. Funktioner fra pakker (fx `filter()` fra dplyr) vises *ikke* her; kun det du selv har lavet.
+- **History:** en log over alle kommandoer du har kørt i konsollen.
+- **Connections:** bruges til databaseforbindelser og versionsstyringssystemer som GitHub. GitHub er et online system til at gemme og dele kode — men DST-serveren har ikke adgang til internettet, så du kan ikke synkronisere kode direkte derfra. Du behøver ikke lære GitHub for at arbejde på DST.
+
+**Nederst til venstre — Konsol**
+
+Her udføres kode og her vises output og fejlmeddelelser. Du kan skrive kommandoer direkte i konsollen — men de gemmes ikke. Alt arbejde du vil beholde, skal ligge i et script.
+
+**Nederst til højre — Files / Plots / Packages / Help**
+
+- **Files:** en filbrowser til dine mapper og filer på serveren.
+- **Plots:** grafer du laver vises her — også selvom de ikke er gemt endnu.
+- **Packages:** liste over alle installerede pakker. Flueben ud for en pakke betyder at den er indlæst med `library()` og klar til brug.
+- **Help:** hjælpedokumentation. Åbnes automatisk når du skriver `?funktionsnavn` i konsollen — fx `?filter` åbner hjælpen for `filter()`.
+
+::: {.callout-tip}
+**Hvis et panel forsvinder:** gå til **View → Panes → Show All Panes** i menulinjen øverst. Du kan også klikke på ikonet med fire firkanter i menulinjen.
+:::
 
 **Kør kode:** placer cursoren på en linje og tryk **Ctrl+Enter**.
 
@@ -110,7 +128,7 @@ Et symbol du vil se overalt er **`%>%`** (røret). Det sender resultatet fra én
 | `left_join()` | Kobl to datasæt — behold alle rækker fra venstre | `kohort %>% left_join(bef, by = "pnr")` |
 | `collect()` | Hent parquet-data ind i R-hukommelsen | `register %>% filter(...) %>% collect()` |
 
-Røret `%>%` forklares grundigt i [Fase 13 — Funktioner: oversigt](13a_guide_til_funktioner.qmd#røret), og `collect()` i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
+Røret `%>%` forklares grundigt i [Fase 14 — Funktioner: oversigt](14a_guide_til_funktioner.qmd#røret), og `collect()` i [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd).
 
 ---
 
@@ -184,6 +202,70 @@ Et godt hjælp-spørgsmål er **minimalt** (mindste kode der viser fejlen), **ko
 Fejlen: kolonnen hedder `PNR`, koden spørger efter `pnr`. R skelner mellem store og små bogstaver.
 
 </details>
+
+---
+
+## Tastaturgenveje i RStudio
+
+| Mac | Windows | Handling |
+|---|---|---|
+| Option + `-` | Alt + `-` | Sæt tildelingsoperatoren `<-` ind |
+| CMD + SHIFT + M | CTRL + SHIFT + M | Sæt pipe ind (`%>%` eller `\|>`) |
+| CMD + Return | CTRL + Enter | Kør linje/selektion og gå til næste |
+| Option + Return | Alt + Enter | Kør linje/selektion og bliv på samme linje |
+| CMD + S | CTRL + S | Gem |
+| CMD + SHIFT + R | CTRL + SHIFT + R | Indsæt sektionsoverskrift i scriptet |
+| CMD + Z | CTRL + Z | Fortryd (undo) |
+| CMD + SHIFT + Z | CTRL + SHIFT + Z | Annullér fortryd (redo) |
+| CMD + A | CTRL + A | Markér alt |
+| CMD + SHIFT + A | CTRL + SHIFT + A | Reformatér/indentér kode |
+| Option + ←/→ | CTRL + ←/→ | Hop et ord ad gangen |
+| Option + SHIFT + ←/→ | CTRL + SHIFT + ←/→ | Markér ord for ord |
+
+::: {.callout-tip}
+**Pipe-shortcut: vælg hvilken pipe der indsættes.**
+`Tools → Global Options → Code → Use native pipe operator` styrer om CTRL/CMD+SHIFT+M indsætter `|>` (native, nyere R) eller `%>%` (magrittr, dplyr-konventionen).
+:::
+
+---
+
+## God kode og reproducerbarhed
+
+Det vigtigste ved registerbaseret forskning er at dine resultater kan genskabes — af en reviewer, en kollega eller dig selv om seks måneder. Det stiller krav til, hvordan du organiserer og skriver din kode.
+
+**Strukturér dine scripts med nummerering**
+
+Hvert trin i analysen bør ligge i sit eget script, navngivet med et nummer:
+
+```
+01_build_cohort.R
+02_extract_outcomes.R
+03_extract_covariates.R
+04_data_management.R
+05_analysis.R
+```
+
+Scriptnumre fortæller enhver der ser mappen, i hvilken rækkefølge de skal køres. Brug undermapper hvis projektet vokser — fx `R/`, `output/`, `datasets/`.
+
+**Kør scripts fra top til bund — aldrig på tværs**
+
+Et script skal kunne køres fra linje 1 til slut uden afbrydelse og give det samme resultat hver gang. Undgå at køre to linjer fra én fil, springe til en anden og tilbage — det er ikke reproducerbart og skaber fejl der er meget svære at finde.
+
+::: {.callout-important}
+**Kør aldrig kode manuelt på tværs af scripts.** Hvis dit resultat afhænger af, at du har kørt linje 14 i script 02 inden linje 7 i script 03, er det ikke reproducerbart. Lav i stedet et `saveRDS()` i script 02 og et `readRDS()` i script 03.
+:::
+
+**Tilføj kommentarer, overskrifter og forklaringer**
+
+Det tager fem minutter at skrive en kommentar nu og en time at forstå koden igen om tre måneder. Tilføj:
+
+- En kort beskrivelse øverst i hvert script: hvad gør dette script, hvad kræver det som input, hvad producerer det?
+- Sektionsoverskrifter med **CTRL+SHIFT+R** — de vises i script-navne-listen til venstre i editoren
+- En kommentar per substantiel kodelinje (dette er påkrævet i dette projekt — se `CLAUDE.md`)
+
+**Gem løbende og kør rent fra starten**
+
+Gem dit script ofte (**CTRL/CMD+S**). Når du tror du er færdig: genstart R (`Session → Restart R`) og kør hele scriptet fra linje 1 igen. Virker det? Så er det reproducerbart.
 
 ---
 

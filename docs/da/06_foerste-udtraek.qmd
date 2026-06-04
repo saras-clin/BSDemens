@@ -20,25 +20,19 @@ Når du er klar til at arbejde med rigtige registerdata, bruger du det samme mø
 :::
 
 ::: {.callout-note}
-**Eksemplerne bruger syntetiske data fra pakken [`fakeregs`](https://github.com/steno-aarhus/fakeregs)** (MIT-licens, Anders Aasted Isaksen, Steno Diabetes Center Aarhus) — et træningsdatasæt der afspejler de rigtige DST-registres struktur og kolonnenavne, men udelukkende indeholder opdigtede personer.
-Funktionen `reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
+**Eksemplerne bruger syntetiske data fra pakken [`fakeregs`](https://github.com/steno-aarhus/fakeregs)** (MIT-licens, Anders Aasted Isaksen, Steno Diabetes Center Aarhus) — opdigtede personer med DST-registrenes struktur og kolonnenavne.
+Pakken bruger `generate_*()`-funktioner til at oprette syntetiske data, som du gemmer som parquet og øver `open_dataset()` på.
 :::
 
-::: {.callout-tip}
-**Arbejder du på DARTER?**
-Erstat `open_dataset(reg_sti("lmdb"))` med `load_database("lmdb")` efter at have installeret `dstDataPrep`.
-Alle øvrige linjer på siden er identiske.
-Se [DARTER — oversigt og pipeline](darter/00_index.qmd) for setup-vejledning.
-:::
 
 ::: {.callout-note}
 **Næste skridt: hospitalsdiagnoser (LPR)**
-Dette eksempel bruger LMDB (recepter) som er relativt simpelt. Når du arbejder med **LPR** (diagnoser), gælder ekstra regler: registret er delt i to perioder (LPR2 og LPR3), koder har et D-præfiks der skal fjernes, og du skal vælge diagnosetyper. Alt dette gennemgås i [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
+Dette eksempel bruger `lpr_adm` (hospitalkontakter — kun kontaktdatoer, ingen diagnosejoin). Når du arbejder med **diagnosedata fra LPR** (ICD-koder), gælder ekstra regler: registret er delt i to perioder (LPR2 og LPR3), koder har et D-præfiks der skal fjernes, og du skal vælge diagnosetyper. Alt dette gennemgås i [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd).
 :::
 
 ---
 
-## Forberedelse: installer fakeregs
+## Forberedelse: installer fakeregs og generer syntetiske data
 
 `fakeregs` er ikke på CRAN — installer direkte fra GitHub:
 
@@ -50,8 +44,26 @@ pak::pak("steno-aarhus/fakeregs")   # installer fakeregs
 ```r
 library(fakeregs)    # syntetiske DST-registerdata
 library(dplyr)       # filter, select, mutate, collect
-library(arrow)       # open_dataset — doven forbindelse til parquet
+library(arrow)       # open_dataset, write_parquet
+
+# Generer syntetiske data og gem som parquet (gøres kun én gang)
+bp        <- generate_background_pop()                           # syntetisk grundpopulation
+bef_synth <- generate_bef(background_df = bp)                    # syntetisk BEF-register
+lpr_synth <- generate_lpr_adm(background_df = bp)                # syntetisk LPR-kontaktregister
+
+dir.create("synth_data/bef",     recursive = TRUE, showWarnings = FALSE)   # opret mapper
+dir.create("synth_data/lpr_adm", recursive = TRUE, showWarnings = FALSE)
+write_parquet(bef_synth,  "synth_data/bef/bef.parquet")                    # gem som parquet
+write_parquet(lpr_synth,  "synth_data/lpr_adm/lpr_adm.parquet")
 ```
+
+::: {.callout-tip}
+**Stien er relativ til dit working directory.**
+`"synth_data/bef/"` oprettes i den mappe R er sat til at arbejde i — tjek hvilken det er med `getwd()`.
+Vil du gemme et andet sted, brug en fuld sti: `"C:/Users/ditbrugernavn/projekter/synth_data/bef/"`.
+:::
+
+Nu kan du øve `open_dataset()` præcis som på DST-serveren.
 
 ---
 
@@ -63,7 +75,7 @@ direkte fra BEF-registret.
 
 ```{.r filename="trin1_kohorte.R"}
 # Åbn BEF — doven forbindelse, ingen data i R endnu
-bef <- open_dataset(reg_sti("bef")) %>%
+bef <- open_dataset("synth_data/bef/") %>%
   rename_with(tolower)
 
 # Hent 200 tilfældige pnr'er som din kohort
@@ -92,7 +104,7 @@ Koden nedenfor er skrevet af **Anders Aasted Isaksen** (Steno Diabetes Center Aa
 og er hentet direkte fra vignetten
 [`common_tasks_dplyr.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/vignettes/common_tasks_dplyr.qmd)
 i pakken [`fakeregs`](https://github.com/steno-aarhus/fakeregs) (MIT-licens).
-Koden er gengivet uændret — al ære tilhører ham.
+Koden er gengivet uændret.
 :::
 
 BEF-registret gemmer `koen`, `civst` og `reg` som koder — ikke som tekst.
@@ -148,22 +160,22 @@ se den direkte her: [steno-aarhus.github.io/fakeregs/articles/common_tasks_dplyr
 
 ## Trin 2 — Udtræk data fra et register
 
-Nu trækker vi receptdata fra LMDB for vores kohorte.
+Nu trækker vi hospitalkontakter fra `lpr_adm` for vores kohorte.
 Mønstret er altid det samme: **åbn → filtrer → vælg kolonner → collect**.
 
 ```{.r filename="trin2_udtraek.R"}
-# Åbn LMDB — doven forbindelse
-lmdb <- open_dataset(reg_sti("lmdb")) %>%
+# Åbn lpr_adm — doven forbindelse
+lpr_adm <- open_dataset("synth_data/lpr_adm/") %>%
   rename_with(tolower)
 
 # Udtræk: filter FØR collect — ellers crasher sessionen
-recepter <- lmdb %>%
-  filter(pnr %in% !!kohort_pnrs) %>%         # kun vores kohort
-  select(pnr, atc, eksd) %>%                  # kun de kolonner vi bruger
-  collect()                                  # HER flyttes data ind i R
+kontakter <- lpr_adm %>%
+  filter(pnr %in% !!kohort_pnrs) %>%           # kun vores kohort
+  select(pnr, recnum, d_inddto) %>%             # kun de kolonner vi bruger
+  collect()                                     # HER flyttes data ind i R
 
-nrow(recepter)                               # hvor mange receptrækker?
-head(recepter)                               # de første seks rækker
+nrow(kontakter)                                 # hvor mange kontaktrækker?
+head(kontakter)                                 # de første seks rækker
 ```
 
 **Hvad skete der?**
@@ -185,11 +197,10 @@ Se [Det universelle mønster](05_universelle-moenster.qmd) for en detaljeret for
 Tilføj variabler med `mutate()` *efter* `collect()` — nu er du i R og kan bruge alle funktioner.
 
 ```r
-recepter <- recepter %>%
+kontakter <- kontakter %>%
   mutate(
-    aar          = as.integer(format(as.Date(eksd), "%Y")),   # udtrækker år fra dato
-    atc3         = substr(atc, 1, 3),                          # 3-tegns ATC-gruppe
-    er_metformin = atc3 == "A10"                               # TRUE for metformin-gruppen
+    dato = as.Date(d_inddto),                            # eksplicit dato-klasse
+    aar  = as.integer(format(dato, "%Y"))                # år fra kontaktdato
   )
 ```
 
@@ -200,15 +211,15 @@ recepter <- recepter %>%
 Gem med `saveRDS()` så næste script kan genindlæse det uden at køre hele udtrækkene igen.
 
 ```{.r filename="trin4_gem.R"}
-saveRDS(recepter, "datasets/extract_recepter.rds")   # gem til disk — skift stien til din egen mappe
+saveRDS(kontakter, "datasets/extract_kontakter.rds")   # gem til disk — skift stien til din egen mappe
 
 # Genindlæs i næste script:
-recepter <- readRDS("datasets/extract_recepter.rds")
+kontakter <- readRDS("datasets/extract_kontakter.rds")
 ```
 
 ::: {.callout-warning}
 **`datasets/`-mappen gemmes kun lokalt på DST-serveren.**
-Mellemresultater hjemsendres via outputkontrol — se [14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd).
+Mellemresultater hjemsendres via outputkontrol — se [14 — Eksport og hjemsendelse](15_eksport-hjemsendelse.qmd).
 :::
 
 ---
@@ -218,11 +229,11 @@ Mellemresultater hjemsendres via outputkontrol — se [14 — Eksport og hjemsen
 Lige efter et udtræk bør du tjekke, at du fik det, du forventede:
 
 ```r
-head(recepter)                      # de første seks rækker — ser det rigtigt ud?
-nrow(recepter)                      # antal rækker — som forventet?
-length(unique(recepter$pnr))        # hvor mange unikke personer?
-colSums(is.na(recepter))            # manglende værdier per kolonne
-class(recepter$eksd)                # er datokolonnen Date? (ikke character)
+head(kontakter)                     # de første seks rækker — ser det rigtigt ud?
+nrow(kontakter)                     # antal rækker — som forventet?
+length(unique(kontakter$pnr))       # hvor mange unikke personer?
+colSums(is.na(kontakter))           # manglende værdier per kolonne
+class(kontakter$d_inddto)           # er datokolonnen Date? (ikke character)
 ```
 
 Hvis dit udtræk inkluderer eksklusionstrin — fx "fjern personer med tidlig diagnose" — er det god praksis at tælle N for hvert trin:
@@ -301,7 +312,7 @@ Du har nu lavet et komplet udtræk og gemt det. Næste skridt er at lære at udf
 
 - [Fase 7 — Inspicér din data](07_inspicer-data.qmd) — den fulde værktøjskasse til at forstå hvad du har
 - [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd) — det komplette mønster for diagnoseudtræk
-- [Fase 10 — Joins og pivots](10_data-manipulation.qmd) — kobl to udtræk sammen
+- [Fase 11 — Joins og pivots](11_data-manipulation.qmd) — kobl to udtræk sammen
 
 ---
 
@@ -310,5 +321,4 @@ Du har nu lavet et komplet udtræk og gemt det. Næste skridt er at lære at udf
 Trin 1 (kohorte-opbygning fra BEF) er tilpasset fra Anders Aasted Isaksens vignette
 [`common_tasks_dplyr.qmd`](https://github.com/steno-aarhus/fakeregs/blob/main/vignettes/common_tasks_dplyr.qmd)
 i `fakeregs`-pakken (MIT-licens, Steno Diabetes Center Aarhus).
-Funktionen `reg_sti()` er uændret fra `fakeregs`.
 Trin 2–4, tjeklisten og SAS→Parquet-sektionen er skrevet til denne vejledning.

@@ -9,9 +9,10 @@ Guiden tager dig frem til et analyseklart datasæt og peger dig mod de rigtige v
 
 ---
 
-## 1. Validerede algoritmer og kovariater
+## 1. Validerede algoritmer 
 
 Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovariater.
+Koden til NMI og SEPLINE-algoritmen er under udvikling. 
 
 ::: {.wide-first-col}
 
@@ -23,9 +24,9 @@ Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovar
 
 :::
 
-- **OSDC** — definér en diabetes-population, type og debutdato → [Fase 12 — OSDC](12b_osdc.qmd)
-- **NMI** — justér for comorbiditet i en model eller beskriv comorbiditetsbyrde → [Fase 12 — NMI](12c_nmi.qmd)
-- **SEPLINE** — uddannelse, indkomst, beskæftigelse som kovariater → [Fase 11 — Socioøkonomiske variable](11_socioekonomiske-variable.qmd)
+- **OSDC** — definér en diabetes-population, type og debutdato → [Fase 13 — OSDC](13b_osdc.qmd)
+- **NMI** — justér for comorbiditet i en model eller beskriv comorbiditetsbyrde → [Fase 13 — NMI](13c_nmi.qmd)
+- **SEPLINE** — uddannelse, indkomst, beskæftigelse som kovariater → [Fase 12 — Socioøkonomiske variable](12_socioekonomiske-variable.qmd)
 
 ::: {.callout-tip}
 **Charlson som alternativ til NMI:** både `heaven::charlsonIndex()` og `EpiForsk` (se nedenfor) beregner Charlson comorbiditetsscore fra LPR-diagnoser — begge er på DST.
@@ -33,7 +34,7 @@ Publicerede, peer-reviewede metoder du kan bruge direkte til at konstruere kovar
 
 ---
 
-## 2. Datahåndtering og udtræk
+## 2. Eksisternde funktioner du kan bruge til datahåndtering og udtræk
 
 ### `heaven` — dansk registerdata-toolkit
 *(forudinstalleret på DST; ikke på CRAN — [github.com/tagteam/heaven](https://github.com/tagteam/heaven))*
@@ -270,4 +271,4 @@ Pakkerne nedenfor er **ikke tilgængelige på DST** (GitHub-only; kræver import
 
 ## Næste skridt
 
-→ [Fase 14 — Eksport og hjemsendelse](14_eksport-hjemsendelse.qmd)
+→ [Fase 15 — Eksport og hjemsendelse](15_eksport-hjemsendelse.qmd)

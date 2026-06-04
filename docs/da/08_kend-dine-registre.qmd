@@ -7,7 +7,7 @@ date: last-modified
 Du kan nu inspicere et datasæt. Næste skridt er at vide, *hvor* dine variable kommer fra:
 hvilket register indeholder demografi, hvilket indeholder diagnoser, hvilket indeholder recepter.
 
-Denne side er din beslutningstabel. Når du ved hvilket register du skal bruge, finder du de eksakte kolonnenavne, typer og kodeeksempler i [Fase 13 — Registerreference](13d_register_reference.qmd).
+Denne side er din beslutningstabel. Når du ved hvilket register du skal bruge, finder du de eksakte kolonnenavne, typer og kodeeksempler i [Fase 14 — Registerreference](14d_register_reference.qmd).
 
 ---
 
@@ -50,30 +50,34 @@ Kend dit spørgsmål. Find registret. Kig i kolonnen.
 
 ---
 
-## Hvordan registrene kobles
+## Join-nøgler
 
-::: {.callout-note}
-**Join-nøgler:**
-BEF, DODSAARS, VNDS, LMDB, UDDA, AKM joines alle på `pnr`.
-FAIK joines via `familie_id` — hent den fra BEF.
-LPR2 joines på `recnum`; LPR3 joines på `dw_ek_kontakt`.
-`lpr_sksopr` joines til `lpr_adm` på `recnum`; `procedurer_kirurgi` joines til `lpr_a_kontakt` på `dw_ek_forloeb`.
-:::
+Forkerte join-nøgler giver stille fejl: koden kører, men du mister rækker — eller fordobler dem.
 
-Selve mekanikken bag joins gennemgås i [Fase 10 — Joins og pivots](10_data-manipulation.qmd).
+| Register | Join-nøgle | Kobler til |
+|---|---|---|
+| BEF, DODSAARS, VNDS, LMDB, UDDA, AKM | `pnr` | Alle øvrige `pnr`-registre |
+| FAIK | `familie_id` | Hentes fra BEF-kolonnen `familie_id` |
+| `lpr_diag` | `recnum` | `lpr_adm` |
+| `lpr_sksopr` | `recnum` | `lpr_adm` |
+| `lpr_a_diagnose` | `dw_ek_kontakt` | `lpr_a_kontakt` |
+| `procedurer_kirurgi` | `dw_ek_forloeb` | `lpr_a_kontakt` |
+
+De bekræftede kolonnenavne og join-eksempler for hvert register finder du i [Fase 14 — Registerreference](14d_register_reference.qmd).
+Selve mekanikken bag joins gennemgås i [Fase 11 — Joins og pivots](11_data-manipulation.qmd).
 
 ---
 
 ::: {.callout-note}
 **SDCA's egen registerdatabase**
 Steno Diabetes Center Aarhus har en database med variabellister, registerbeskrivelser og ansøgningsskabeloner til Sundhedsdatastyrelsen:
-[steno-aarhus.github.io/registers-project-database →](https://steno-aarhus.github.io/registers-project-database/)
+[steno-aarhus.github.io/registers-project-database →](https://steno-aarhus.github.io/registers-project-database/dst/registers-and-variables/)
 Den dækker *hvilke variable og registre der findes* (og ansøgning) — denne guide dækker *hvordan du koder udtrækket*.
 :::
 
 ## Næste skridt
 
-- **Skal du bruge de eksakte kolonnenavne, typer og kodeeksempler?** → [Fase 13 — Registerreference](13d_register_reference.qmd)
+- **Skal du bruge de eksakte kolonnenavne, typer og kodeeksempler?** → [Fase 14 — Registerreference](14d_register_reference.qmd)
 - **Skal du trække hospitalsdiagnoser?** → [Fase 9 — Hospitalskontakter (LPR)](09_hospitalskontakter-lpr.qmd)
 
 ::: {.callout-tip}
