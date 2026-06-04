@@ -159,7 +159,7 @@ Vil du i stedet trække **baseline-komorbiditet** (dvs. diagnoser *inden* studie
 Dette er Fase 1 — koden til at bygge `alle_dx`.
 
 ::: {.callout-note}
-Eksemplet kræver at registrene er tilgængelige som parquet-filer og bruger `open_dataset()` med generiske stier — justér stierne til dit projekt. Er dine registre endnu kun i SAS-format, konverter dem først: [Fase 6 — SAS til parquet](06_foerste-udtraek.qmd#avanceret-konvertér-projektspecifikke-sas-filer-til-parquet-én-gang). Vil du øve koden med syntetiske data lokalt, se fold-ud'en **Prøv det selv** nedenfor.
+Eksemplet kræver at registrene er tilgængelige som parquet-filer og bruger `open_dataset()` med generiske stier — justér stierne til dit projekt. Er dine registre endnu kun i SAS-format, konverter dem først: [Fase 4 — SAS til parquet](04_filformater.qmd#konvertér-sas-til-parquet). Vil du øve koden med syntetiske data lokalt, se fold-ud'en **Prøv det selv** nedenfor.
 :::
 
 ::: {.callout-note}

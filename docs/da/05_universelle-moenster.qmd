@@ -164,7 +164,7 @@ Du behøver ikke kende disse navne for at bruge mønstret ovenfor — men her er
 
 **Parquet** er et filformat der gemmer data *kolonne for kolonne* i stedet for række for række. Vil du kun have `pnr` og `aar`, læser computeren kun de to kolonner — ikke resten. Det er derfor det er hurtigt.
 
-På DARTER-projektet (708421) er de fleste SAS-datasæt allerede konverteret til parquet og kan åbnes direkte med `load_database()` — se [DARTER — Registersti og datastores](darter/01_registersti-datastores.qmd). På andre projekter kan du selv konvertere SAS-filer til parquet — se Fase 6.
+På DARTER-projektet (708421) er de fleste SAS-datasæt allerede konverteret til parquet og kan åbnes direkte med `load_database()` — se [DARTER — Registersti og datastores](darter/01_registersti-datastores.qmd). På andre projekter kan du selv konvertere SAS-filer til parquet — se [Fase 4 — Konvertér SAS til parquet](04_filformater.qmd#konvertér-sas-til-parquet).
 
 **Arrow** er R-pakken der læser parquet-filer og oversætter dine dplyr-kommandoer til effektive parquet-forespørgsler. `open_dataset()` bruger Arrow.
 

@@ -185,7 +185,7 @@ Opdigtede, men strukturelt realistiske data for ni DST-registre. Til at øve og 
 ### `fastreg` — SAS → parquet
 *(kun GitHub — [github.com/dp-next/fastreg](https://github.com/dp-next/fastreg))*
 
-Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun relevant hvis du selv bygger et parquet-workspace fra bunden. Se den korte note i [Fase 6's SAS → parquet-fold-ud](06_foerste-udtraek.qmd).
+Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun relevant hvis du selv bygger et parquet-workspace fra bunden. Se [Fase 4 — SAS → parquet](04_filformater.qmd#konvertér-sas-til-parquet).
 
 ---
 

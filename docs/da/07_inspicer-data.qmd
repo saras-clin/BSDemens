@@ -14,6 +14,16 @@ Denne side viser de kommandoer, du vil bruge igen og igen til at inspicere dine 
 `data$koen` betyder: "kolonnen `koen` i tabellen `data`". Erstat `data` med dit eget datasætnavn og `koen` med dit eget kolonnenavn. Du vil se `$` overalt i R-kode.
 :::
 
+::: {.callout-tip}
+**Vil du øve kommandoerne i RStudio?**
+Alle eksempler på siden bruger `bef_data` — et BEF-udtræk med kolonner som `koen`, `alder` og `foed_dag`. Du kan generere det med to linjer, forudsat du har kørt forberedelsesblokken i [Fase 6](06_foerste-udtraek.qmd#forberedelse-installer-fakeregs-og-generer-syntetiske-data):
+
+```r
+# Fortsætter fra Fase 6 — bef_data er allerede åbnet som doven Arrow-forbindelse
+bef_data <- bef_data %>% filter(year == 2015) %>% collect()   # filtrer og hent ind i R
+```
+:::
+
 ---
 
 ## Ser du en rød fejlbesked? {#ser-du-en-rød-fejlbesked}
@@ -34,11 +44,13 @@ En oversigt over hyppige fejlbeskeder og hvad de typisk betyder finder du i [Fas
 ## Se hvad du har
 
 ```r
-dim(data)          # antal rækker og kolonner — fx "5000 rows, 12 columns"
-nrow(data)         # kun antal rækker
-ncol(data)         # kun antal kolonner
-names(data)        # kolonnenavne som en vektor
+dim(bef_data)          # antal rækker og kolonner — fx "1200 rows, 8 columns"
+nrow(bef_data)         # kun antal rækker
+ncol(bef_data)         # kun antal kolonner
+names(bef_data)        # kolonnenavne som en vektor
 ```
+
+`names()` virker også på et dovent Arrow-objekt inden `collect()` — fx `names(bef)` hvis du vil tjekke, hvilke kolonner registret har, inden du beslutter hvad du vil `select()`.
 
 <details>
 <summary>Eksempel med simpel data</summary>
@@ -61,13 +73,17 @@ names(df)
 ## Forstå strukturen
 
 ```r
-str(data)          # kolonner med type og de første værdier — start her
-glimpse(data)      # samme som str(), men pænere layout (kræver pakken dplyr)
-class(data)        # objekttype — er data faktisk i R, eller er det stadig en forbindelse?
-class(data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
+glimpse(bef_data)      # kolonnenavn, type og første værdier — kompakt og læsbar (kræver dplyr)
+str(bef_data)          # samme information, men mere verbose output
+class(bef_data)        # objekttype — er data faktisk i R, eller er det stadig en forbindelse?
+class(bef_data$alder)  # type for én kolonne: "numeric", "character", "Date" mv.
 ```
 
-`class(data)` fortæller om du har rigtige data (`"data.frame"`/`"tbl_df"`) eller stadig bare en usendt forespørgsel (`"tbl_duckdb_connection"` / `"Table"`).
+`class(bef_data)` fortæller om du har rigtige data (`"data.frame"`/`"tbl_df"`) eller stadig bare en usendt forespørgsel. Du kan se tre forskellige returværdier:
+
+- `"data.frame"` / `"tbl_df"` — data er i R. Du kan bruge alle funktioner.
+- `"tbl_duckdb_connection"` / `"Table"` — doven Arrow/DuckDB-forespørgsel. Mangler `collect()`.
+- `"arrow_dplyr_query"` — en Arrow-forespørgsel med et eller flere piped trin (fx `filter()` eller `select()`), men endnu ikke kørt. Mangler `collect()`.
 
 ::: {.callout-tip}
 **`class()` kan hjælpe dig med at fejlfinde**
@@ -79,9 +95,9 @@ Ser objektet ud som data men opfører sig mærkeligt, eller fejler din kode med 
 ## Se de første og sidste rækker
 
 ```r
-head(data)         # de første 6 rækker
-head(data, 10)     # de første 10 rækker
-tail(data)         # de sidste 6 rækker
+head(bef_data)         # de første 6 rækker — ser kolonnerne og typerne rigtige ud?
+head(bef_data, 10)     # de første 10 rækker
+tail(bef_data)         # de sidste 6 rækker — nyttigt til at opdage ufuldstændige datasæt
 ```
 
 ---
@@ -91,9 +107,9 @@ tail(data)         # de sidste 6 rækker
 Som nævnt øverst på siden er `$`-tegnet R's måde at sige "denne kolonne i denne tabel": `data$koen` er kolonnen `koen` i tabellen `data`.
 
 ```r
-unique(data$koen)              # hvilke unikke værdier findes i kolonnen koen?
-table(data$koen)               # frekvenstabel: hvor mange rækker har hver værdi?
-table(data$koen, data$alder_gruppe)  # krydstabel: fordeling på tværs af to kolonner
+unique(bef_data$koen)                     # hvilke unikke værdier findes i kolonnen koen?
+table(bef_data$koen)                      # frekvenstabel: hvor mange rækker har hver værdi?
+table(bef_data$koen, bef_data$civst)      # krydstabel: fordeling af køn på tværs af civilstatus
 ```
 
 <details>
@@ -140,19 +156,19 @@ Det afhænger af *hvilken* kolonne der mangler:
 Tjek altid `colSums(is.na(data))` lige efter et udtræk eller et join, så du opdager uventede huller, før de forplanter sig stille gennem analysen.
 
 ```r
-summary(data)              # min, max, median, gennemsnit og kvartiler for alle kolonner
-summary(data$index_date)   # opsummering af én kolonne
+summary(bef_data)              # min, max, median, gennemsnit og kvartiler for alle kolonner
+summary(bef_data$foed_dag)     # opsummering af én kolonne
 ```
 
 For kontinuerte variable:
 
 ```r
-min(data$alder, na.rm = TRUE)    # mindste værdi (na.rm fjerner NA'er - rm = remove)
-max(data$alder, na.rm = TRUE)    # største værdi
-mean(data$alder, na.rm = TRUE)   # gennemsnit
-median(data$alder, na.rm = TRUE) # median
-sd(data$alder, na.rm = TRUE)     # standardafvigelse
-IQR(data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
+min(bef_data$alder, na.rm = TRUE)    # mindste værdi (na.rm fjerner NA'er - rm = remove)
+max(bef_data$alder, na.rm = TRUE)    # største værdi
+mean(bef_data$alder, na.rm = TRUE)   # gennemsnit
+median(bef_data$alder, na.rm = TRUE) # median
+sd(bef_data$alder, na.rm = TRUE)     # standardafvigelse
+IQR(bef_data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
 ```
 
 ---
@@ -160,18 +176,18 @@ IQR(data$alder, na.rm = TRUE)    # interkvartilbredde (Q3 - Q1)
 ## Tjek manglende værdier
 
 ```r
-sum(is.na(data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
-colSums(is.na(data))     # antal NA'er per kolonne — giver overblik over hele datasættet
+sum(is.na(bef_data$koen))    # antal NA'er i kolonnen koen — erstat med dit eget kolonnenavn
+colSums(is.na(bef_data))     # antal NA'er per kolonne — giver overblik over hele datasættet
 ```
 
-`colSums(is.na(data))` returnerer én linje med en tæller per kolonne:
+`colSums(is.na(bef_data))` returnerer én linje med en tæller per kolonne:
 
 ```
-#  pnr   alder    koen  index_date  indkomst
-#    0       0       0           2        58
+#  pnr  koen  alder  foed_dag  year  civst  opr_land  reg
+#    0     0      0         3     0      0         0    0
 ```
 
-Her er `index_date` manglende for 2 og `indkomst` for 58 — alt andet er komplet. En kolonne med `0` er helt uden NA'er.
+Her er `foed_dag` manglende for 3 — alt andet er komplet. En kolonne med `0` er helt uden NA'er.
 
 ---
 
@@ -180,14 +196,14 @@ Her er `index_date` manglende for 2 og `indkomst` for 58 — alt andet er komple
 Datokolonner kan indeholde umulige værdier — datoer langt uden for studieperioden er et tegn på en konverteringsfejl eller forkert kolonne.
 
 ```r
-min(data$index_date, na.rm = TRUE)   # er den tidligste dato plausibel?
-max(data$index_date, na.rm = TRUE)   # er den seneste dato plausibel?
+min(bef_data$foed_dag, na.rm = TRUE)   # er den tidligste fødselsdato plausibel?
+max(bef_data$foed_dag, na.rm = TRUE)   # er den seneste fødselsdato plausibel?
 
-# Tjek om der er datoer FØR studiestart:
-sum(data$index_date < as.Date("2005-01-01"), na.rm = TRUE)   # erstat datoen med din studiestart
+# Tjek om der er datoer FØR et forventet interval:
+sum(bef_data$foed_dag < as.Date("1900-01-01"), na.rm = TRUE)   # erstat datoen med din nedre grænse
 
-# Tjek om der er datoer EFTER studieslutt:
-sum(data$index_date > as.Date("2024-12-31"), na.rm = TRUE)   # erstat datoen med din studieslutt
+# Tjek om der er datoer EFTER et forventet interval:
+sum(bef_data$foed_dag > as.Date("2015-12-31"), na.rm = TRUE)   # erstat datoen med din øvre grænse
 ```
 
 Se [Fase 14c — Faldgruber](14c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid-i-date-format) for de hyppigste datokonverteringsfejl og hvordan du retter dem.
@@ -199,27 +215,27 @@ Se [Fase 14c — Faldgruber](14c_dst_faldgruber.qmd#4-datokolonner-er-ikke-altid
 
 **Tæl og sortér** (dplyr):
 
-Erstat `data` med dit eget datasætnavn — fx `recepter`, `kontakter` eller `kohort`.
+Erstat `bef_data` med dit eget datasætnavn og kolonnenavne med dine egne.
 
 ```r
-data %>% count(koen)               # antal rækker per kategori
-data %>% count(koen, alder_gruppe) # per kombination af to variable
-data %>% arrange(dato)             # sortér stigende efter dato
-data %>% arrange(desc(dato))       # sortér faldende
+bef_data %>% count(koen)               # antal rækker per kategori
+bef_data %>% count(koen, civst)        # per kombination af to variable
+bef_data %>% arrange(foed_dag)         # sortér stigende efter fødselsdato
+bef_data %>% arrange(desc(foed_dag))   # sortér faldende
 ```
 
 **Hurtige visualiseringer** — til at danne sig et overblik, ikke til publikation:
 
-Erstat `data` med dit eget datasætnavn og kolonnenavne med dine egne.
+Erstat `bef_data` med dit eget datasætnavn og kolonnenavne med dine egne.
 
 ```r
 # Kontinuerte variable:
-hist(data$alder)                         # histogram
-boxplot(data$alder)                      # boksplot
-boxplot(alder ~ koen, data = data)       # boksplot opdelt på køn
+hist(bef_data$alder)                            # histogram
+boxplot(bef_data$alder)                         # boksplot
+boxplot(alder ~ koen, data = bef_data)          # boksplot opdelt på køn
 
 # Kategoriske variable:
-barplot(table(data$cohort))              # søjlediagram
+barplot(table(bef_data$koen))                   # søjlediagram
 ```
 
 </details>
