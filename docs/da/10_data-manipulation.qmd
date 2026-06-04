@@ -268,6 +268,31 @@ kohort_med_dod <- kohort %>%
 
 ---
 
+## Praktisk eksempel: kohorte + emigrationsdato
+
+Emigration censurerer ligesom død — personen forlader studiet den dag de udvandrer.
+VNDS indeholder én række per migrationsbegivenhed; brug kun `"U"` (udvandring) og tag den første dato per person.
+
+```r
+# Emigrationsdatoer fra VNDS:
+vnds <- load_database("vnds") %>%
+  rename_with(tolower) %>%                       # standardisér kolonnenavne
+  filter(pnr %in% !!kohort$pnr,
+         indud_kode == "U") %>%                  # kun udvandringshændelser
+  select(pnr, emigration_date = haend_dato) %>%  # omdøb haend_dato til emigration_date
+  collect() %>%                                  # hent ind i R
+  group_by(pnr) %>%                              # gruppér for at finde første udvandring
+  arrange(emigration_date) %>%                   # ældste dato først
+  slice(1) %>%                                   # første emigration per person
+  ungroup()                                      # frigiv gruppering
+
+# Join: alle kohort-medlemmer bevares; ikke-emigrerede får emigration_date = NA
+kohort_med_emigration <- kohort %>%
+  left_join(vnds, by = "pnr")                    # NA = aldrig emigreret i studieperioden
+```
+
+---
+
 ## Beregn opfølgningstid og hændelsesvariabel
 
 Inden du kan analysere, skal hvert kohortemedlem have en **censureringsdato** (hvornår opfølgningen slutter) og en **hændelsesvariabel** (fik de udfaldet?).

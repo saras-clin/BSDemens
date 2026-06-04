@@ -203,6 +203,35 @@ resultat <- kohort %>%
 saveRDS(resultat, "datasets/extract_demens.rds")   # skift filnavn for hvert nyt udfald
 ```
 
+## Ekskluder prævalente tilfælde
+
+Et standard eksklusionskriterium er at fjerne personer, der allerede havde diagnosen *inden* index-dato.
+Det er den modsatte operation af udfaldsudtrækket — brug `<` i stedet for `>`.
+
+```r
+EKSKL_KODER <- c("G30", "F00", "F01", "F02", "F03")   # samme koder som udfaldet
+
+# Find alle med diagnosen FØR index-dato
+praevalente <- alle_dx %>%
+  filter(icd3 %in% EKSKL_KODER) %>%                                    # behold kun disse koder
+  inner_join(kohort %>% select(pnr, index_date), by = "pnr") %>%       # tilføj index-dato
+  filter(date_contact < index_date) %>%                                 # KUN pre-index diagnoser
+  distinct(pnr)                                                         # én række per person
+
+# Ekskluder fra kohorten
+cat("Kohort inden ekskludering:  ", nrow(kohort),                       "\n")
+kohort_renset <- kohort %>%
+  anti_join(praevalente, by = "pnr")                                    # fjern prævalente tilfælde
+cat("Kohort efter ekskludering:  ", nrow(kohort_renset),                "\n")
+cat("Ekskluderede:               ", nrow(kohort) - nrow(kohort_renset), "\n")
+```
+
+::: {.callout-tip}
+**Lookback-periode:** Overvej at begrænse `date_contact < index_date` yderligere — fx kun de 5 år inden index — for at undgå falske eksklusioner baseret på meget gamle diagnoser. Det afhænger af din definition af "prævalent".
+:::
+
+---
+
 <details>
 <summary>Tilføj psykiatrisk LPR2 (nødvendigt for F-koder, fx demens)</summary>
 

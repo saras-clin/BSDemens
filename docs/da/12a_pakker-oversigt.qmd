@@ -190,7 +190,36 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ---
 
-## 3. Analyse: regression, overlevelse og competing risks
+## 3. Tabel 1 — baseline karakteristika
+
+Tabel 1 opsummerer din studiepopulation inden analysen. `gtsummary` er standardpakken.
+
+```r
+library(gtsummary)   # tbl_summary(), tbl_merge()
+
+# Forudsætter at kohort har kolonnerne: gruppe, alder, koen, nmi_score, occupation_cat
+tabel1 <- kohort %>%
+  select(gruppe, alder, koen, nmi_score, occupation_cat) %>%   # vælg variable til tabellen
+  tbl_summary(
+    by = gruppe,                                               # opdel på eksponeret vs komparator
+    statistic = list(
+      all_continuous()  ~ "{mean} ({sd})",                    # kontinuerte: middelværdi (SD)
+      all_categorical() ~ "{n} ({p}%)"                        # kategoriske: n (%)
+    ),
+    missing = "no"                                             # vis ikke NA-rækker separat
+  ) %>%
+  add_overall() %>%                                            # tilføj en samlet kolonne
+  add_p()                                                      # p-værdier for gruppe-forskelle
+```
+
+::: {.callout-warning}
+**Outputkontrol:** Tælleværdier på 0–4 må ikke hjemsende. Afrund til nærmeste 5 med `round_5_gtsummary()` fra [`Z.gtsummary.addons`](https://github.com/zheer-kejlberg/Z.gtsummary.addons) — pakken er ikke på DST og skal importeres via din datamanager.
+Manuel afrunding: `round(x / 5) * 5` giver nærmeste 5.
+:::
+
+---
+
+## Analyse: regression, overlevelse og competing risks
 
 Dette er kun pointers — guiden underviser ikke i metoderne. Alle nedenstående er **bekræftet på DST** (juni 2026).
 
