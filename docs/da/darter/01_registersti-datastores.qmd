@@ -72,32 +72,33 @@ Kolonnenavne vises efter `rename_with(tolower)`.
 ## Indlæsningsskabeloner
 
 ```r
-library(dstDataPrep)
-library(dplyr)
+library(dstDataPrep)   # load_database() — adgang til DST-registre
+library(dplyr)         # rename_with, rename, left_join, select
 
 # Standard register — parquet via load_database:
-bef <- load_database("bef") %>% rename_with(tolower)
+bef <- load_database("bef") %>% rename_with(tolower)   # doven forbindelse; lowercase kolonner
 
-# Psykiatrisk LPR2 — kræver rename:
+# Psykiatrisk LPR2 — kræver rename af v_cpr og k_recnum:
 psyk_adm <- load_database("t_psyk_adm") %>%
-  rename_with(tolower) %>%
-  rename(pnr = v_cpr, recnum = k_recnum)
+  rename_with(tolower) %>%                          # lowercase kolonner
+  rename(pnr = v_cpr, recnum = k_recnum)            # v_cpr → pnr; k_recnum → recnum
 
-# DBSO — parquet-external:
-dbso <- load_database("dbso") %>% rename_with(tolower)
+# DBSO — parquet-external (konverteret fra SAS via 00_prepare_dbso.R):
+dbso <- load_database("dbso") %>% rename_with(tolower)   # doven forbindelse
 
-# OSDC — RDS-fil:
-dm_pop <- readRDS(path_dm_pop) %>% rename(pnr = PNR)
+# OSDC — RDS-fil med præberegnet diabetesklassifikation:
+dm_pop <- readRDS(path_dm_pop) %>% rename(pnr = PNR)   # PNR er uppercase i råfil — omdøb
 
-# LPR3 procedurer — join via dw_ek_forloeb (IKKE dw_ek_kontakt):
+# LPR3 procedurer — join via dw_ek_forloeb (IKKE dw_ek_kontakt — er NA for alle rækker):
 proc <- load_database("procedurer_kirurgi") %>%
-  rename_with(tolower) %>%
+  rename_with(tolower) %>%                          # lowercase kolonner
   left_join(
     load_database("lpr_a_kontakt") %>%
       rename_with(tolower) %>%
-      select(dw_ek_forloeb, pnr),
-    by = "dw_ek_forloeb"
+      select(dw_ek_forloeb, pnr),                  # hent pnr via forloeb-nøglen
+    by = "dw_ek_forloeb"                            # join-nøgle — dw_ek_kontakt virker ikke
   )
+# proc er stadig doven — tilføj filter() og collect() inden brug
 ```
 
 ---

@@ -33,7 +33,7 @@ To trin skal gennemføres **inden du skriver kode** på DARTER:
 Den skal bygges manuelt, da DST-serveren nulstiller installerede pakker.
 
 1. **File → Open Project in New Session**
-2. Naviger til `E:/workdata/708421/workspaces/luke/dstDataPrep/dstDataPrep.Rproj`
+2. Naviger til `E:/workdata/708421/workspaces/[ditNavn]/dstDataPrep/dstDataPrep.Rproj`
 3. Tryk **Ctrl+Shift+B** (Build) — eller på Mac via menuen: **Build → Install Package**
 4. Vent på "Done" og luk sessionen
 
