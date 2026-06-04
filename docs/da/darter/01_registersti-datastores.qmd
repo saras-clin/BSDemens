@@ -31,6 +31,7 @@ path_output       <- "E:/workdata/708421/workspaces/[ditNavn]/BS_demens/datasets
 ## Oversigt — alle registre på projekt 708421
 
 Alle bekræftet via `colnames()` på DST-serveren 2026-05-15.
+De fleste registre er opdateret til **slutningen af 2024** pr. 2026 (Anders Aasted Isaksen/DARTER-team).
 Kolonnenavne vises efter `rename_with(tolower)`.
 
 | Register | Adgang | Join-nøgle | Periode | Kritisk kolonne |
@@ -53,12 +54,17 @@ Kolonnenavne vises efter `rename_with(tolower)`.
 | **AKM** | `load_database("akm")` | `pnr` | Alle år | `socio13`, `aar` |
 | **DBSO** | `load_database("dbso")` | `pnr` | 2010+ | `datoper_prim`, kirurgi-flag |
 | **OSDC** | `readRDS(path_dm_pop)` | `PNR` → rename til `pnr` | 1977–2022 | `diabetes_type`, `do_dm` |
+| **Laboratoriesvar** | `load_database("laboratorieproevesvar_")` | `pnr` | Ca. 1994+ | `npu`, `samplingdato`, `samplevalue` (character) |
 
 ---
 
 ## Kritiske noter
 
-**DODSAARS og DOD:** `dodsaars` er i cleaned-data men dækker kun ~1970–2001 (pr. juni 2026). For post-2001 dødsfald kræves udtræk fra rå SAS-fil — kontakt din datamanager. Tjek altid at parquet-filens dækning matcher din studieperiode inden du kører pipeline (se [DARTER-faldgruber](02_darter-faldgruber.qmd#1-tjek-at-parquet-filerne-er-opdaterede)).
+**DODSAARS og DOD:** `dodsaars` er i cleaned-data men dækker kun ~1970–2001. For post-2001 dødsfald kræves udtræk fra rå SAS-fil — kontakt din datamanager. Se [faldgrube 1](02_darter-faldgruber.qmd#1-tjek-at-parquet-filerne-er-opdaterede).
+
+**LPR3 — duplikatrisiko:** `lpr_a_kontakt` og `lpr_a_diagnose` indeholder data fra to formater (LPR_F og LPR_A). Filtrer altid på `lprindberetningssystem == "LPR3"`. Se [faldgrube 5](02_darter-faldgruber.qmd#lpr3-lprindberetningssystem).
+
+**Laboratoriesvar — brug kun én kilde:** `laboratorieproevesvar_` erstatter `lab_forsker`/`lab_dm_forsker`. De gamle filer eksisterer stadig — brug kun én for at undgå duplikater. Se [faldgrube 6](02_darter-faldgruber.qmd).
 <!-- TODO: link til udtræksguide når klar -->
 
 **procedurer_kirurgi:** `dw_ek_kontakt` er **NA for alle rækker** på DST. Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`.

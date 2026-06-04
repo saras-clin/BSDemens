@@ -48,6 +48,20 @@ install.packages("duckplyr")   # kør inden library() — nulstilles ved logout
 ```
 :::
 
+::: {.callout-tip}
+**Alternativ: brug `compute()` til DuckDB-forbindelse**
+`load_database()` returnerer en Arrow-forbindelse der kun understøtter et subset af dplyr-funktioner.
+Har du brug for DuckDB-specifik funktionalitet eller oplever du langsom ydeevne, kan du pipe til `compute()`:
+
+```r
+lmdb <- load_database("lmdb") %>%
+  filter(pnr %in% !!kohort$pnr) %>%   # filtrer i Arrow FØR compute — reducer data
+  compute()                             # konvertér til DuckDB-forbindelse
+```
+
+Reducer altid data med `filter()`/`select()` inden `compute()`. Se [osdc-dokumentationen](https://steno-aarhus.github.io/osdc/) for DuckDB-konfiguration og memory limits.
+:::
+
 ---
 
 **Inden du kører et script:** kontroller at `path_output` øverst i hvert script peger på din workspace-mappe.
@@ -79,7 +93,8 @@ get_lpr_diagnoses <- function(pnr_vector, diagtypes = c("A", "B"), inpatient_onl
     rename(pnr = v_cpr, recnum = k_recnum)                            # LPR2 psykiatrisk kontakter
   psyk_diag <- load_database("t_psyk_diag") %>% rename_with(tolower) %>%
     rename(recnum = v_recnum)                                          # LPR2 psykiatrisk diagnoser
-  lpr3_k    <- load_database("lpr_a_kontakt")  %>% rename_with(tolower)  # LPR3 kontakter
+  lpr3_k    <- load_database("lpr_a_kontakt")  %>% rename_with(tolower) %>%
+    filter(lprindberetningssystem == "LPR3")                               # KRITISK: undgå duplikerede rækker fra LPR_F-format
   lpr3_d    <- load_database("lpr_a_diagnose") %>% rename_with(tolower)  # LPR3 diagnoser
 
   # Filtrer på indlæggelsestype hvis ønsket
