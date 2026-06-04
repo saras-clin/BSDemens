@@ -7,56 +7,44 @@ date: last-modified
 Du har bygget dit datasæt og kørt din analyse (Fase 0–13). Tilbage er det sidste skridt: at få resultaterne sikkert ud af DST.
 
 Data fra Danmarks Statistik er mikrodata underlagt GDPR og særlige regler for forskningsdata.
-Du kan **ikke** kopiere rå data ud — alt skal igennem outputkontrol ved DST's Forskningsservice.
+Du kan **ikke** kopiere rå data ud — alt skal igennem DST's hjemtagelsesproces.
 
-**Autoritativ kilde:** [dst.dk — Adgang til data (Forskningsservice) →](https://www.dst.dk/da/TilSalg/Forskning/adgang-til-data)
+**Autoritativ kilde:** [DST — Regler for hjemtagelse af analyseresultater →](https://www.dst.dk/da/TilSalg/data-til-forskning/regler-og-datasikkerhed/regler-for-hjemtagelse-af-analyseresultater)
 
 ---
 
 ## Hvad må du eksportere?
 
 **Ja:**
-- Aggregerede tabeller (summarized data)
+- Aggregerede tabeller
 - Grafer og figurer
 - Modeloutput — koefficienter, konfidensintervaller, p-værdier
 
-::: {.callout-note}
-**Scripts eksporteres også via outputkontrol — ikke frit.**
-Kode/scripts kan hjemsende, men skal igennem den samme outputkontrolproces som resultatfiler. DST tjekker at scripts ikke indeholder mikrodata eller afslører individoplysninger.
-:::
-
 **Nej:**
 - Individdata i nogen form
-- Celler med færre end 5 observationer
-- Resultater der kan identificere enkeltpersoner
+- Celler med færre end 3 observationer (nogle registre kræver minimum 5)
+- Resultater der kan identificere enkeltpersoner — direkte eller indirekte
 
----
-
-## Outputkontrol — processen i fire trin
-
-1. **Gem filer i outputmappen** — typisk `E:/workdata/[projektnummer]/output/`
-2. **Skriv en README** — kort beskrivelse af hvad hver fil indeholder; DST skal forstå hvad de ser på
-3. **Anmod om outputkontrol** — kontakt DST Forskningsservice ([forskning@dst.dk](mailto:forskning@dst.dk)); aftal med din datamanager om der er en projektspecifik procedure
-4. **Download efter godkendelse** — filer frigives via DSTs sikre downloadfunktion
-
-::: {.callout-important}
-**n < 5 er en tommelfingerregel — DST har det sidste ord.**
-Reglerne kan inkludere dominansregler, krav til afrunding og krav til kontinuerte mål. Spørg Forskningsservice **inden** du indsender hvis du er i tvivl.
+::: {.callout-note}
+**Scripts eksporteres også via hjemtagelsesprocessen — ikke frit.**
+Kode/scripts kan hjemsende, men går igennem den samme proces som resultatfiler.
 :::
 
 ---
 
-## Afrunding til nærmeste 5
+## Processen — "Hjemtag Filer" i DDV-appen
 
-DST kræver typisk at tælleværdier afrundes til nærmeste 5 inden hjemsendelse.
+1. **Gem filer i din projektmappe** med præcise, sigende filnavne — se nedenfor
+2. **Upload i DDV-appen** via "Hjemtag Filer"
+3. **Systemet scanner automatisk** for potentielle mikrodata og flagger risici
+4. **Tilføj kommentar** hvis en fil flagges — beskriv præcist hvad filen indeholder og hvorfor den er aggregeret
+5. **Bekræft** overholdelse af DST's fortrolighedspolitik (afkrydsning)
+6. **Download** under "Mit overblik" → dit projekt → "Hjemtagelser"
 
-```r
-# Manuel afrunding:
-round(antal / 5) * 5   # 23 → 25, 12 → 10
-
-# Med gtsummary (kræver Z.gtsummary.addons — ikke på DST endnu):
-# round_5_gtsummary(tabel)
-```
+::: {.callout-important}
+**Brug præcise filnavne og stier — ikke generiske navne som `output.csv`.**
+Når systemet flagger en fil, er dit bedste forsvar et sigende filnavn (`tabel1_deskriptiv_n500.csv`) og en klar kommentar om hvad filen er. Ingen README kræves — beskriv i kommentarfeltet i DDV-appen.
+:::
 
 ---
 
@@ -68,12 +56,12 @@ Når du ikke angiver en fuld sti, gemmer R filen i din **arbejdsmappe** — tjek
 getwd()   # viser din nuværende arbejdsmappe, fx "E:/workdata/708421/myproject"
 ```
 
-Gem altid til outputmappen med en fuld sti, så du er sikker på at filen havner det rigtige sted:
+Gem med fuld sti så du er sikker på at filen havner det rigtige sted:
 
 ```r
 library(readr)   # write_csv
 
-# Erstat stien med din projekts outputmappe:
+# Erstat stien med din projekts mappe:
 output_sti <- "E:/workdata/[projektnummer]/output/"
 
 # Aggregeret tabel som CSV-fil:
@@ -91,19 +79,22 @@ sink()                                            # stop — output går igen ti
 
 ---
 
-## Tjekliste inden du sender
+## Afrunding
 
-- [ ] Ingen individdata — kun aggregerede resultater
-- [ ] Alle celler ≥ 5 (eller afrundet til nærmeste 5)
-- [ ] README beskriver hvad hver fil er
-- [ ] Filnavne er sigende
-- [ ] Scripts er rene og kommenterede
+DST kræver at tælleværdier er tilstrækkeligt aggregerede. Manuel afrunding til nærmeste 5:
+
+```r
+round(antal / 5) * 5   # 23 → 25, 12 → 10
+```
 
 ---
 
-## Mere information
+## Tjekliste inden du uploader
 
-[DST — Regler for hjemtagelse af analyseresultater →](https://www.dst.dk/da/TilSalg/data-til-forskning/regler-og-datasikkerhed/regler-for-hjemtagelse-af-analyseresultater)
+- [ ] Ingen individdata — kun aggregerede resultater
+- [ ] Alle celler ≥ 3 observationer (tjek om dit register kræver ≥ 5)
+- [ ] Filnavne er præcise og sigende
+- [ ] Scripts er rene — ingen mikrodata i koden
 
 ---
 
