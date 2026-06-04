@@ -62,7 +62,7 @@ Gem med fuld sti så du er sikker på at filen havner det rigtige sted:
 library(readr)   # write_csv
 
 # Erstat stien med din projekts mappe:
-output_sti <- "E:/workdata/[projektnummer]/output/"
+output_sti <- "E:/workdata/[projektnummer]/workspaces/[dit-mappenavn]/[evt-projekt-navn]/output/"
 
 # Aggregeret tabel som CSV-fil:
 write_csv(min_tabel, paste0(output_sti, "tabel1_deskriptiv.csv"))
