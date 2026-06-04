@@ -276,7 +276,7 @@ Nu har du alle byggeklodserne — udtræk (Fase 6), registre (Fase 8), LPR/SKS (
 
 ::: {.callout-tip}
 **Designvalgene** (hvem er komparator, immortal time, matching-ratio) hører til planlægningen — se [Fase 1 — Sammenligningskohorten](01_studieforberedelse.qmd#sammenligningskohorten-komparator).
-Selve **matchingen** gøres nemmest med `heaven::riskSetMatch()` eller `incidenseMatch()` — se [Fase 12](12a_pakker-oversigt.qmd).
+Selve **matchingen** med `heaven::riskSetMatch()` er vist i kodeskelettet nedenfor.
 :::
 
 <details>
@@ -311,7 +311,7 @@ matched <- riskSetMatch(
 ```
 
 ::: {.callout-warning}
-**Under udvikling.** En komplet, testet skabelon til at bygge og matche studiepopulationen til dette projekt kommer her senere.
+**Skelettets er et udgangspunkt — brug det som inspiration.** Trin 1–3 ovenfor kan bruges nu: erstat variabelnavne og koder med dine egne. Den fulde, projektspecifikke og testede pipeline til dette studie er endnu ikke færdig.
 :::
 
 Funktionerne brugt her er forklaret i [Fase 13 — Funktioner: oversigt](13a_guide_til_funktioner.qmd) (`group_by`, `slice`, `transmute`, `left_join`) og [Fase 12](12a_pakker-oversigt.qmd) (`riskSetMatch`).

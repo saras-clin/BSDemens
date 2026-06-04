@@ -105,9 +105,7 @@ Det skal du overveje:
 - **Kan en komparator senere blive eksponeret?** Beslut hvordan (fx risk-set/incidence-density sampling, hvor en komparator kan opereres senere og selv blive case).
 - **Samme eksklusioner** anvendes på begge grupper.
 
-::: {.callout-warning}
-**Under udvikling.** En konkret kodeskabelon til at bygge og matche komparatorkohorten kommer her senere. Indtil da kan `heaven::riskSetMatch()` og `heaven::incidenseMatch()` ([Fase 12](12a_pakker-oversigt.qmd)) bruges til selve matchingen.
-:::
+→ Et kodeskelet til matching og studiepopulationsbygning ligger i [Fase 10 — Byg din studiepopulation](10_data-manipulation.qmd#byg-din-studiepopulation).
 
 ---
 
