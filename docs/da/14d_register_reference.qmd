@@ -354,7 +354,7 @@ opr_alle <- bind_rows(opr_lpr2, opr_lpr3)
 
 ---
 
-## 7. LMDB — Lægemiddelstatistikregistret
+## 6. LMDB — Lægemiddelstatistikregistret
 
 Én række per ekspederet recept. Dækker ca. 1994 og frem.
 
@@ -379,7 +379,7 @@ opr_alle <- bind_rows(opr_lpr2, opr_lpr3)
 
 ---
 
-## 8. Socioøkonomiske registre
+## 7. Socioøkonomiske registre
 
 Alle tre registre bruges til SEP-udtræk i `03_extract_ses.R` efter SEPLINE-retningslinjerne
 (Hjorth et al. 2025). Ingen samlet SEP-variabel beregnes — tre separate dimensioner.
@@ -434,7 +434,7 @@ SEPLINE-kategorisering af `socio13`:
 
 ---
 
-## 9. Projekt-specifikke registre
+## 8. Projekt-specifikke registre
 
 Mange projekter har adgang til registre ud over standardlisten ovenfor — fx kvalitetsregistre fra kliniske databaser eller færdigberegnede klassifikationsfiler.
 

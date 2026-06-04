@@ -34,7 +34,7 @@ Koden til NMI og SEPLINE-algoritmen er under udvikling.
 
 ---
 
-## 2. Eksisternde funktioner du kan bruge til datahåndtering og udtræk
+## 2. Eksisterende funktioner du kan bruge til datahåndtering og udtræk
 
 ### `heaven` — dansk registerdata-toolkit
 *(forudinstalleret på DST; ikke på CRAN — [github.com/tagteam/heaven](https://github.com/tagteam/heaven))*
@@ -189,8 +189,6 @@ Struktureret pipeline til at konvertere et helt SAS-workspace til parquet. Kun r
 
 ---
 
----
-
 ## 3. Tabel 1 — baseline karakteristika
 
 Tabel 1 opsummerer din studiepopulation inden analysen. `gtsummary` er standardpakken.
@@ -202,7 +200,7 @@ library(gtsummary)   # tbl_summary(), tbl_merge()
 tabel1 <- kohort %>%
   select(gruppe, alder, koen, nmi_score, occupation_cat) %>%   # vælg variable til tabellen
   tbl_summary(
-    by = gruppe,                                               # opdel på eksponeret vs komparator
+    by = gruppe,                                               # opdel på eksponeret vs sammenligningskohorte
     statistic = list(
       all_continuous()  ~ "{mean} ({sd})",                    # kontinuerte: middelværdi (SD)
       all_categorical() ~ "{n} ({p}%)"                        # kategoriske: n (%)

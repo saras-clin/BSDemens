@@ -130,11 +130,10 @@ Se [DARTER — setup →](darter/00_index.qmd) for installation.
 ## Lokalt (fakeregs)
 
 ```r
-bef <- open_dataset(reg_sti("bef")) %>% rename_with(tolower)   # reg_sti() fra fakeregs; lowercase kolonner
+bef <- open_dataset("synth_data/bef/") %>% rename_with(tolower)   # sti til lokalt gemt syntetisk register
 ```
 
-`reg_sti()` er fra `fakeregs` og returnerer stien til det syntetiske register.
-Se [Første udtræk](06_foerste-udtraek.qmd) for installation af `fakeregs`.
+Generer og gem syntetiske data lokalt inden brug — se [Fase 6 — Første udtræk](06_foerste-udtraek.qmd#forberedelse-installer-fakeregs-og-generer-syntetiske-data).
 :::
 
 Bruges til alle registre der er gemt som parquet-filer:

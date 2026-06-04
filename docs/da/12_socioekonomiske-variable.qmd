@@ -219,5 +219,5 @@ kohort_ses <- kohort %>%
 
 Du har nu SES-kovariater. Næste skridt afhænger af hvad du mangler:
 
-- **Specialpakker** (OSDC til diabetesklassifikation, NMI til comorbiditetsscore, analyseværktøjer)? → [Fase 12 — Pakker og specialfunktioner](13a_pakker-oversigt.qmd)
+- **Specialpakker** (OSDC til diabetesklassifikation, NMI til comorbiditetsscore, analyseværktøjer)? → [Fase 13 — Pakker og specialfunktioner](13a_pakker-oversigt.qmd)
 - **Klar til at eksportere resultater?** → [Fase 15 — Eksport og hjemsendelse](15_eksport-hjemsendelse.qmd)

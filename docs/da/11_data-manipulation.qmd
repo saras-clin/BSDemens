@@ -30,7 +30,7 @@ Registrene du trækker fra — LPR, LMDB, BEF — er næsten altid i *langt form
 
 ### Hvad har du allerede gemt?
 
-Hvert udtræk fra Fase 6, 9, 11 m.fl. bør gemmes som sin egen RDS-fil — ét register, ét emne. Eksempel på hvad du typisk har:
+Hvert udtræk fra Fase 6, 9 og 12 m.fl. bør gemmes som sin egen RDS-fil — ét register, ét emne. Eksempel på hvad du typisk har:
 
 | Fil | Indhold | Nøglekolonner |
 |---|---|---|
@@ -350,7 +350,7 @@ Kolonner der mangler i den ene tabel (fx en kolonne der kun findes i LPR3) fylde
 kohort <- readRDS("datasets/full_cohort.rds")
 
 # Dødsdatoer fra DODSAARS:
-dodsaars <- load_database("dodsaars") %>%
+dodsaars <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/dodsaars/") %>%
   rename_with(tolower) %>%               # standardisér kolonnenavne
   filter(pnr %in% !!kohort$pnr) %>%     # kun kohortens pnr'er
   select(pnr, death_date = d_dodsdto) %>%   # omdøb d_dodsdto til death_date
@@ -370,7 +370,7 @@ VNDS indeholder én række per migrationsbegivenhed; brug kun `"U"` (udvandring)
 
 ```r
 # Emigrationsdatoer fra VNDS:
-vnds <- load_database("vnds") %>%
+vnds <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/vnds/") %>%
   rename_with(tolower) %>%                       # standardisér kolonnenavne
   filter(pnr %in% !!kohort$pnr,
          indud_kode == "U") %>%                  # kun udvandringshændelser
@@ -461,12 +461,12 @@ udfald  <- readRDS("datasets/extract_demens.rds")   # pnr + event_date (NA = ing
 kohort <- kohort_renset %>% left_join(udfald, by = "pnr")
 
 # 3. Kobl censurering: dødsdato og emigration
-deaths <- load_database("dodsaars") %>%
+deaths <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/dodsaars/") %>%
   rename_with(tolower) %>%
   filter(pnr %in% !!kohort$pnr) %>%
   select(pnr, death_date = d_dodsdto) %>% collect()
 
-vnds_data <- load_database("vnds") %>%
+vnds_data <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/vnds/") %>%
   rename_with(tolower) %>%
   filter(pnr %in% !!kohort$pnr, indud_kode == "U") %>%
   select(pnr, emigration_date = haend_dato) %>% collect() %>%
@@ -523,7 +523,7 @@ names(kohort_final)                                       # verificér kolonnena
 library(dstDataPrep); library(dplyr); library(heaven)
 
 # 1. Eksponeret kohorte: operationsdato som index (SKS-koder — se Fase 9)
-eksponeret <- opr_alle %>%                       # fra SKS-udtrækket (Fase 9 / 13d)
+eksponeret <- opr_alle %>%                       # fra SKS-udtrækket (Fase 9 / 14d)
   group_by(pnr) %>% arrange(opr_dato) %>% slice(1) %>% ungroup() %>%
   transmute(pnr, index_date = opr_dato, exposed = 1L)
 
@@ -542,7 +542,7 @@ matched <- riskSetMatch(
 **Skelettets er et udgangspunkt — brug det som inspiration.** Trin 1–3 ovenfor kan bruges nu: erstat variabelnavne og koder med dine egne. Den fulde, projektspecifikke og testede pipeline til dette studie er endnu ikke færdig.
 :::
 
-Funktionerne brugt her er forklaret i [Fase 14 — Funktioner: oversigt](14a_guide_til_funktioner.qmd) (`group_by`, `slice`, `transmute`, `left_join`) og [Fase 12](13a_pakker-oversigt.qmd) (`riskSetMatch`).
+Funktionerne brugt her er forklaret i [Fase 14 — Funktioner: oversigt](14a_guide_til_funktioner.qmd) (`group_by`, `slice`, `transmute`, `left_join`) og [Fase 13](13a_pakker-oversigt.qmd) (`riskSetMatch`).
 
 </details>
 
