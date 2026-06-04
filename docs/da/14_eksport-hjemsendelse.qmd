@@ -103,7 +103,7 @@ sink()                                            # stop — output går igen ti
 
 ## Mere information
 
-[Sundhedsdatastyrelsen — Udtræk fra forskermaskinen →](https://sundhedsdatastyrelsen.dk/data-og-registre/forskerservice/ansoeg-om-data/udtraek-fra-forskermaskinen)
+[DST — Regler for hjemtagelse af analyseresultater →](https://www.dst.dk/da/TilSalg/data-til-forskning/regler-og-datasikkerhed/regler-for-hjemtagelse-af-analyseresultater)
 
 ---
 
