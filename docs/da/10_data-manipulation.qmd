@@ -4,12 +4,29 @@ subtitle: "Langt vs. bredt format, pivots og joins"
 date: last-modified
 ---
 
-Du har nu trukket data ud af registrene (Fase 6 og 9). De kommer næsten altid i **langt format** — og inden du analyserer, skal du ofte forme dem om og koble flere udtræk sammen.
-Det er det, denne fase handler om. Nu hvor du har data at arbejde med, giver disse begreber mening.
+Du har nu trukket data ud af registrene (Fase 6 og 9). Inden du kan analysere, skal du samle dem til ét datasæt med den rigtige struktur. Det er det, denne fase handler om.
 
 ::: {.callout-note}
 Eksemplerne bruger variabelnavne fra DARTER-projektet.
 Dine kolonner kan hedde noget andet — tjek med `names(din_data)`.
+:::
+
+---
+
+## Hvad er et analyseklart datasæt?
+
+Et analyseklart datasæt har **én række per person** og **én kolonne per variabel** — det vi kalder *bredt format*:
+
+| `pnr` | `index_date` | `censor_date` | `followup_years` | `event` | `alder` | `koen` | `nmi_score` |
+|---|---|---|---|---|---|---|---|
+| ... | 2015-03-01 | 2022-07-14 | 7.4 | 0 | 58 | 2 | 12 |
+| ... | 2016-11-20 | 2019-11-20 | 3.0 | 1 | 63 | 1 | 7 |
+
+Registrene du trækker fra — LPR, LMDB, BEF — er næsten altid i *langt format* med mange rækker per person. Denne fase viser, hvordan du former dem om og samler dem.
+
+::: {.callout-important}
+**Saml kun det du skal bruge.**
+Det er fristende at beholde alle kolonner "for en sikkerheds skyld". Gør det ikke. Afslut altid med `select()` og vælg eksplicit de kolonner analysen kræver. Et datasæt med kun de nødvendige kolonner er langt lettere at debugge og forstå.
 :::
 
 ---
@@ -68,6 +85,13 @@ df_bredt <- df_langt %>%
     values_from = "vaegt"       # hvilken kolonne indeholder værdierne?
   )
 ```
+
+::: {.callout-warning}
+**Du kan IKKE `pivot_wider()` en hel LPR-tabel.**
+LPR har potentielt hundredvis af unikke ICD-koder per person — `pivot_wider()` ville give dig én kolonne per kode, dvs. tusindvis af kolonner og et datasæt der er umuligt at arbejde med.
+
+I stedet bruger du mønstret fra Fase 9: udtræk første dato for én specifik diagnosegruppe og join den som én kolonne med `left_join()`. Én udfaldsvariabel = én kolonne.
+:::
 
 <details>
 <summary>Praktisk eksempel: HbA1c-målinger fra langt til bredt</summary>
@@ -328,23 +352,98 @@ kohort <- kohort %>%
 Nu har du alle byggeklodserne — udtræk (Fase 6), registre (Fase 8), LPR/SKS (Fase 9) og joins (ovenfor) — til at samle din studiepopulation. Det sker i fire trin:
 
 1. **Definer den eksponerede kohorte.** Filtrér det register der definerer eksponeringen — fx bariatri-operationer via SKS-koder i `lpr_sksopr` / `procedurer_kirurgi` ([Fase 9](09_hospitalskontakter-lpr.qmd)). Behold `pnr` og **index-dato** (operationsdatoen).
-2. **Byg komparatoren.** Match kontroller til de eksponerede på fx alder, køn og kalenderår. Kontrollerne tildeles den matchede eksponeredes index-dato.
+2. **Byg sammenligningskohorten.** Match kontroller til de eksponerede på fx alder, køn og kalenderår. Kontrollerne tildeles den matchede eksponeredes index-dato.
 3. **Anvend de samme inklusions-/eksklusionskriterier** på begge grupper, og saml dem (`bind_rows()`).
-4. **Kobl udfald og kovariater på** med `left_join()` (én række per person) og gem med `saveRDS()`.
+4. **Kobl udfald og kovariater på** med `left_join()` (én række per person), beregn opfølgningstid, og afslut med `select()`.
+
+::: {.callout-important}
+**Afslut med `select()` — behold kun de kolonner analysen kræver.**
+
+```r
+kohort_final <- kohort %>%
+  select(pnr, index_date, censor_date, followup_years, event,
+         alder, koen, nmi_score, occupation_cat, education_cat, income_cat)
+
+saveRDS(kohort_final, "datasets/analysis_dataset.rds")   # gem det endelige datasæt
+```
+:::
 
 ::: {.callout-tip}
-**Designvalgene** (hvem er komparator, immortal time, matching-ratio) hører til planlægningen — se [Fase 1 — Sammenligningskohorten](01_studieforberedelse.qmd#sammenligningskohorten-komparator).
+**Designvalgene** (hvem er sammenligningskohorten, immortal time, matching-ratio) hører til planlægningen — se [Fase 1 — Sammenligningskohorten](01_studieforberedelse.qmd#sammenligningskohorten-komparator).
 Selve **matchingen** med `heaven::riskSetMatch()` er vist i kodeskelettet nedenfor.
 :::
 
 <details>
+<summary>Komplet opskrift — fra kohort til analyseklart datasæt</summary>
+
+```r
+# Komplet opskrift: alle trin i rækkefølge
+
+# 0. Indlæs din kohorte (pnr + index_date, opbygget i Fase 6/9)
+kohort <- readRDS("datasets/full_cohort.rds")   # én række per person
+
+# 1. Ekskluder prævalente tilfælde FØR udfaldsudtrækket (se Fase 9)
+# ... kohort_renset <- kohort %>% anti_join(praevalente, by = "pnr")
+
+# 2. Kobl udfald (fx første demensdiagnose efter index-dato)
+udfald  <- readRDS("datasets/extract_demens.rds")   # pnr + event_date (NA = ingen hændelse)
+kohort <- kohort_renset %>% left_join(udfald, by = "pnr")
+
+# 3. Kobl censurering: dødsdato og emigration
+deaths <- load_database("dodsaars") %>%
+  rename_with(tolower) %>%
+  filter(pnr %in% !!kohort$pnr) %>%
+  select(pnr, death_date = d_dodsdto) %>% collect()
+
+vnds_data <- load_database("vnds") %>%
+  rename_with(tolower) %>%
+  filter(pnr %in% !!kohort$pnr, indud_kode == "U") %>%
+  select(pnr, emigration_date = haend_dato) %>% collect() %>%
+  group_by(pnr) %>% arrange(emigration_date) %>% slice(1) %>% ungroup()
+
+kohort <- kohort %>%
+  left_join(deaths,    by = "pnr") %>%
+  left_join(vnds_data, by = "pnr")
+
+# 4. Beregn opfølgningstid og hændelsesvariabel
+studie_slut <- as.Date("2024-12-31")
+kohort <- kohort %>%
+  mutate(
+    censor_date    = pmin(event_date, death_date, emigration_date, studie_slut, na.rm = TRUE),
+    followup_years = as.numeric(censor_date - index_date) / 365.25,
+    event          = as.integer(!is.na(event_date) & event_date <= censor_date)
+  )
+
+# 5. Kobl kovariater (demografiske, SES, komorbiditet)
+bef_data <- readRDS("datasets/extract_bef.rds")    # alder, køn fra BEF
+ses_data <- readRDS("datasets/extract_ses.rds")    # uddannelse, indkomst, beskæftigelse
+nmi_data <- readRDS("datasets/extract_nmi.rds")    # NMI-score
+
+kohort <- kohort %>%
+  left_join(bef_data, by = "pnr") %>%
+  left_join(ses_data, by = "pnr") %>%
+  left_join(nmi_data, by = "pnr")
+
+# 6. Behold KUN de kolonner analysen kræver
+kohort_final <- kohort %>%
+  select(pnr, index_date, censor_date, followup_years, event,
+         alder, koen, nmi_score, occupation_cat, education_cat, income_cat)
+
+saveRDS(kohort_final, "datasets/analysis_dataset.rds")   # gem det endelige datasæt
+nrow(kohort_final)                                        # verificér antal personer
+names(kohort_final)                                       # verificér kolonnenavne
+```
+
+</details>
+
+<details>
 <summary>Mere i dybden — matching, immortal time og et kodeskelet</summary>
 
-**Vigtige faldgruber, når du bygger komparatoren:**
+**Vigtige faldgruber, når du bygger sammenligningskohorten:**
 
-- **Immortal time bias:** en komparator skal være i live, bosat i Danmark og opfylde inklusionskriterierne **på sin tildelte index-dato** — ikke kun ved studiestart.
-- **Risk-set / incidence-density sampling:** en person kan optræde som komparator og *senere* selv blive opereret og blive case. Beslut hvordan du håndterer det (heaven understøtter risk-set-matching).
-- **Matching-ratio:** fx 1:5 eksponeret:komparator — flere kontroller giver mere præcision, men aftagende udbytte.
+- **Immortal time bias:** en person i sammenligningskohorten skal være i live, bosat i Danmark og opfylde inklusionskriterierne **på sin tildelte index-dato** — ikke kun ved studiestart.
+- **Risk-set / incidence-density sampling:** en person kan optræde i sammenligningskohorten og *senere* selv blive opereret og blive case. Beslut hvordan du håndterer det (heaven understøtter risk-set-matching).
+- **Matching-ratio:** fx 1:5 eksponeret:sammenligningskohorte — flere kontroller giver mere præcision, men aftagende udbytte.
 - **Samme eksklusioner** anvendes på begge grupper, ellers introducerer du selektionsbias.
 
 **Kodeskelet** (mønster — ikke en færdig pipeline):
