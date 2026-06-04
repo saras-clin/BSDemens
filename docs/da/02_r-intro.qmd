@@ -6,7 +6,7 @@ date: last-modified
 
 Du behøver ikke at lære R fra bunden.
 Denne fase giver dig det minimum, du skal have, for ikke at føle dig fortabt, når du ser din første linje kode i Fase 6.
-Datastrukturer og basiskommandoer til udforskende analyse kommer i Fase 7 og 10 — de giver ingen mening, før du har data at kigge på.
+Datastrukturer og basiskommandoer til udforskende analyse kommer i Fase 7 og 11 — de giver ingen mening, før du har data at kigge på.
 
 ---
 
@@ -280,7 +280,7 @@ Det tager fem minutter at skrive en kommentar nu og en time at forstå koden ige
 
 - En kort beskrivelse øverst i hvert script: hvad gør dette script, hvad kræver det som input, hvad producerer det?
 - Sektionsoverskrifter med **CTRL+SHIFT+R** — de vises i script-navne-listen til venstre i editoren
-- En kommentar per substantiel kodelinje (dette er påkrævet i dette projekt — se `CLAUDE.md`)
+- En kommentar per substantiel kodelinje
 
 **Gem løbende og kør rent fra starten**
 
