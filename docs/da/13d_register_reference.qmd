@@ -25,8 +25,8 @@ Nøglekolonner — dem du faktisk bruger i koden — er markeret med fed.
 
 ::: {.callout-note}
 **Åbning af registre — to veje:**
-Kodeeksemplerne på denne side bruger `open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/registernavn/")`.
-**DARTER-brugere** kan i stedet bruge `load_database("registernavn")` — se [DARTER — Registersti og datastores](darter/01_registersti-datastores.qmd).
+Kodeeksemplerne på denne side bruger `open_dataset("sti/til/register/")` som generisk placeholder — erstat med stien til dit projekts parquet-mappe.
+**DARTER-brugere** kan bruge `load_database("registernavn")` — se [DARTER — Registersti og datastores](darter/01_registersti-datastores.qmd).
 :::
 
 Se [Faldgruber](13c_dst_faldgruber.qmd) for særlige quirks ect. ved hvert register.
@@ -173,7 +173,7 @@ De patienter vil fremstå demensfrie og forblive i kohorten som falske negativer
 Kolonnenavne afviger fra somatisk LPR2 — **omdøb ved load**:
 
 ```r
-psyk_adm <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/t_psyk_adm/") %>%
+psyk_adm <- open_dataset("sti/til/t_psyk_adm/") %>%
   rename_with(tolower) %>%
   rename(pnr = v_cpr, recnum = k_recnum)
 ```
@@ -188,7 +188,7 @@ psyk_adm <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-regis
 ### t_psyk_diag — Psykiatriske diagnoser
 
 ```r
-psyk_diag <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/t_psyk_diag/") %>%
+psyk_diag <- open_dataset("sti/til/t_psyk_diag/") %>%
   rename_with(tolower) %>%
   rename(recnum = v_recnum)
 ```
@@ -271,7 +271,7 @@ Til en fuld dækning skal begge forespørges og resultatet bindes sammen.
 Placering: `parquet-registers/lpr_sksopr`
 
 ```r
-lpr_sksopr <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/lpr_sksopr/") %>%
+lpr_sksopr <- open_dataset("sti/til/lpr_sksopr/") %>%
   rename_with(tolower)
 ```
 
@@ -290,7 +290,7 @@ lpr_sksopr <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-reg
 Placering: `parquet-external/procedurer_kirurgi`
 
 ```r
-proc_kirurgi <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-external/procedurer_kirurgi/") %>%
+proc_kirurgi <- open_dataset("sti/til/procedurer_kirurgi/") %>%
   rename_with(tolower)
 ```
 
@@ -323,11 +323,11 @@ Kolonnenavnene er blandet store/små bogstaver i rådata — kald `rename_with(t
 # DARTER: brug load_database("registernavn") i stedet for open_dataset("sti")
 
 # SKS fra LPR2 (frem til 2018)
-opr_lpr2 <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/lpr_sksopr/") %>%
+opr_lpr2 <- open_dataset("sti/til/lpr_sksopr/") %>%
   rename_with(tolower) %>%
   filter(toupper(c_opr) %in% !!SKS_KODER) %>%   # !! sender den lokale R-vektor til DuckDB
   left_join(
-    open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/lpr_adm/") %>%
+    open_dataset("sti/til/lpr_adm/") %>%
       rename_with(tolower) %>%
       select(recnum, pnr, d_inddto),
     by = "recnum"
@@ -336,11 +336,11 @@ opr_lpr2 <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-regis
   collect()
 
 # SKS fra LPR3 (2019 og frem) — join via dw_ek_forloeb
-opr_lpr3 <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-external/procedurer_kirurgi/") %>%
+opr_lpr3 <- open_dataset("sti/til/procedurer_kirurgi/") %>%
   rename_with(tolower) %>%
   filter(toupper(procedurekode) %in% !!SKS_KODER) %>%   # !! sender den lokale R-vektor til DuckDB
   left_join(
-    open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/lpr_a_kontakt/") %>%
+    open_dataset("sti/til/lpr_a_kontakt/") %>%
       rename_with(tolower) %>%
       select(dw_ek_forloeb, pnr),
     by = "dw_ek_forloeb"

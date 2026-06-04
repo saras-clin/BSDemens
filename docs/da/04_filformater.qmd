@@ -22,7 +22,7 @@ Det sidste — **doven vs. fuld indlæsning** — er den vigtigste skelnen på d
 | `.xlsx` | `readxl` | `read_xlsx("sti/til/fil.xlsx")` | **Fuld** — hele filen ind i RAM |
 
 **Hvad skriver du i parenteserne?**
-Du skriver stien til parquet-mappen — fx `open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/bef/")` for BEF-registret. Kolonneoversigt for hvert register finder du i [13d — Registerreference](13d_register_reference.qmd). Stier til dit konkrete projekt bekræfter du med din datamanager eller i din projektvejledning.
+Du skriver stien til den parquet-mappe der indeholder registret — fx `open_dataset("sti/til/bef/")`. Hvilken sti det konkret er, afhænger af dit projekt og din server. Kolonnenavne for hvert register finder du i [13d — Registerreference](13d_register_reference.qmd).
 
 <details>
 <summary>Sjældnere formater (Stata, SPSS, Feather, RData)</summary>

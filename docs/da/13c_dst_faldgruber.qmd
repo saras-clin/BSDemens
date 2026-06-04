@@ -27,10 +27,10 @@ Der er to registre med lignende navne:
 :::
 
 ```r
-# KORREKT — erstat stien med din projekts parquet-mappe
+# KORREKT — erstat "sti/til/dodsaars/" med din projekts parquet-sti
 # DARTER: load_database("dodsaars") %>% rename_with(tolower)
-dod <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/dodsaars/") %>%
-  rename_with(tolower)                                        # kontrollér dækning i din projektvejledning
+dod <- open_dataset("sti/til/dodsaars/") %>%
+  rename_with(tolower)                       # kontrollér dækning i din projektvejledning
 dod_person <- dod %>%
   filter(pnr %in% !!kohort_pnrs) %>%
   select(pnr, death_date = d_dodsdto) %>%   # d_dodsdto er den bekræftede kolonne
@@ -49,8 +49,8 @@ Når hukommelsesbjælken i RStudio bliver rød, oplever alle på serveren langso
 ```r
 # Filtrer tidligt — aldrig collect() først
 # DARTER: load_database("lmdb") %>% rename_with(tolower)
-lmdb <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/lmdb/") %>%
-  rename_with(tolower)                              # doven forbindelse — ingen RAM brugt endnu
+lmdb <- open_dataset("sti/til/lmdb/") %>%
+  rename_with(tolower)                  # doven forbindelse — ingen RAM brugt endnu
 
 result <- lmdb %>%
   filter(pnr %in% !!kohort_pnrs, substr(atc, 1, 4) == "N06D") %>%   # filtrer inden collect
@@ -118,8 +118,8 @@ bef_2020 <- bef %>%
                         # — også dem der dør i løbet af 2020
 
 # KORREKT: kombiner med dodsaars for at ekskludere dødsfald
-deaths <- open_dataset("E:/workdata/[projektnummer]/cleaned-data/parquet-registers/dodsaars/") %>%
-  rename_with(tolower) %>%                         # DARTER: load_database("dodsaars") %>% rename_with(tolower)
+deaths <- open_dataset("sti/til/dodsaars/") %>%   # DARTER: load_database("dodsaars")
+  rename_with(tolower) %>%
   filter(pnr %in% !!kohort_pnrs) %>%
   select(pnr, d_dodsdto) %>%
   collect()
