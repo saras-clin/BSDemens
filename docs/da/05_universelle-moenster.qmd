@@ -126,7 +126,9 @@ rm(stort_register)   # fjerner objektet fra din R-session (forsvinder fra listen
 gc()                 # beder operativsystemet om at genvinde hukommelsen R ikke længere bruger
 ```
 
-`rm()` fjerner objektet fra din aktive session — det kan ikke længere bruges i koden og vises ikke i Environment-panelet (øverst til højre). `gc()` (*garbage collection*) frigiver den hukommelse tilbage til operativsystemet, som R ellers kan holde på lidt længere end nødvendigt. På DST, hvor RAM er delt, er det god praksis at kalde begge efter store udtræk.
+`rm()` fjerner objektet fra din aktive session — det kan ikke længere bruges i koden og forsvinder fra Environment-panelet (øverst til højre i RStudio).
+
+`gc()` (*garbage collection*) påvirker ikke din session — alle dine øvrige objekter er stadig der. R holder normalt på frigjort hukommelse lidt ekstra, fordi det er hurtigere at genbruge end at bede operativsystemet om ny. `gc()` tvinger R til at aflevere den hukommelse tilbage til operativsystemet *med det samme*, så den bliver tilgængelig for andre brugere på den fælles DST-server. Du mister ingenting — det hjælper dine kolleger.
 
 Ryd altid op efter store udtræk, inden du fortsætter.
 

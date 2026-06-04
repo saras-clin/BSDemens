@@ -66,12 +66,24 @@ lpr_adm %>%
 
 **Hvad det gør:** røret sender resultatet fra linjen til venstre videre som første argument til funktionen til højre.
 
+**De to skrivemåder gør det samme:**
+
+```r
+# Uden røret — indefra og ud, som russiske dukker:
+collect(select(filter(lpr_adm, pnr %in% !!mine_pnrs), pnr, recnum))
+
+# Med røret — oppefra og ned, som en opskrift:
+lpr_adm %>%
+  filter(pnr %in% !!mine_pnrs) %>%
+  select(pnr, recnum) %>%
+  collect()
+```
+
+Begge versioner giver nøjagtigt det samme resultat. Pipe-versionen er lettere at læse fordi du kan følge trinene i rækkefølge — og lettere at fejlfinde fordi du kan tilføje eller fjerne ét trin ad gangen.
+
 **Anekdote:** Forestil dig at du laver mad.
 Du skærer løgene — og sender dem videre til gryden — som sender indholdet videre til tallerkenen.
 Røret gør præcis det: det kæder trin sammen, så du kan læse koden oppefra og ned som en opskrift.
-Uden røret ville du skulle skrive det indefra og ud, som russiske dukker:
-`collect(select(filter(lpr_adm, pnr %in% !!mine_pnrs), pnr, recnum))`.
-Det er svært at læse og svært at fejlsøge.
 
 ::: {.callout-note}
 **`%>%` og `|>` er det samme — bare to forskellige måder at skrive røret på.**

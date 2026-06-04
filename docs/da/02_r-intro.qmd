@@ -71,6 +71,16 @@ Du har nu skrevet, kørt og brugt din første linje R-kode.
 `filter(data, alder > 50)` er en funktion. `sum(c(1, 2, 3))` er en funktion.
 Du genkender funktioner på parenteserne.
 
+**Hvad er der i parenteserne?**
+Parenteserne er der altid — men de er ikke altid fyldte. Det afhænger af om funktionen behøver input for at vide hvad den skal gøre:
+
+- `filter(alder > 50)` — *kræver* at du fortæller den betingelsen; ellers ved den ikke hvad den skal filtrere på
+- `open_dataset("E:/workdata/...")` — *kræver* stien; ellers ved den ikke hvad den skal åbne
+- `collect()` — *kræver ingenting*; den ved allerede hvad den skal hente, fordi det er røret der har sendt data frem til den
+- `ungroup()` — *kræver ingenting*; den fjerner bare grupperingen fra det der er sendt igennem røret
+
+Tommelfingerregel: tomme parenteser betyder at funktionen virker på *det der er sendt videre med røret*, uden at du behøver fortælle den noget ekstra.
+
 **En pakke** er en samling af funktioner skrevet af andre, som du kan hente ind.
 R kommer med basisfunktioner, men det meste vi bruger er i pakker som `dplyr` og `arrow`.
 
