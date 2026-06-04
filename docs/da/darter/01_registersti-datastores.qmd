@@ -58,7 +58,7 @@ Kolonnenavne vises efter `rename_with(tolower)`.
 
 ## Kritiske noter
 
-**DODSAARS og DOD:** `dodsaars` er i cleaned-data men dækker kun ~1970–2001 (pr. juni 2026). For post-2001 dødsfald kræves DOD-udtræk fra rå SAS — guide under udvikling.
+**DODSAARS og DOD:** `dodsaars` er i cleaned-data men dækker kun ~1970–2001 (pr. juni 2026). For post-2001 dødsfald kræves udtræk fra rå SAS-fil — kontakt din datamanager. Tjek altid at parquet-filens dækning matcher din studieperiode inden du kører pipeline (se [DARTER-faldgruber](02_darter-faldgruber.qmd#1-tjek-at-parquet-filerne-er-opdaterede)).
 <!-- TODO: link til udtræksguide når klar -->
 
 **procedurer_kirurgi:** `dw_ek_kontakt` er **NA for alle rækker** på DST. Join til `lpr_a_kontakt` via `dw_ek_forloeb` for at hente `pnr`.

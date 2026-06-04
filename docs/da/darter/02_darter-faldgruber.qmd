@@ -8,23 +8,33 @@ Denne side supplerer de [generelle DST-faldgruber](../13c_dst_faldgruber.qmd) me
 
 ---
 
-## 1. DODSAARS dækker kun til ~2001
+## 1. Tjek at parquet-filerne er opdaterede
 
-`dodsaars` i cleaned-data (projekt 708421) dækker kun ~1970–2001 pr. juni 2026.
-Det betyder, at dødsfald efter 2001 **ikke** fanges af den nuværende kode.
+Parquet-filerne i `cleaned-data` afspejler kun data frem til det tidspunkt de sidst blev opdateret.
+**`dodsaars` dækker pr. juni 2026 kun ~1970–2001** — dødsfald efter 2001 fanges ikke af den nuværende kode.
 
 ```r
-# Nuværende kode — fanger kun dødsfald til ~2001:
-dod <- load_database("dodsaars") %>% rename_with(tolower)
-deaths <- dod %>%
-  filter(pnr %in% !!pnr_liste) %>%
-  select(pnr, d_dodsdto) %>%
-  collect()
+# Tjek hvornår parquet-mappen sidst blev opdateret:
+file.info("E:/workdata/708421/cleaned-data/parquet-registers/dodsaars/")$mtime
 ```
 
-**Konsekvens:** Matching-loopet i `01_build_cohorts.R` ekskluderer ikke BS-patienter der dør efter 2001 men inden kirurgi, og komparatorer der dør efter 2001 behandles som levende.
+Samme gælder potentielt for andre registre. Bekræft altid at dækningen matcher din studieperiode, inden du kører pipeline.
 
-**Løsning:** DOD-registret (~2001–2024) skal udtrækkes fra rå SAS-fil og kombineres med dodsaars. Guide under udvikling — se `docs/TODO.md`.
+::: {.callout-warning}
+**Hvis parquet-filen ikke dækker din studieperiode:**
+Du skal trække data fra den rå SAS-fil på DST. Kontakt din datamanager — de kan hjælpe med adgang til rådata og konvertering.
+:::
+
+```r
+# Nuværende kode — fanger kun dødsfald frem til parquet-filens dækning:
+dod <- load_database("dodsaars") %>% rename_with(tolower)   # doven forbindelse
+deaths <- dod %>%
+  filter(pnr %in% !!pnr_liste) %>%   # kun kohortens pnr'er
+  select(pnr, d_dodsdto) %>%          # kun dødsdato
+  collect()                            # hent ind i R
+```
+
+**Konsekvens ved manglende dækning:** Komparatorer og BS-patienter der dør efter parquet-filens slutdato behandles som levende — det påvirker censurering og matching i `01_build_cohorts.R`.
 
 ---
 
