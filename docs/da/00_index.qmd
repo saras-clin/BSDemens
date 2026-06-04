@@ -17,18 +17,19 @@ Du behøver ikke have kodet før.
 ### Helt ny?
 Følg faserne fra begyndelsen.
 
-→ [Fase 1 — Planlæg dit studie](01_studieforberedelse.qmd)\
-→ [Fase 2 — R: det allermest nødvendige](02_r-intro.qmd)\
-→ [Fase 3 — Log ind på DST](03_log-ind-dst.qmd)
+→ [1 — Planlæg dit studie](01_studieforberedelse.qmd)\
+→ [2 — R: det allermest nødvendige](02_r-intro.qmd)\
+→ [3 — Log ind på DST](03_log-ind-dst.qmd)
 :::
 
 ::: {.g-col-4}
 ### Kender R, ny på DST?
 Spring fase 2 over og start med serveren.
 
-→ [Fase 3 — Log ind på DST](03_log-ind-dst.qmd)\
-→ [Fase 5 — Det universelle mønster](05_universelle-moenster.qmd)\
-→ [Fase 8 — Kend dine registre](08_kend-dine-registre.qmd)
+→ [3 — Log ind på DST](03_log-ind-dst.qmd)\
+→ [5 — Det universelle mønster](05_universelle-moenster.qmd)\
+→ [8 — Kend dine registre](08_kend-dine-registre.qmd)\
+→ [14 — Reference](14_reference.qmd)
 :::
 
 ::: {.g-col-4}
